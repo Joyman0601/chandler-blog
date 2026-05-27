@@ -9,15 +9,20 @@ import ProfilePanel from "../../components/ProfilePanel.astro";
       <h1 class="page-title">项目</h1>
       <div class="grid">
         <article class="project-card">
-          <h3>AI 知识库应用</h3>
-          <div class="meta">Java / Spring Boot / RAG / LLM</div>
+          <h3>企业知识库 RAG + Agent 助手</h3>
+          <div class="meta">Java 17 / Spring Boot 3.3 / LLM / RAG / Tool Calling</div>
           <p class="summary">
-            围绕企业知识问答场景，整理从文档处理、向量检索、上下文构造到模型回答评估的工程经验。
+            基于 Spring Boot 实现的大模型应用后端项目，目标是把企业文档入库、向量检索、LLM 问答、工具调用、权限校验和生产治理串成一套可演示、可扩展的 Agent 后端框架。
           </p>
           <ul class="detail-list">
-            <li>关注知识切分、召回质量、Prompt 组织和回答稳定性。</li>
-            <li>适合沉淀 RAG、工具调用、权限控制和可观测性相关笔记。</li>
+            <li>文档链路：支持 txt / markdown 上传、chunk 切分、embedding、文档更新删除和 version/status 生命周期管理。</li>
+            <li>问答链路：问题向量化后按权限与状态过滤 chunk，基于相似度召回上下文，并由后端生成可信 sources。</li>
+            <li>Agent 链路：通过 ToolRegistry、ToolExecutionService 和受控 Agent Loop 管理工具调用、参数校验、高风险确认与审计日志。</li>
+            <li>工程治理：包含 debug 检索、评估接口、成本耗时统计、错误码、安全自检和自动化测试。</li>
           </ul>
+          <div class="link-row compact">
+            <a class="button" href="https://github.com/Joyman0601/RAG" target="_blank" rel="noreferrer">查看源码</a>
+          </div>
         </article>
         <article class="project-card">
           <h3>个人技术博客</h3>
