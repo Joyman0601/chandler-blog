@@ -72,6 +72,45 @@ src/styles/global.css    全局样式
 public/robots.txt        搜索引擎抓取配置
 ```
 
+## 写新文章流程
+
+在 `src/content/blog/` 下新建 Markdown 文件，例如：
+
+```text
+src/content/blog/my-new-post.md
+```
+
+文章开头需要包含 frontmatter：
+
+```md
+---
+title: "文章标题"
+description: "文章描述，用于博客列表和 SEO。"
+pubDate: 2026-05-27
+tags: ["Java", "Spring", "RAG"]
+---
+```
+
+本地确认构建：
+
+```bash
+npm run build
+```
+
+提交并推送：
+
+```bash
+git add .
+git commit -m "Add my new post"
+git push origin main
+```
+
+推送到 GitHub `main` 分支后，Cloudflare 会自动部署。部署成功后可访问：
+
+```text
+https://chandlerblog.com/blog/my-new-post/
+```
+
 ## 部署
 
 项目代码推送到 GitHub `main` 分支后，Cloudflare 会自动触发构建和部署。
