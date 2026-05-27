@@ -1,0 +1,18 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="页面未找到" description="当前页面不存在，返回 Chandler 的博客继续浏览文章和项目。">
+  <section class="content-card not-found">
+    <p class="eyebrow">404</p>
+    <h1 class="page-title">页面未找到</h1>
+    <p class="summary">
+      这个地址暂时没有对应内容，可能是链接拼写错误，或者文章路径已经调整。
+    </p>
+    <div class="link-row">
+      <a class="button primary" href="/">返回首页</a>
+      <a class="button" href="/blog/">查看文章</a>
+      <a class="button" href="/projects/">查看项目</a>
+    </div>
+  </section>
+</BaseLayout>
