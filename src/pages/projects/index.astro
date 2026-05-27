@@ -3,7 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProfilePanel from "../../components/ProfilePanel.astro";
 ---
 
-<BaseLayout title="项目" description="Chandler 的项目与工程实践">
+<BaseLayout title="项目" description="Chandler 的项目实践，记录个人技术博客、AI 知识库应用和后端工程化探索。">
   <div class="layout">
     <section>
       <h1 class="page-title">项目</h1>
@@ -11,12 +11,35 @@ import ProfilePanel from "../../components/ProfilePanel.astro";
         <article class="project-card">
           <h3>AI 知识库应用</h3>
           <div class="meta">Java / Spring Boot / RAG / LLM</div>
-          <p class="summary">用于整理大模型应用开发中的知识检索、Prompt 组织、上下文拼接和质量评估经验。</p>
+          <p class="summary">
+            围绕企业知识问答场景，整理从文档处理、向量检索、上下文构造到模型回答评估的工程经验。
+          </p>
+          <ul class="detail-list">
+            <li>关注知识切分、召回质量、Prompt 组织和回答稳定性。</li>
+            <li>适合沉淀 RAG、工具调用、权限控制和可观测性相关笔记。</li>
+          </ul>
         </article>
         <article class="project-card">
           <h3>个人技术博客</h3>
-          <div class="meta">Astro / Markdown / Cloudflare Pages</div>
-          <p class="summary">当前正在搭建的个人网站，用于沉淀技术笔记、项目复盘和长期学习记录。</p>
+          <div class="meta">Astro / Markdown / Cloudflare Workers</div>
+          <p class="summary">
+            当前正在维护的个人网站，用于发布技术文章、项目复盘和长期学习记录，已经绑定 chandlerblog.com。
+          </p>
+          <ul class="detail-list">
+            <li>使用 Astro 生成静态页面，文章通过 Markdown 管理。</li>
+            <li>通过 GitHub 和 Cloudflare 自动部署，支持自定义域名和基础 SEO。</li>
+          </ul>
+        </article>
+        <article class="project-card">
+          <h3>后端工程实践笔记</h3>
+          <div class="meta">Java / Spring / MyBatis / 部署</div>
+          <p class="summary">
+            计划持续整理后端开发中的常见问题，包括接口设计、数据访问、异常处理、日志、测试和部署排查。
+          </p>
+          <ul class="detail-list">
+            <li>把零散问题沉淀为可复用的排查清单和实现记录。</li>
+            <li>后续会从真实开发过程里逐步补充文章和示例。</li>
+          </ul>
         </article>
       </div>
     </section>

@@ -273,6 +273,17 @@ svg {
   line-height: 1.75;
 }
 
+.detail-list {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.detail-list li + li {
+  margin-top: 6px;
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;

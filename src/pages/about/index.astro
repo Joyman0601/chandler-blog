@@ -4,18 +4,35 @@ import ProfilePanel from "../../components/ProfilePanel.astro";
 import { site } from "../../data/site";
 ---
 
-<BaseLayout title="关于" description="关于 Chandler">
+<BaseLayout title="关于" description="关于 Chandler，记录 Java、Spring 和 AI 大模型应用开发的长期学习与项目实践。">
   <div class="layout">
     <section class="content-card">
       <h1 class="page-title">关于我</h1>
       <p class="summary">
-        我是 {site.name}，主要关注 Java、Spring 和 AI 大模型应用开发。这个网站会持续记录技术学习、项目实践和阶段性复盘。
+        我是 {site.name}，目前主要关注 Java、Spring 和 AI 大模型应用开发。这个博客会持续记录技术学习、项目实践、问题排查和阶段性复盘。
+      </p>
+      <p class="summary">
+        我希望这里不只是文章归档，而是一个长期维护的个人知识库：把踩过的坑、做过的项目、理解过的概念整理成可以反复查阅的材料。
       </p>
       <div class="section">
         <h2>关注方向</h2>
         <div class="tag-list">
           {site.focus.map((item) => <span class="tag">{item}</span>)}
         </div>
+      </div>
+      <div class="section">
+        <h2>写作内容</h2>
+        <ul class="detail-list">
+          <li>Java、Spring Boot、数据库访问、接口设计和工程化实践。</li>
+          <li>AI 大模型应用开发中的 Prompt、RAG、工具调用和效果评估。</li>
+          <li>个人项目的搭建过程、部署记录、复盘总结和后续计划。</li>
+        </ul>
+      </div>
+      <div class="section">
+        <h2>更新计划</h2>
+        <p class="summary">
+          先从小而稳定的内容开始：每次解决一个问题、完成一个功能、读懂一个概念，就整理成一篇短记录。长期目标是形成一套围绕后端开发和 AI 应用落地的实践笔记。
+        </p>
       </div>
       <div class="section">
         <h2>账号链接</h2>
