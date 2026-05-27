@@ -14,7 +14,7 @@ export const site = {
     { href: "/about/", label: "关于" },
   ],
   links: [
-    { label: "GitHub", href: "https://github.com/" },
-    { label: "B站", href: "https://space.bilibili.com/" },
+    { label: "GitHub", href: "https://github.com/Joyman0601" },
+    { label: "B站", href: "https://b23.tv/AXk25Qc" },
   ],
 };
