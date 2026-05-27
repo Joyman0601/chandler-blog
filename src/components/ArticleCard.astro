@@ -1,0 +1,22 @@
+---
+interface Props {
+  title: string;
+  href: string;
+  date: Date;
+  summary: string;
+  tags?: string[];
+}
+
+const { title, href, date, summary, tags = [] } = Astro.props;
+const formattedDate = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+}).format(date);
+---
+
+<article class="article-card">
+  <h3><a href={href}>{title}</a></h3>
+  <div class="meta">{formattedDate} {tags.length ? ` / ${tags.join("、")}` : ""}</div>
+  <p class="summary">{summary}</p>
+</article>

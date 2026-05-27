@@ -1,0 +1,70 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ArticleCard from "../components/ArticleCard.astro";
+import ProfilePanel from "../components/ProfilePanel.astro";
+import { site } from "../data/site";
+
+const posts = (await getCollection("blog"))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3);
+---
+
+<BaseLayout>
+  <section class="hero">
+    <div class="hero-panel">
+      <p class="eyebrow">{site.name} / Java / Spring / AI</p>
+      <h1>{site.title}</h1>
+      <p class="hero-copy">
+        {site.description}。这里会持续整理 Java、Spring、AI 大模型应用开发相关的笔记、项目复盘和工程实践。
+      </p>
+      <div class="tag-list">
+        {site.focus.map((item) => <span class="tag">{item}</span>)}
+      </div>
+      <div class="link-row">
+        <a class="button primary" href="/blog/">阅读文章</a>
+        <a class="button" href="/projects/">查看项目</a>
+      </div>
+    </div>
+    <ProfilePanel />
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <h2>最近文章</h2>
+      <a href="/blog/">全部文章</a>
+    </div>
+    <div class="grid">
+      {
+        posts.map((post) => (
+            <ArticleCard
+              title={post.data.title}
+            href={`/blog/${post.id}/`}
+              date={post.data.pubDate}
+              summary={post.data.description}
+              tags={post.data.tags}
+          />
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <h2>精选项目</h2>
+      <a href="/projects/">更多项目</a>
+    </div>
+    <div class="grid two">
+      <article class="project-card">
+        <h3>AI 知识库应用</h3>
+        <div class="meta">Java / Spring Boot / RAG</div>
+        <p class="summary">围绕知识检索、上下文构造和问答质量评估，沉淀大模型应用开发经验。</p>
+      </article>
+      <article class="project-card">
+        <h3>个人技术博客</h3>
+        <div class="meta">Astro / Markdown / Cloudflare Pages</div>
+        <p class="summary">用于持续记录技术文章、项目复盘和长期学习路线。</p>
+      </article>
+    </div>
+  </section>
+</BaseLayout>

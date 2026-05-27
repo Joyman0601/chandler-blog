@@ -1,0 +1,55 @@
+---
+import "../styles/global.css";
+import { site } from "../data/site";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = site.title, description = site.description } = Astro.props;
+const pageTitle = title === site.title ? site.title : `${title} | ${site.title}`;
+const currentPath = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="/" aria-label={site.title}>
+          <span class="brand-name">{site.title}</span>
+          <span class="brand-line">{site.description}</span>
+        </a>
+        <nav class="nav" aria-label="主导航">
+          {
+            site.nav.map((item) => {
+              const isHome = item.href === "/";
+              const isCurrent = isHome
+                ? currentPath === item.href
+                : currentPath.startsWith(item.href);
+              return (
+                <a href={item.href} aria-current={isCurrent ? "page" : undefined}>
+                  {item.label}
+                </a>
+              );
+            })
+          }
+        </nav>
+      </div>
+    </header>
+    <main class="shell main">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="shell">© {new Date().getFullYear()} {site.name}. Built with Astro.</div>
+    </footer>
+  </body>
+</html>

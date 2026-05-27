@@ -1,0 +1,32 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ArticleCard from "../../components/ArticleCard.astro";
+import ProfilePanel from "../../components/ProfilePanel.astro";
+
+const posts = (await getCollection("blog")).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+---
+
+<BaseLayout title="文章" description="Chandler 的技术文章与学习笔记">
+  <div class="layout">
+    <section>
+      <h1 class="page-title">文章</h1>
+      <div class="grid">
+        {
+          posts.map((post) => (
+            <ArticleCard
+              title={post.data.title}
+              href={`/blog/${post.id}/`}
+              date={post.data.pubDate}
+              summary={post.data.description}
+              tags={post.data.tags}
+            />
+          ))
+        }
+      </div>
+    </section>
+    <ProfilePanel />
+  </div>
+</BaseLayout>

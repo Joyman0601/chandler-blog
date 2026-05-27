@@ -1,0 +1,22 @@
+---
+import { site } from "../data/site";
+---
+
+<aside class="side-panel">
+  <h2>{site.name}</h2>
+  <ul class="profile-list">
+    <li>{site.description}</li>
+    <li>方向：{site.focus.join(" / ")}</li>
+    <li>
+      链接：
+      {
+        site.links.map((link, index) => (
+          <>
+            <a href={link.href} target="_blank" rel="noreferrer">{link.label}</a>
+            {index < site.links.length - 1 ? " / " : ""}
+          </>
+        ))
+      }
+    </li>
+  </ul>
+</aside>

@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProfilePanel from "../../components/ProfilePanel.astro";
+import { site } from "../../data/site";
+---
+
+<BaseLayout title="关于" description="关于 Chandler">
+  <div class="layout">
+    <section class="content-card">
+      <h1 class="page-title">关于我</h1>
+      <p class="summary">
+        我是 {site.name}，主要关注 Java、Spring 和 AI 大模型应用开发。这个网站会持续记录技术学习、项目实践和阶段性复盘。
+      </p>
+      <div class="section">
+        <h2>关注方向</h2>
+        <div class="tag-list">
+          {site.focus.map((item) => <span class="tag">{item}</span>)}
+        </div>
+      </div>
+      <div class="section">
+        <h2>账号链接</h2>
+        <div class="link-row">
+          {site.links.map((link) => <a class="button" href={link.href} target="_blank" rel="noreferrer">{link.label}</a>)}
+        </div>
+      </div>
+    </section>
+    <ProfilePanel />
+  </div>
+</BaseLayout>

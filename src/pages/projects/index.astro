@@ -1,0 +1,25 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProfilePanel from "../../components/ProfilePanel.astro";
+---
+
+<BaseLayout title="项目" description="Chandler 的项目与工程实践">
+  <div class="layout">
+    <section>
+      <h1 class="page-title">项目</h1>
+      <div class="grid">
+        <article class="project-card">
+          <h3>AI 知识库应用</h3>
+          <div class="meta">Java / Spring Boot / RAG / LLM</div>
+          <p class="summary">用于整理大模型应用开发中的知识检索、Prompt 组织、上下文拼接和质量评估经验。</p>
+        </article>
+        <article class="project-card">
+          <h3>个人技术博客</h3>
+          <div class="meta">Astro / Markdown / Cloudflare Pages</div>
+          <p class="summary">当前正在搭建的个人网站，用于沉淀技术笔记、项目复盘和长期学习记录。</p>
+        </article>
+      </div>
+    </section>
+    <ProfilePanel />
+  </div>
+</BaseLayout>
