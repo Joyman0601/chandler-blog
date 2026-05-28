@@ -300,6 +300,31 @@ svg {
   font-size: 32px;
 }
 
+.series-group {
+  margin-top: 36px;
+}
+
+.series-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.series-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.series-count {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
 .article {
   background: var(--surface);
   border: 1px solid var(--border);
