@@ -306,6 +306,7 @@ svg {
   border-radius: 8px;
   padding: 34px;
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 
 .article h1 {
