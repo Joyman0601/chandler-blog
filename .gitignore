@@ -1,3 +1,6 @@
+# local draft docs
+tmp/
+
 # build output
 dist/
 # generated types
