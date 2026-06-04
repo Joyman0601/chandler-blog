@@ -1,0 +1,10 @@
+{
+  // 纯静态博客：只把 astro build 产出的 dist 作为静态资源上传。
+  // 没有 main worker、没有 kv_namespaces/SESSION 绑定 —— 避免 Cloudflare
+  // 自动给 Astro 注入 SESSION KV 并去 provision（那是 SSR 才需要的）。
+  "name": "chandler-blog",
+  "compatibility_date": "2026-06-04",
+  "assets": {
+    "directory": "./dist"
+  }
+}
