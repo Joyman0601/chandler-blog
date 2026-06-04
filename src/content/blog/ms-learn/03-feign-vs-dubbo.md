@@ -1,7 +1,7 @@
 ---
 title: "服务间通信：Feign 与 Dubbo 两种姿势对比"
 description: "跨进程调用有几种姿势？用同一个 order→user 调用，分别用 RestTemplate、Feign、Dubbo 实现并对比，讲清声明式 HTTP 和 RPC 的区别，以及别用玩具基准下性能结论的教训。"
-pubDate: 2026-05-26
+pubDate: 2026-01-03
 tags: ["微服务", "Feign", "Dubbo", "RPC"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"

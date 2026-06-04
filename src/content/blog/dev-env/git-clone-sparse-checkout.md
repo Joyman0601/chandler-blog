@@ -1,7 +1,7 @@
 ---
 title: "Git 克隆大仓库失败与稀疏检出实战排错"
 description: "整理一次操作 RuoYi-Vue-Plus 仓库时遇到的克隆失败、稀疏检出与代理冲突问题及解决方案。"
-pubDate: 2026-05-26
+pubDate: 2025-12-20
 tags: ["Git", "排错", "开发环境"]
 series: "dev-env"
 seriesLabel: "开发环境与排错"

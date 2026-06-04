@@ -1,7 +1,7 @@
 ---
 title: "开发环境实用技巧合集：Maven Profile / Docker / WSL / 终端输出重叠"
 description: "汇总 Maven 多 Profile、查看已停止容器、WSL 访问 Windows 文件、终端流式输出重叠等几个高频小问题及其原理。"
-pubDate: 2026-05-28
+pubDate: 2026-03-06
 tags: ["Maven", "Docker", "WSL", "开发环境"]
 series: "dev-env"
 seriesLabel: "开发环境与排错"

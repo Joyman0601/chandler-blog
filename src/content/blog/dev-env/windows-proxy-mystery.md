@@ -1,7 +1,7 @@
 ---
 title: "Windows 代理之谜：为什么管理员模式不用开代理就能连"
 description: "解释普通模式必须开代理、管理员模式却能直连的原因，以及 Clash 系统代理与 LAN 设置为何不同步。"
-pubDate: 2026-05-27
+pubDate: 2026-01-18
 tags: ["Windows", "代理", "网络", "开发环境"]
 series: "dev-env"
 seriesLabel: "开发环境与排错"

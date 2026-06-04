@@ -1,7 +1,7 @@
 ---
 title: "JeecgBoot 微服务实现深度解析"
 description: "整理自对 JeecgBoot 3.9.2 源码的逐层阅读，涵盖微服务架构设计、认证链路全流程，以及关键设计取舍的分析。"
-pubDate: 2026-05-28
+pubDate: 2026-03-17
 tags: ["JeecgBoot", "微服务", "Spring Cloud", "认证"]
 series: "jeecgboot"
 seriesLabel: "JeecgBoot 项目"

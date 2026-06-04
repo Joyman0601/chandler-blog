@@ -1,7 +1,7 @@
 ---
 title: "分布式事务：跨服务写操作怎么「要么全成要么全滚」"
 description: "下单扣库存跨两个库两次写，扣完库存建单失败就钱货两失。用 Seata AT 模式 + Feign 实现全局事务，讲清 TC/TM/RM 三角色、undo_log 反向补偿，以及把人折磨很久的镜像挂载和 SEATA_IP 坑。"
-pubDate: 2026-05-29
+pubDate: 2026-01-30
 tags: ["微服务", "Seata", "分布式事务", "AT模式"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"

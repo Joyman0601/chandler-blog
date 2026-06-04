@@ -1,7 +1,7 @@
 ---
 title: "个人网站搭建记录"
 description: "记录 Chandler 的个人技术博客从本地项目、GitHub 仓库到 Cloudflare 自定义域名上线的完整过程。"
-pubDate: 2026-05-27
+pubDate: 2025-12-03
 tags: ["Astro", "个人网站", "Cloudflare", "部署"]
 ---
 

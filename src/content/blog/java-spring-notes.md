@@ -1,7 +1,7 @@
 ---
 title: "Java 与 Spring 学习笔记"
 description: "整理 Java 后端学习中需要长期复盘的 Spring Boot、接口设计、数据访问、异常处理和工程化主题。"
-pubDate: 2026-05-26
+pubDate: 2026-02-23
 tags: ["Java", "Spring", "后端"]
 ---
 

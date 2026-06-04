@@ -1,7 +1,7 @@
 ---
 title: "企业知识库 RAG + Agent 助手项目复盘"
 description: "复盘一个基于 Java 17 和 Spring Boot 的 RAG + Agent 后端项目，记录从 LLM API、RAG 检索到工具调用和安全治理的实践思路。"
-pubDate: 2026-05-27
+pubDate: 2026-05-12
 tags: ["Java", "Spring Boot", "RAG", "Agent", "LLM"]
 series: "rag"
 seriesLabel: "RAG 项目"

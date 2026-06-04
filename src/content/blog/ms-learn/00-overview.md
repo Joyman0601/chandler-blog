@@ -1,7 +1,7 @@
 ---
 title: "从单体到微服务：我用一套极简电商 demo 学了什么"
 description: "用一套 用户/订单/库存 的极简电商 demo，从零搭最小可运行微服务，逐个攻克注册发现、网关、通信、会话、限流熔断、分布式事务、消息、可观测性。这是系列总览。"
-pubDate: 2026-06-02
+pubDate: 2025-12-09
 tags: ["微服务", "Spring Cloud", "Spring Cloud Alibaba", "系列导读"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"

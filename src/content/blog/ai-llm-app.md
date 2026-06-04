@@ -1,7 +1,7 @@
 ---
 title: "AI 大模型应用开发备忘"
 description: "记录大模型应用开发中 LLM API、Prompt、RAG、Tool Calling、Agent 和工程治理的学习重点。"
-pubDate: 2026-05-25
+pubDate: 2026-04-09
 tags: ["AI", "LLM", "RAG", "Agent"]
 ---
 

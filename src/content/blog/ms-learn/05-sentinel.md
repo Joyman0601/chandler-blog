@@ -1,7 +1,7 @@
 ---
 title: "限流与熔断：下游病了，怎么不被拖死"
 description: "注册发现解决不了「实例瞬间故障」。用 Sentinel 给服务加两道保护：限流控住入口流量、熔断隔离生病的下游。讲清 FlowRule/DegradeRule、fallback/blockHandler 的分工，以及熔断没触发其实是请求密度不够的坑。"
-pubDate: 2026-05-28
+pubDate: 2026-01-24
 tags: ["微服务", "Sentinel", "限流", "熔断"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"

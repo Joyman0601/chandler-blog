@@ -1,7 +1,7 @@
 ---
 title: "可观测性：微服务出了问题怎么定位"
 description: "服务多、链路长，出了问题怎么查？三支柱 Metrics/Logs/Traces 落地：Actuator 暴露指标、Prometheus+Grafana 看图、Zipkin 链路追踪。重点讲 Feign traceId 断裂、Zipkin UI 被 GET span 淹没等排查很久的坑。"
-pubDate: 2026-05-31
+pubDate: 2026-02-11
 tags: ["微服务", "可观测性", "Prometheus", "Zipkin"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"

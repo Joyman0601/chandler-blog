@@ -1,7 +1,7 @@
 ---
 title: "深入 JeecgBoot 3.9.2 源码：多租户 & 低代码平台原理解析"
 description: "基于 JeecgBoot 3.9.2 源码，解析多租户行级隔离的完整实现链路，以及低代码 Online 平台元数据驱动、解释执行的底层原理。"
-pubDate: 2026-05-29
+pubDate: 2026-03-28
 tags: ["JeecgBoot", "多租户", "低代码", "MyBatis-Plus"]
 series: "jeecgboot"
 seriesLabel: "JeecgBoot 项目"

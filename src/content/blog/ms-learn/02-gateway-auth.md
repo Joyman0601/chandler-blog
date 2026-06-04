@@ -1,7 +1,7 @@
 ---
 title: "API 网关与统一鉴权：把横切关注点提到入口"
 description: "服务拆开后，鉴权/路由/跨域这些横切逻辑难道每个服务都写一遍？用 Spring Cloud Gateway 立一个统一入口，并讲清 WebFlux 响应式编程不能引 servlet 的坑。"
-pubDate: 2026-05-25
+pubDate: 2025-12-27
 tags: ["微服务", "网关", "Spring Cloud Gateway", "WebFlux"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"

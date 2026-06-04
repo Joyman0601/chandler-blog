@@ -1,7 +1,7 @@
 ---
 title: "分布式会话：登录态凭什么跨进程共享"
 description: "单体把 session 存进程内存就行，微服务为什么不行？用 Sa-Token + Redis 把登录态外置，让签发 token 的服务和校验 token 的网关共享同一份登录态。"
-pubDate: 2026-05-27
+pubDate: 2026-01-09
 tags: ["微服务", "Sa-Token", "Redis", "分布式会话"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"

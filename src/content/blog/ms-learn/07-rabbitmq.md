@@ -1,7 +1,7 @@
 ---
 title: "事件驱动与可靠消息：异步解耦后冒出的新问题"
 description: "把同步调用换成 MQ 异步事件，下单秒回不再等积分。但 MQ 带来同步 RPC 没有的新问题：消息重复要幂等、消费失败要重试+死信队列。用 RabbitMQ 把这三件配套讲透。"
-pubDate: 2026-05-30
+pubDate: 2026-02-05
 tags: ["微服务", "RabbitMQ", "事件驱动", "消息队列"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"

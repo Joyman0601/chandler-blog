@@ -1,7 +1,7 @@
 ---
 title: "国产 Embeddings 向量化 API 选型指南"
 description: "梳理支持 Embeddings 的国产 API 服务（硅基流动、智谱、百度千帆、阿里云百炼等）并给出 RAG 场景的选型建议。"
-pubDate: 2026-05-29
+pubDate: 2026-04-22
 tags: ["AI", "Embeddings", "RAG", "向量检索"]
 ---
 
