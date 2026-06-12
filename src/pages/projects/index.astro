@@ -25,6 +25,22 @@ import ProfilePanel from "../../components/ProfilePanel.astro";
           </div>
         </article>
         <article class="project-card">
+          <h3>从单体到微服务电商 demo</h3>
+          <div class="meta">Spring Boot 3.2 / Spring Cloud Alibaba / Nacos / Seata / RabbitMQ</div>
+          <p class="summary">
+            一套极简电商微服务学习项目，用 用户/订单/库存 三个服务加一个网关，把单体拆开后冒出来的问题逐个攻克，从注册发现一路跑到可观测性，每一步都有能跑起来的检查点和亲手验证过的实验现象。
+          </p>
+          <ul class="detail-list">
+            <li>服务治理：Nacos 注册发现与配置中心、Spring Cloud Gateway 网关统一鉴权、Feign 与 Dubbo 两种通信方式对比。</li>
+            <li>稳定性：Sa-Token + Redis 分布式会话、Sentinel 限流与熔断降级、Seata AT 跨服务分布式事务。</li>
+            <li>异步与可观测：RabbitMQ 事件驱动配套幂等与死信队列、Prometheus / Grafana / Zipkin 指标与链路追踪。</li>
+            <li>工程沉淀：大量篇幅记录版本配套、Docker 镜像挂载、容器网络等真实环境踩坑与排查心法。</li>
+          </ul>
+          <div class="link-row compact">
+            <a class="button" href="https://github.com/Joyman0601/ms-learn" target="_blank" rel="noreferrer">查看源码</a>
+          </div>
+        </article>
+        <article class="project-card">
           <h3>个人技术博客</h3>
           <div class="meta">Astro / Markdown / Cloudflare Workers</div>
           <p class="summary">
