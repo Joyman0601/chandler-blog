@@ -24,7 +24,7 @@ export const site = {
   giscus: {
     repo: "Joyman0601/chandler-blog",
     repoId: "R_kgDOSo_EFg",
-    category: "",
-    categoryId: "",
+    category: "Announcements",
+    categoryId: "DIC_kwDOSo_EFs4C_AM8",
   },
 };
