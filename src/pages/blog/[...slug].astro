@@ -2,6 +2,7 @@
 import { getCollection, render } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ArticleSidebar from "../../components/ArticleSidebar.astro";
+import Comments from "../../components/Comments.astro";
 import {
   buildToc,
   readStats,
@@ -70,7 +71,9 @@ const jsonLd = {
     slot="head"
     set:html={JSON.stringify(jsonLd)}
   />
+  <div class="reading-progress" aria-hidden="true"><span id="reading-bar"></span></div>
   <div class="layout">
+    <div class="main-col">
     <article class="article" data-pagefind-body>
       <a class="back-link" href="/blog/">← 返回文章列表</a>
       <h1>{post.data.title}</h1>
@@ -105,6 +108,8 @@ const jsonLd = {
         </nav>
       )}
     </article>
+    <Comments />
+    </div>
     <ArticleSidebar
       toc={toc}
       seriesLabel={post.data.seriesLabel}
@@ -134,6 +139,45 @@ const jsonLd = {
           }
         });
         pre.appendChild(btn);
+      });
+    })();
+  </script>
+
+  <script is:inline>
+    // 阅读进度条
+    (() => {
+      const bar = document.getElementById("reading-bar");
+      const article = document.querySelector(".article");
+      if (!bar || !article) return;
+      const update = () => {
+        const total = article.offsetTop + article.offsetHeight - window.innerHeight;
+        const ratio = total > 0 ? window.scrollY / total : 0;
+        bar.style.width = Math.min(100, Math.max(0, ratio * 100)) + "%";
+      };
+      update();
+      window.addEventListener("scroll", update, { passive: true });
+      window.addEventListener("resize", update);
+    })();
+
+    // 标题锚点：hover 显示 #，点击复制章节深链
+    (() => {
+      const heads = document.querySelectorAll(".article h2[id], .article h3[id]");
+      heads.forEach((h) => {
+        const a = document.createElement("a");
+        a.className = "heading-anchor";
+        a.href = "#" + h.id;
+        a.setAttribute("aria-label", "复制本节链接");
+        a.textContent = "#";
+        a.addEventListener("click", (e) => {
+          e.preventDefault();
+          const url = location.origin + location.pathname + "#" + h.id;
+          history.replaceState(null, "", "#" + h.id);
+          navigator.clipboard?.writeText(url).then(() => {
+            a.classList.add("copied");
+            setTimeout(() => a.classList.remove("copied"), 1200);
+          });
+        });
+        h.appendChild(a);
       });
     })();
   </script>

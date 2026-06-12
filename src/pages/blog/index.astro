@@ -36,8 +36,17 @@ const seriesGroups = Array.from(seriesMap.entries())
     <section>
       <h1 class="page-title">文章</h1>
 
+      {(seriesGroups.length > 0 || standalonePosts.length > 0) && (
+        <nav class="jump-nav" aria-label="按系列跳转">
+          {standalonePosts.length > 0 && <a href="#standalone">单篇</a>}
+          {seriesGroups.map((group) => (
+            <a href={`#series-${group.key}`}>{group.label}</a>
+          ))}
+        </nav>
+      )}
+
       {standalonePosts.length > 0 && (
-        <div class="grid">
+        <div class="grid" id="standalone">
           {standalonePosts.map((post) => (
             <ArticleCard
               title={post.data.title}
@@ -51,7 +60,7 @@ const seriesGroups = Array.from(seriesMap.entries())
       )}
 
       {seriesGroups.map((group) => (
-        <div class="series-group">
+        <div class="series-group" id={`series-${group.key}`}>
           <div class="series-header">
             <h2>{group.label}</h2>
             <span class="series-count">{group.posts.length} 篇</span>

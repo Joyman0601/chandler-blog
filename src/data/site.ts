@@ -18,4 +18,13 @@ export const site = {
     { label: "GitHub", href: "https://github.com/Joyman0601" },
     { label: "B站", href: "https://b23.tv/AXk25Qc" },
   ],
+  // giscus 评论（基于 GitHub Discussions）。
+  // category / categoryId 需在仓库开启 Discussions 后到 giscus.app 获取并填入；
+  // 二者为空时评论区不渲染，不影响站点其它部分。
+  giscus: {
+    repo: "Joyman0601/chandler-blog",
+    repoId: "R_kgDOSo_EFg",
+    category: "",
+    categoryId: "",
+  },
 };
