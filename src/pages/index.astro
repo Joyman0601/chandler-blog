@@ -4,19 +4,26 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import ArticleCard from "../components/ArticleCard.astro";
 import ProfilePanel from "../components/ProfilePanel.astro";
 import { site } from "../data/site";
+import { siteStats } from "../utils/posts";
 
-const posts = (await getCollection("blog"))
+const allPosts = await getCollection("blog");
+const posts = [...allPosts]
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
   .slice(0, 3);
+const stats = siteStats(allPosts);
+const wordsLabel =
+  stats.words >= 10000
+    ? `${(stats.words / 10000).toFixed(1)} 万`
+    : `${stats.words}`;
 ---
 
 <BaseLayout>
   <section class="hero">
     <div class="hero-panel">
-      <p class="eyebrow">{site.name} / Java / Spring / AI</p>
+      <p class="eyebrow">{site.name} / Java 后端 / 大模型应用</p>
       <h1>{site.title}</h1>
       <p class="hero-copy">
-        {site.description}。这里会持续整理 Java、Spring、AI 大模型应用开发相关的笔记、项目复盘和工程实践。
+        {site.bio}持续整理 Java 后端、微服务和大模型应用里能跑起来的笔记与项目复盘。
       </p>
       <div class="tag-list">
         {site.focus.map((item) => <span class="tag">{item}</span>)}
@@ -25,6 +32,11 @@ const posts = (await getCollection("blog"))
         <a class="button primary" href="/blog/">阅读文章</a>
         <a class="button" href="/projects/">查看项目</a>
       </div>
+      <dl class="stat-row">
+        <div class="stat"><dt>文章</dt><dd>{stats.posts}</dd></div>
+        <div class="stat"><dt>累计字数</dt><dd>{wordsLabel}</dd></div>
+        <div class="stat"><dt>持续记录</dt><dd>{stats.days} 天</dd></div>
+      </dl>
     </div>
     <ProfilePanel />
   </section>
@@ -55,31 +67,22 @@ const posts = (await getCollection("blog"))
       <a href="/projects/">更多项目</a>
     </div>
     <div class="grid two">
-      <article class="project-card">
-        <h3>企业知识库 RAG + Agent 助手</h3>
-        <div class="meta">Java 17 / Spring Boot 3.3 / RAG / Tool Calling</div>
-        <p class="summary">
-          一个大模型应用后端学习项目，覆盖文档上传、chunk 切分、embedding、向量检索、sources 引用、工具调用和 Agent 安全治理。
-        </p>
-        <div class="link-row compact">
-          <a class="button" href="https://github.com/Joyman0601/RAG" target="_blank" rel="noreferrer">查看源码</a>
-        </div>
-      </article>
-      <article class="project-card">
-        <h3>从单体到微服务电商 demo</h3>
-        <div class="meta">Spring Cloud Alibaba / Nacos / Seata / RabbitMQ</div>
-        <p class="summary">
-          一套极简电商微服务学习项目，用 用户/订单/库存 三个服务，把注册发现、网关、通信、会话、限流熔断、分布式事务、消息和可观测性完整跑了一遍。
-        </p>
-        <div class="link-row compact">
-          <a class="button" href="https://github.com/Joyman0601/ms-learn" target="_blank" rel="noreferrer">查看源码</a>
-        </div>
-      </article>
-      <article class="project-card">
-        <h3>个人技术博客</h3>
-        <div class="meta">Astro / Markdown / Cloudflare Workers</div>
-        <p class="summary">用于持续记录技术文章、项目复盘和长期学习路线，已绑定 chandlerblog.com。</p>
-      </article>
+      {
+        site.projects
+          .filter((p) => p.featured)
+          .map((project) => (
+            <article class="project-card">
+              <h3>{project.title}</h3>
+              <div class="meta">{project.meta}</div>
+              <p class="summary">{project.summary}</p>
+              {project.href && (
+                <div class="link-row compact">
+                  <a class="button" href={project.href} target="_blank" rel="noreferrer">查看源码</a>
+                </div>
+              )}
+            </article>
+          ))
+      }
     </div>
   </section>
 </BaseLayout>

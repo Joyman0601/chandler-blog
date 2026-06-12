@@ -3,9 +3,14 @@ import { site } from "../data/site";
 ---
 
 <aside class="side-panel">
-  <h2>{site.name}</h2>
+  <div class="profile-head">
+    <img class="profile-avatar" src={site.avatar} alt={site.name} width="64" height="64" loading="lazy" decoding="async" />
+    <div class="profile-id">
+      <h2>{site.name}</h2>
+      <span class="profile-realname">{site.tagline}</span>
+    </div>
+  </div>
   <ul class="profile-list">
-    <li>{site.description}</li>
     <li>方向：{site.focus.join(" / ")}</li>
     <li>
       链接：

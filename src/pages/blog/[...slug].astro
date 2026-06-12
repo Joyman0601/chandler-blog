@@ -122,6 +122,20 @@ const jsonLd = {
     (() => {
       const blocks = document.querySelectorAll(".article pre");
       blocks.forEach((pre) => {
+        // 包一层容器，顶部加语言名 + 复制按钮
+        const wrap = document.createElement("div");
+        wrap.className = "code-block";
+        pre.parentNode.insertBefore(wrap, pre);
+
+        const head = document.createElement("div");
+        head.className = "code-head";
+
+        const lang = (pre.dataset.language || "").toLowerCase();
+        const label = document.createElement("span");
+        label.className = "code-lang";
+        label.textContent = lang && lang !== "plaintext" && lang !== "text" ? lang : "code";
+        head.appendChild(label);
+
         const btn = document.createElement("button");
         btn.className = "copy-btn";
         btn.type = "button";
@@ -138,7 +152,10 @@ const jsonLd = {
             setTimeout(() => (btn.textContent = "复制"), 1500);
           }
         });
-        pre.appendChild(btn);
+        head.appendChild(btn);
+
+        wrap.appendChild(head);
+        wrap.appendChild(pre);
       });
     })();
   </script>

@@ -34,6 +34,23 @@ export function readStats(markdown: string): ReadStats {
   return { minutes, words };
 }
 
+export interface SiteStats {
+  posts: number;
+  words: number;
+  days: number;
+}
+
+// 站点累计统计：文章数、总字数、自第一篇起的记录天数
+export function siteStats(posts: BlogPost[]): SiteStats {
+  const words = posts.reduce((sum, p) => sum + readStats(p.body ?? "").words, 0);
+  const earliest = posts.reduce(
+    (min, p) => Math.min(min, p.data.pubDate.valueOf()),
+    Date.now(),
+  );
+  const days = Math.max(1, Math.round((Date.now() - earliest) / 86400000));
+  return { posts: posts.length, words, days };
+}
+
 export interface TocEntry {
   depth: number;
   slug: string;

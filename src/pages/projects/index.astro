@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProfilePanel from "../../components/ProfilePanel.astro";
+import { site } from "../../data/site";
 ---
 
 <BaseLayout title="项目" description="Chandler 的项目实践，记录个人技术博客、AI 知识库应用和后端工程化探索。">
@@ -8,60 +9,25 @@ import ProfilePanel from "../../components/ProfilePanel.astro";
     <section>
       <h1 class="page-title">项目</h1>
       <div class="grid">
-        <article class="project-card">
-          <h3>企业知识库 RAG + Agent 助手</h3>
-          <div class="meta">Java 17 / Spring Boot 3.3 / LLM / RAG / Tool Calling</div>
-          <p class="summary">
-            基于 Spring Boot 实现的大模型应用后端项目，目标是把企业文档入库、向量检索、LLM 问答、工具调用、权限校验和生产治理串成一套可演示、可扩展的 Agent 后端框架。
-          </p>
-          <ul class="detail-list">
-            <li>文档链路：支持 txt / markdown 上传、chunk 切分、embedding、文档更新删除和 version/status 生命周期管理。</li>
-            <li>问答链路：问题向量化后按权限与状态过滤 chunk，基于相似度召回上下文，并由后端生成可信 sources。</li>
-            <li>Agent 链路：通过 ToolRegistry、ToolExecutionService 和受控 Agent Loop 管理工具调用、参数校验、高风险确认与审计日志。</li>
-            <li>工程治理：包含 debug 检索、评估接口、成本耗时统计、错误码、安全自检和自动化测试。</li>
-          </ul>
-          <div class="link-row compact">
-            <a class="button" href="https://github.com/Joyman0601/RAG" target="_blank" rel="noreferrer">查看源码</a>
-          </div>
-        </article>
-        <article class="project-card">
-          <h3>从单体到微服务电商 demo</h3>
-          <div class="meta">Spring Boot 3.2 / Spring Cloud Alibaba / Nacos / Seata / RabbitMQ</div>
-          <p class="summary">
-            一套极简电商微服务学习项目，用 用户/订单/库存 三个服务加一个网关，把单体拆开后冒出来的问题逐个攻克，从注册发现一路跑到可观测性，每一步都有能跑起来的检查点和亲手验证过的实验现象。
-          </p>
-          <ul class="detail-list">
-            <li>服务治理：Nacos 注册发现与配置中心、Spring Cloud Gateway 网关统一鉴权、Feign 与 Dubbo 两种通信方式对比。</li>
-            <li>稳定性：Sa-Token + Redis 分布式会话、Sentinel 限流与熔断降级、Seata AT 跨服务分布式事务。</li>
-            <li>异步与可观测：RabbitMQ 事件驱动配套幂等与死信队列、Prometheus / Grafana / Zipkin 指标与链路追踪。</li>
-            <li>工程沉淀：大量篇幅记录版本配套、Docker 镜像挂载、容器网络等真实环境踩坑与排查心法。</li>
-          </ul>
-          <div class="link-row compact">
-            <a class="button" href="https://github.com/Joyman0601/ms-learn" target="_blank" rel="noreferrer">查看源码</a>
-          </div>
-        </article>
-        <article class="project-card">
-          <h3>个人技术博客</h3>
-          <div class="meta">Astro / Markdown / Cloudflare Workers</div>
-          <p class="summary">
-            当前正在维护的个人网站，用于发布技术文章、项目复盘和长期学习记录，已经绑定 chandlerblog.com。
-          </p>
-          <ul class="detail-list">
-            <li>使用 Astro 生成静态页面，文章通过 Markdown 管理。</li>
-            <li>通过 GitHub 和 Cloudflare 自动部署，支持自定义域名和基础 SEO。</li>
-          </ul>
-        </article>
-        <article class="project-card">
-          <h3>后端工程实践笔记</h3>
-          <div class="meta">Java / Spring / MyBatis / 部署</div>
-          <p class="summary">
-            计划持续整理后端开发中的常见问题，包括接口设计、数据访问、异常处理、日志、测试和部署排查。
-          </p>
-          <ul class="detail-list">
-            <li>把零散问题沉淀为可复用的排查清单和实现记录。</li>
-            <li>后续会从真实开发过程里逐步补充文章和示例。</li>
-          </ul>
-        </article>
+        {
+          site.projects.map((project) => (
+            <article class="project-card">
+              <h3>{project.title}</h3>
+              <div class="meta">{project.meta}</div>
+              <p class="summary">{project.summary}</p>
+              {project.details.length > 0 && (
+                <ul class="detail-list">
+                  {project.details.map((d) => <li>{d}</li>)}
+                </ul>
+              )}
+              {project.href && (
+                <div class="link-row compact">
+                  <a class="button" href={project.href} target="_blank" rel="noreferrer">查看源码</a>
+                </div>
+              )}
+            </article>
+          ))
+        }
       </div>
     </section>
     <ProfilePanel />

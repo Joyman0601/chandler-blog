@@ -22,7 +22,7 @@ const pageTitle = title === site.title ? site.title : `${title} | ${site.title}`
 const currentPath = Astro.url.pathname;
 const canonicalUrl = new URL(currentPath, site.url).toString();
 const metaDescription = description || site.seoDescription;
-const ogImage = new URL("/og.svg", site.url).toString();
+const ogImage = new URL("/og.png", site.url).toString();
 ---
 
 <!doctype html>
@@ -71,8 +71,11 @@ const ogImage = new URL("/og.svg", site.url).toString();
     <header class="site-header">
       <div class="shell header-inner">
         <a class="brand" href="/" aria-label={site.title}>
-          <span class="brand-name">{site.title}</span>
-          <span class="brand-line">{site.description}</span>
+          <img class="brand-avatar" src={site.avatar} alt="" width="40" height="40" decoding="async" />
+          <span class="brand-text">
+            <span class="brand-name">{site.title}</span>
+            <span class="brand-line">{site.description}</span>
+          </span>
         </a>
         <div class="header-actions">
           <nav class="nav" aria-label="主导航">
@@ -112,6 +115,21 @@ const ogImage = new URL("/og.svg", site.url).toString();
         <a href="/rss.xml">RSS</a>
       </div>
     </footer>
+    <button class="to-top" type="button" id="to-top" aria-label="回到顶部" hidden>↑</button>
+    <script is:inline>
+      (() => {
+        const btn = document.getElementById("to-top");
+        if (!btn) return;
+        const toggle = () => {
+          btn.hidden = window.scrollY < 600;
+        };
+        toggle();
+        window.addEventListener("scroll", toggle, { passive: true });
+        btn.addEventListener("click", () => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      })();
+    </script>
     <script is:inline>
       (() => {
         const btn = document.getElementById("theme-toggle");

@@ -7,35 +7,32 @@ import { site } from "../../data/site";
 <BaseLayout title="关于" description="关于 Chandler，记录 Java、Spring 和 AI 大模型应用开发的长期学习与项目实践。">
   <div class="layout">
     <section class="content-card">
-      <h1 class="page-title">关于我</h1>
-      <p class="summary">
-        我是 {site.name}，目前主要关注 Java、Spring 和 AI 大模型应用开发。这个博客会持续记录技术学习、项目实践、问题排查和阶段性复盘。
-      </p>
-      <p class="summary">
-        我希望这里不只是文章归档，而是一个长期维护的个人知识库：把踩过的坑、做过的项目、理解过的概念整理成可以反复查阅的材料。
-      </p>
-      <div class="section">
-        <h2>关注方向</h2>
-        <div class="tag-list">
-          {site.focus.map((item) => <span class="tag">{item}</span>)}
+      <div class="about-head">
+        <img class="about-avatar" src={site.avatar} alt={site.name} width="96" height="96" decoding="async" />
+        <div>
+          <h1 class="page-title">关于我</h1>
+          <p class="about-tagline">{site.tagline}</p>
         </div>
       </div>
+
+      <p class="summary">
+        我是 Chandler——名字来自《老友记》里那个爱讲冷笑话的 Chandler Bing。平时主要写 Java 后端，也在往大模型应用方向折腾，喜欢把学到的东西记下来。
+      </p>
+      <p class="summary">
+        这个博客对我来说更像一个长期维护的笔记本：把踩过的坑、做过的项目、想明白的概念，整理成自己以后还能翻回来看的材料。比起写得多，我更在意写得真——尽量留下能跑起来的代码和真实的过程。
+      </p>
+
       <div class="section">
-        <h2>写作内容</h2>
+        <h2>这里写些什么</h2>
         <ul class="detail-list">
-          <li>Java、Spring Boot、数据库访问、接口设计和工程化实践。</li>
-          <li>AI 大模型应用开发中的 Prompt、RAG、工具调用和效果评估。</li>
-          <li>个人项目的搭建过程、部署记录、复盘总结和后续计划。</li>
+          <li>Java、Spring Boot、微服务相关的实践和踩坑记录。</li>
+          <li>AI 大模型应用开发：RAG、Agent、工具调用这类话题。</li>
+          <li>个人项目的搭建、复盘和一些零散的学习笔记。</li>
         </ul>
       </div>
+
       <div class="section">
-        <h2>更新计划</h2>
-        <p class="summary">
-          先从小而稳定的内容开始：每次解决一个问题、完成一个功能、读懂一个概念，就整理成一篇短记录。长期目标是形成一套围绕后端开发和 AI 应用落地的实践笔记。
-        </p>
-      </div>
-      <div class="section">
-        <h2>账号链接</h2>
+        <h2>找到我</h2>
         <div class="link-row">
           {site.links.map((link) => <a class="button" href={link.href} target="_blank" rel="noreferrer">{link.label}</a>)}
         </div>
