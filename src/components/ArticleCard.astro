@@ -17,6 +17,13 @@ const formattedDate = new Intl.DateTimeFormat("zh-CN", {
 
 <article class="article-card">
   <h3><a href={href}>{title}</a></h3>
-  <div class="meta">{formattedDate} {tags.length ? ` / ${tags.join("、")}` : ""}</div>
+  <div class="meta">{formattedDate}</div>
   <p class="summary">{summary}</p>
+  {tags.length > 0 && (
+    <div class="card-tags">
+      {tags.map((tag) => (
+        <a class="tag tag-link" href={`/tags/${tag}/`}>{tag}</a>
+      ))}
+    </div>
+  )}
 </article>

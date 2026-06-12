@@ -5,13 +5,24 @@ import { site } from "../data/site";
 interface Props {
   title?: string;
   description?: string;
+  ogType?: "website" | "article";
+  publishedTime?: string;
+  modifiedTime?: string;
 }
 
-const { title = site.title, description = site.seoDescription } = Astro.props;
+const {
+  title = site.title,
+  description = site.seoDescription,
+  ogType = "website",
+  publishedTime,
+  modifiedTime,
+} = Astro.props;
+
 const pageTitle = title === site.title ? site.title : `${title} | ${site.title}`;
 const currentPath = Astro.url.pathname;
 const canonicalUrl = new URL(currentPath, site.url).toString();
 const metaDescription = description || site.seoDescription;
+const ogImage = new URL("/og.svg", site.url).toString();
 ---
 
 <!doctype html>
@@ -24,16 +35,36 @@ const metaDescription = description || site.seoDescription;
     <meta name="author" content={site.name} />
     <meta name="generator" content={Astro.generator} />
     <link rel="canonical" href={canonicalUrl} />
-    <meta property="og:type" content="website" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" type="application/rss+xml" title={site.title} href="/rss.xml" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={site.title} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={metaDescription} />
     <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImage} />
     <meta property="og:locale" content="zh_CN" />
-    <meta name="twitter:card" content="summary" />
+    {ogType === "article" && publishedTime && (
+      <meta property="article:published_time" content={publishedTime} />
+    )}
+    {ogType === "article" && modifiedTime && (
+      <meta property="article:modified_time" content={modifiedTime} />
+    )}
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={metaDescription} />
+    <meta name="twitter:image" content={ogImage} />
     <title>{pageTitle}</title>
+    <script is:inline>
+      (() => {
+        const stored = localStorage.getItem("theme");
+        const dark = stored
+          ? stored === "dark"
+          : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (dark) document.documentElement.setAttribute("data-theme", "dark");
+      })();
+    </script>
+    <slot name="head" />
   </head>
   <body>
     <header class="site-header">
@@ -42,28 +73,60 @@ const metaDescription = description || site.seoDescription;
           <span class="brand-name">{site.title}</span>
           <span class="brand-line">{site.description}</span>
         </a>
-        <nav class="nav" aria-label="主导航">
-          {
-            site.nav.map((item) => {
-              const isHome = item.href === "/";
-              const isCurrent = isHome
-                ? currentPath === item.href
-                : currentPath.startsWith(item.href);
-              return (
-                <a href={item.href} aria-current={isCurrent ? "page" : undefined}>
-                  {item.label}
-                </a>
-              );
-            })
-          }
-        </nav>
+        <div class="header-actions">
+          <nav class="nav" aria-label="主导航">
+            {
+              site.nav.map((item) => {
+                const isHome = item.href === "/";
+                const isCurrent = isHome
+                  ? currentPath === item.href
+                  : currentPath.startsWith(item.href);
+                return (
+                  <a href={item.href} aria-current={isCurrent ? "page" : undefined}>
+                    {item.label}
+                  </a>
+                );
+              })
+            }
+          </nav>
+          <a class="icon-button" href="/search/" aria-label="搜索">搜索</a>
+          <button
+            class="icon-button"
+            type="button"
+            id="theme-toggle"
+            aria-label="切换深浅色"
+          >
+            <span class="theme-dark-label">浅色</span>
+            <span class="theme-light-label">深色</span>
+          </button>
+        </div>
       </div>
     </header>
     <main class="shell main">
       <slot />
     </main>
     <footer class="site-footer">
-      <div class="shell">© {new Date().getFullYear()} {site.name}. Built with Astro.</div>
+      <div class="shell footer-inner">
+        <span>© {new Date().getFullYear()} {site.name}. Built with Astro.</span>
+        <a href="/rss.xml">RSS</a>
+      </div>
     </footer>
+    <script is:inline>
+      (() => {
+        const btn = document.getElementById("theme-toggle");
+        if (!btn) return;
+        btn.addEventListener("click", () => {
+          const isDark =
+            document.documentElement.getAttribute("data-theme") === "dark";
+          if (isDark) {
+            document.documentElement.removeAttribute("data-theme");
+            localStorage.setItem("theme", "light");
+          } else {
+            document.documentElement.setAttribute("data-theme", "dark");
+            localStorage.setItem("theme", "dark");
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

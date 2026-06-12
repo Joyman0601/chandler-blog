@@ -1,0 +1,30 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProfilePanel from "../../components/ProfilePanel.astro";
+
+const posts = await getCollection("blog");
+const counts = new Map<string, number>();
+for (const post of posts) {
+  for (const tag of post.data.tags) {
+    counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+}
+const tags = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+---
+
+<BaseLayout title="标签" description="按标签浏览 Chandler 博客的所有文章">
+  <div class="layout">
+    <section class="content-card">
+      <h1 class="page-title">标签</h1>
+      <div class="tag-cloud">
+        {tags.map(([tag, count]) => (
+          <a class="tag tag-link" href={`/tags/${tag}/`}>
+            {tag} <span class="tag-count">{count}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+    <ProfilePanel />
+  </div>
+</BaseLayout>

@@ -10,6 +10,7 @@ export const site = {
   nav: [
     { href: "/", label: "首页" },
     { href: "/blog/", label: "文章" },
+    { href: "/tags/", label: "标签" },
     { href: "/projects/", label: "项目" },
     { href: "/about/", label: "关于" },
   ],

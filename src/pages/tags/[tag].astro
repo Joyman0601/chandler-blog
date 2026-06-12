@@ -1,0 +1,45 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ArticleCard from "../../components/ArticleCard.astro";
+import ProfilePanel from "../../components/ProfilePanel.astro";
+import { sortByDateDesc } from "../../utils/posts";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  const tagMap = new Map<string, typeof posts>();
+  for (const post of posts) {
+    for (const tag of post.data.tags) {
+      if (!tagMap.has(tag)) tagMap.set(tag, []);
+      tagMap.get(tag)!.push(post);
+    }
+  }
+  return Array.from(tagMap.entries()).map(([tag, tagPosts]) => ({
+    params: { tag },
+    props: { tag, posts: sortByDateDesc(tagPosts) },
+  }));
+}
+
+const { tag, posts } = Astro.props;
+---
+
+<BaseLayout title={`标签：${tag}`} description={`所有「${tag}」相关的文章`}>
+  <div class="layout">
+    <section>
+      <div class="crumbs"><a href="/tags/">标签</a> / {tag}</div>
+      <h1 class="page-title">标签：{tag} <span class="series-count">{posts.length} 篇</span></h1>
+      <div class="grid">
+        {posts.map((post) => (
+          <ArticleCard
+            title={post.data.title}
+            href={`/blog/${post.id}/`}
+            date={post.data.pubDate}
+            summary={post.data.description}
+            tags={post.data.tags}
+          />
+        ))}
+      </div>
+    </section>
+    <ProfilePanel />
+  </div>
+</BaseLayout>

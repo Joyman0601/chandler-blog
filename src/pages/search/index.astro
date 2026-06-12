@@ -1,0 +1,34 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="搜索" description="搜索 Chandler 博客的全部文章">
+  <section class="content-card search-card">
+    <h1 class="page-title">搜索</h1>
+    <p class="summary">输入关键词，全文检索站内所有文章。</p>
+    <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+    <div id="search"></div>
+    <noscript><p class="summary">搜索功能需要启用 JavaScript。</p></noscript>
+  </section>
+  <script is:inline src="/pagefind/pagefind-ui.js"></script>
+  <script is:inline>
+    window.addEventListener("DOMContentLoaded", () => {
+      if (window.PagefindUI) {
+        new window.PagefindUI({
+          element: "#search",
+          showSubResults: true,
+          showImages: false,
+          translations: {
+            placeholder: "搜索文章…",
+            zero_results: "没有找到与「[SEARCH_TERM]」相关的结果",
+            clear_search: "清除",
+            load_more: "加载更多结果",
+            search_label: "搜索",
+            filters_label: "筛选",
+            results_count: "[COUNT] 条结果",
+          },
+        });
+      }
+    });
+  </script>
+</BaseLayout>

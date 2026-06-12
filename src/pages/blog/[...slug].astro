@@ -1,32 +1,140 @@
 ---
 import { getCollection, render } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import ProfilePanel from "../../components/ProfilePanel.astro";
+import ArticleSidebar from "../../components/ArticleSidebar.astro";
+import {
+  buildToc,
+  readStats,
+  seriesPostsSorted,
+} from "../../utils/posts";
+import { site } from "../../data/site";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
   return posts.map((post) => ({
     params: { slug: post.id },
-    props: { post },
+    props: { post, posts },
   }));
 }
 
-const { post } = Astro.props;
-const { Content } = await render(post);
-const formattedDate = new Intl.DateTimeFormat("zh-CN", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-}).format(post.data.pubDate);
+const { post, posts } = Astro.props;
+const { Content, headings } = await render(post);
+
+const toc = buildToc(headings);
+const { minutes } = readStats(post.body ?? "");
+
+const seriesPosts = post.data.series
+  ? seriesPostsSorted(posts, post.data.series)
+  : [];
+const idx = seriesPosts.findIndex((p) => p.id === post.id);
+const prev = idx > 0 ? seriesPosts[idx - 1] : undefined;
+const next = idx >= 0 && idx < seriesPosts.length - 1 ? seriesPosts[idx + 1] : undefined;
+
+const fmt = (d: Date) =>
+  new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+
+const formattedDate = fmt(post.data.pubDate);
+const formattedUpdated = post.data.updatedDate ? fmt(post.data.updatedDate) : null;
+const canonicalUrl = new URL(`/blog/${post.id}/`, site.url).toString();
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.pubDate.toISOString(),
+  ...(post.data.updatedDate
+    ? { dateModified: post.data.updatedDate.toISOString() }
+    : {}),
+  author: { "@type": "Person", name: site.name },
+  publisher: { "@type": "Person", name: site.name },
+  mainEntityOfPage: canonicalUrl,
+  keywords: post.data.tags.join(", "),
+  url: canonicalUrl,
+};
 ---
 
-<BaseLayout title={post.data.title} description={post.data.description}>
+<BaseLayout
+  title={post.data.title}
+  description={post.data.description}
+  ogType="article"
+  publishedTime={post.data.pubDate.toISOString()}
+  modifiedTime={post.data.updatedDate?.toISOString()}
+>
+  <script
+    type="application/ld+json"
+    slot="head"
+    set:html={JSON.stringify(jsonLd)}
+  />
   <div class="layout">
-    <article class="article">
+    <article class="article" data-pagefind-body>
+      <a class="back-link" href="/blog/">← 返回文章列表</a>
       <h1>{post.data.title}</h1>
-      <div class="meta">{formattedDate} / {post.data.tags.join("、")}</div>
+      <div class="meta article-meta">
+        <span>{formattedDate}</span>
+        {formattedUpdated && <span>更新于 {formattedUpdated}</span>}
+        <span>约 {minutes} 分钟</span>
+      </div>
+      {post.data.tags.length > 0 && (
+        <div class="card-tags" data-pagefind-ignore>
+          {post.data.tags.map((tag) => (
+            <a class="tag tag-link" href={`/tags/${tag}/`}>{tag}</a>
+          ))}
+        </div>
+      )}
       <Content />
+
+      {(prev || next) && (
+        <nav class="post-nav" aria-label="系列文章导航" data-pagefind-ignore>
+          {prev ? (
+            <a class="post-nav-link prev" href={`/blog/${prev.id}/`}>
+              <span class="post-nav-dir">← 上一篇</span>
+              <span class="post-nav-title">{prev.data.title}</span>
+            </a>
+          ) : <span class="post-nav-spacer" />}
+          {next ? (
+            <a class="post-nav-link next" href={`/blog/${next.id}/`}>
+              <span class="post-nav-dir">下一篇 →</span>
+              <span class="post-nav-title">{next.data.title}</span>
+            </a>
+          ) : <span class="post-nav-spacer" />}
+        </nav>
+      )}
     </article>
-    <ProfilePanel />
+    <ArticleSidebar
+      toc={toc}
+      seriesLabel={post.data.seriesLabel}
+      seriesPosts={seriesPosts}
+      currentId={post.id}
+    />
   </div>
+
+  <script is:inline>
+    (() => {
+      const blocks = document.querySelectorAll(".article pre");
+      blocks.forEach((pre) => {
+        const btn = document.createElement("button");
+        btn.className = "copy-btn";
+        btn.type = "button";
+        btn.textContent = "复制";
+        btn.addEventListener("click", async () => {
+          const code = pre.querySelector("code");
+          const text = code ? code.innerText : pre.innerText;
+          try {
+            await navigator.clipboard.writeText(text);
+            btn.textContent = "已复制";
+            setTimeout(() => (btn.textContent = "复制"), 1500);
+          } catch {
+            btn.textContent = "复制失败";
+            setTimeout(() => (btn.textContent = "复制"), 1500);
+          }
+        });
+        pre.appendChild(btn);
+      });
+    })();
+  </script>
 </BaseLayout>
