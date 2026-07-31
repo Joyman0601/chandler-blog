@@ -1,7 +1,7 @@
 ---
 title: "演示环境的三层加固：Token 门 + LLM 配额 + Nginx 限流"
 description: "面试演示项目挂公网，最怕的就是被扫接口把 LLM 额度刷爆。给项目做了三层加固：DemoTokenFilter（前置鉴权，可选严格模式）+ LlmQuotaService（日切配额，只计 chat 不计 embed）+ Nginx limit_req_zone（IP 粒度限流）+ UploadEndpointGuard（关闭上传接口）。这篇讲每层挡什么、为什么这么切、以及一个改 env 后 restart 白改的小坑。"
-pubDate: 2026-08-12
+pubDate: 2026-07-30
 tags: ["Spring Boot", "安全", "限流", "Filter", "Nginx", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"

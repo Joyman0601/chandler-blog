@@ -1,7 +1,7 @@
 ---
 title: "录屏前的彩排：让我修完三个能毁掉演示的 bug"
 description: "录屏前对着脚本做了一次完整彩排，暴露了三处一到面试就会翻车的 bug——Langfuse trace 里 latency 和 cost 都是 0、Agent 处理年假问题稳定报 TOOL_EXECUTION_FAILED、以及 TOKEN_BUDGET_EXCEEDED。每一个单独看都是小问题，但连在一起足以毁掉整场演示。这篇按修复顺序复盘,顺便谈谈「哪些通路能加重试、哪些不能」。"
-pubDate: 2026-08-14
+pubDate: 2026-08-01
 tags: ["Agent", "LLM", "重试", "可观测性", "Langfuse", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"

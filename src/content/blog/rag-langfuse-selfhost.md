@@ -1,7 +1,7 @@
 ---
 title: "自建 Langfuse 反代到公网：六个非踩不可的坑"
 description: "给 RAG 项目自建 Langfuse 观测栈，独立 compose stack 通过 external network 复用主 stack 内网。踩了六个坑：NEXTAUTH_URL 精确匹配、Postgres 数据卷不能挂父目录、Next.js 反代必带 Upgrade 头、web 镜像必须 rebuild 才吃 nginx.conf、Langfuse UI trace input/output 独立于 generation、input 必须是 JSON message 数组。这篇原样复盘，希望能省别人几小时。"
-pubDate: 2026-08-13
+pubDate: 2026-07-31
 tags: ["Langfuse", "可观测性", "Docker Compose", "Nginx", "反向代理", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"

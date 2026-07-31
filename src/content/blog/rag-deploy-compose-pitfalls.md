@@ -1,7 +1,7 @@
 ---
 title: "把 RAG 项目部署上云的那天，我踩了六个坑"
 description: "本地跑得好好的 Spring Boot + pgvector + Vue3，第一次用 Docker Compose 上云那天基本上是每半小时一个坑。healthcheck 拖崩 app、上传接口两条数据链踩混、pgvector 维度硬编码、docker compose --env-file 必带……复盘一下这六个每一个都够我心态崩一次的坑。"
-pubDate: 2026-08-11
+pubDate: 2026-07-29
 tags: ["Docker", "Docker Compose", "pgvector", "PostgreSQL", "部署", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"
