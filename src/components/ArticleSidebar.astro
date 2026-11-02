@@ -60,32 +60,39 @@ const { toc, seriesLabel, seriesPosts = [], currentId } = Astro.props;
 {toc.length > 0 && (
   <script is:inline>
     (() => {
-      const links = Array.from(document.querySelectorAll("[data-toc-link]"));
-      if (!links.length) return;
-      const headings = links
-        .map((l) => document.getElementById(l.getAttribute("data-toc-link")))
-        .filter(Boolean);
-      let active = null;
-      const setActive = (id) => {
-        if (active === id) return;
-        active = id;
-        links.forEach((l) => {
-          const current = l.getAttribute("data-toc-link") === id;
-          l.toggleAttribute("data-active", current);
-          if (current) l.setAttribute("aria-current", "location");
-          else l.removeAttribute("aria-current");
-        });
+      const initToc = () => {
+        const links = Array.from(document.querySelectorAll("[data-toc-link]"));
+        if (!links.length) return;
+        const headings = links
+          .map((l) => document.getElementById(l.getAttribute("data-toc-link")))
+          .filter(Boolean);
+        let active = null;
+        const setActive = (id) => {
+          if (active === id) return;
+          active = id;
+          links.forEach((l) => {
+            const current = l.getAttribute("data-toc-link") === id;
+            l.toggleAttribute("data-active", current);
+            if (current) l.setAttribute("aria-current", "location");
+            else l.removeAttribute("aria-current");
+          });
+        };
+        const obs = new IntersectionObserver(
+          (entries) => {
+            const visible = entries
+              .filter((e) => e.isIntersecting)
+              .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+            if (visible[0]) setActive(visible[0].target.id);
+          },
+          { rootMargin: "-100px 0px -65% 0px", threshold: 0 },
+        );
+        headings.forEach((h) => obs.observe(h));
       };
-      const obs = new IntersectionObserver(
-        (entries) => {
-          const visible = entries
-            .filter((e) => e.isIntersecting)
-            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-          if (visible[0]) setActive(visible[0].target.id);
-        },
-        { rootMargin: "-100px 0px -65% 0px", threshold: 0 },
-      );
-      headings.forEach((h) => obs.observe(h));
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initToc, { once: true });
+      } else {
+        initToc();
+      }
     })();
   </script>
 )}
