@@ -111,6 +111,17 @@ const ogImage = new URL("/og.png", site.url).toString();
         </div>
       </div>
     </header>
+    <script is:inline>
+      (() => {
+        const header = document.querySelector(".site-header");
+        if (!header || !("ResizeObserver" in window)) return;
+        // Text resizing can make the masthead taller than its CSS minimum.
+        const observer = new ResizeObserver(() => {
+          document.documentElement.style.setProperty("--header-offset", `${header.getBoundingClientRect().height}px`);
+        });
+        observer.observe(header);
+      })();
+    </script>
     <main class="shell main" id="main-content" tabindex="-1">
       <slot />
     </main>

@@ -43,7 +43,7 @@ html {
   background: var(--bg);
   color: var(--text);
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--header-height) + 24px);
+  scroll-padding-top: calc(var(--header-offset, var(--header-height)) + 24px);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -231,7 +231,7 @@ main:focus { outline: none; }
 .heading-anchor { margin-left: 8px; font-size: .8em; color: var(--muted); opacity: 0; }
 .article h2:hover .heading-anchor, .article h3:hover .heading-anchor, .heading-anchor:focus { opacity: 1; }
 .heading-anchor.copied::after { content: " 已复制"; font-size: 12px; color: var(--accent); }
-.article-aside { position: sticky; top: calc(var(--header-height) + 32px); grid-column: 2; grid-row: 1; max-height: calc(100dvh - var(--header-height) - 56px); overflow-y: auto; scrollbar-width: thin; display: grid; gap: 24px; padding-right: 8px; }
+.article-aside { position: sticky; top: calc(var(--header-offset, var(--header-height)) + 32px); grid-column: 2; grid-row: 1; max-height: calc(100dvh - var(--header-offset, var(--header-height)) - 56px); overflow-y: auto; scrollbar-width: thin; display: grid; gap: 24px; padding-right: 8px; }
 .aside-block { border-top: 1px solid var(--border); padding-top: 18px; }
 .aside-block summary { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; line-height: 1.7; list-style: none; }
 .aside-block summary::-webkit-details-marker { display: none; }
@@ -254,7 +254,7 @@ main:focus { outline: none; }
 .post-nav-dir { color: var(--muted); font-size: 12px; }
 .post-nav-title { font-size: 14px; line-height: 1.8; font-weight: 600; }
 .post-nav-spacer { display: block; }
-.reading-progress { position: fixed; top: var(--header-height); left: 0; right: 0; z-index: 21; height: 2px; pointer-events: none; }
+.reading-progress { position: fixed; top: var(--header-offset, var(--header-height)); left: 0; right: 0; z-index: 21; height: 2px; pointer-events: none; }
 .reading-progress span { display: block; height: 100%; width: 0; background: var(--accent); }
 .comments { border-top: 1px solid var(--border); padding-top: 24px; }
 .comments-title { margin: 0 0 20px; font-size: 22px; font-weight: 600; }
