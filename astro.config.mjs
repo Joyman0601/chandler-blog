@@ -43,6 +43,11 @@ for (const file of collectMarkdown(BLOG_DIR)) {
 // https://astro.build/config
 export default defineConfig({
   site: 'https://chandlerblog.com',
+  markdown: {
+    shikiConfig: {
+      theme: 'github-dark-high-contrast',
+    },
+  },
   integrations: [
     sitemap({
       serialize(item) {
