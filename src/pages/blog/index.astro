@@ -34,7 +34,7 @@ const seriesGroups = Array.from(seriesMap.entries())
 <BaseLayout title="文章" description="Chandler 的技术文章与学习笔记">
   <div class="layout">
     <section>
-      <h1 class="page-title">文章</h1>
+      <header class="page-heading"><p class="section-kicker">THE NOTEBOOK</p><h1 class="page-title">文章与学习笔记<span class="title-count">{allPosts.length}</span></h1><p class="page-description">在真实的问题里学习，把走过的路写下来。</p></header>
 
       {(seriesGroups.length > 0 || standalonePosts.length > 0) && (
         <nav class="jump-nav" aria-label="按系列跳转">
@@ -46,7 +46,7 @@ const seriesGroups = Array.from(seriesMap.entries())
       )}
 
       {standalonePosts.length > 0 && (
-        <div class="grid" id="standalone">
+        <div class="article-list" id="standalone">
           {standalonePosts.map((post) => (
             <ArticleCard
               title={post.data.title}
@@ -65,7 +65,7 @@ const seriesGroups = Array.from(seriesMap.entries())
             <h2>{group.label}</h2>
             <span class="series-count">{group.posts.length} 篇</span>
           </div>
-          <div class="grid">
+          <div class="article-list">
             {group.posts.map((post) => (
               <ArticleCard
                 title={post.data.title}

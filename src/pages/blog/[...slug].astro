@@ -36,6 +36,7 @@ const fmt = (d: Date) =>
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    timeZone: "UTC",
   }).format(d);
 
 const formattedDate = fmt(post.data.pubDate);
@@ -72,13 +73,19 @@ const jsonLd = {
     set:html={JSON.stringify(jsonLd)}
   />
   <div class="reading-progress" aria-hidden="true"><span id="reading-bar"></span></div>
-  <div class="layout">
+  <div class="layout article-layout">
+    <ArticleSidebar
+      toc={toc}
+      seriesLabel={post.data.seriesLabel}
+      seriesPosts={seriesPosts}
+      currentId={post.id}
+    />
     <div class="main-col">
     <article class="article" data-pagefind-body>
       <a class="back-link" href="/blog/">← 返回文章列表</a>
       <h1>{post.data.title}</h1>
       <div class="meta article-meta">
-        <span>{formattedDate}</span>
+        <time datetime={post.data.pubDate.toISOString()}>{formattedDate}</time>
         {formattedUpdated && <span>更新于 {formattedUpdated}</span>}
         <span>约 {minutes} 分钟</span>
       </div>
@@ -110,12 +117,6 @@ const jsonLd = {
     </article>
     <Comments />
     </div>
-    <ArticleSidebar
-      toc={toc}
-      seriesLabel={post.data.seriesLabel}
-      seriesPosts={seriesPosts}
-      currentId={post.id}
-    />
   </div>
 
   <script is:inline>
@@ -131,6 +132,9 @@ const jsonLd = {
         head.className = "code-head";
 
         const lang = (pre.dataset.language || "").toLowerCase();
+        pre.tabIndex = 0;
+        pre.setAttribute("role", "region");
+        pre.setAttribute("aria-label", lang ? `${lang} 代码示例` : "代码示例");
         const label = document.createElement("span");
         label.className = "code-lang";
         label.textContent = lang && lang !== "plaintext" && lang !== "text" ? lang : "code";
@@ -140,6 +144,8 @@ const jsonLd = {
         btn.className = "copy-btn";
         btn.type = "button";
         btn.textContent = "复制";
+        btn.setAttribute("aria-label", "复制代码");
+        btn.setAttribute("aria-live", "polite");
         btn.addEventListener("click", async () => {
           const code = pre.querySelector("code");
           const text = code ? code.innerText : pre.innerText;
@@ -156,6 +162,10 @@ const jsonLd = {
 
         wrap.appendChild(head);
         wrap.appendChild(pre);
+      });
+      document.querySelectorAll(".article table").forEach((table) => {
+        table.tabIndex = 0;
+        table.setAttribute("aria-label", "数据表格，可左右滚动");
       });
     })();
   </script>
@@ -192,7 +202,7 @@ const jsonLd = {
           navigator.clipboard?.writeText(url).then(() => {
             a.classList.add("copied");
             setTimeout(() => a.classList.remove("copied"), 1200);
-          });
+          }).catch(() => {});
         });
         h.appendChild(a);
       });

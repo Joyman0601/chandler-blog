@@ -12,18 +12,21 @@ const formattedDate = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
+  timeZone: "UTC",
 }).format(date);
 ---
 
 <article class="article-card">
-  <h3><a href={href}>{title}</a></h3>
-  <div class="meta">{formattedDate}</div>
-  <p class="summary">{summary}</p>
-  {tags.length > 0 && (
-    <div class="card-tags">
-      {tags.map((tag) => (
-        <a class="tag tag-link" href={`/tags/${tag}/`}>{tag}</a>
-      ))}
-    </div>
-  )}
+  <time class="article-date" datetime={date.toISOString()}>{formattedDate}</time>
+  <div class="article-card-content">
+    <h3><a href={href}>{title}</a></h3>
+    <p class="summary">{summary}</p>
+    {tags.length > 0 && (
+      <div class="card-tags">
+        {tags.map((tag) => (
+          <a class="tag tag-link" href={`/tags/${tag}/`}>{tag}</a>
+        ))}
+      </div>
+    )}
+  </div>
 </article>

@@ -54,10 +54,12 @@ const ogImage = new URL("/og.png", site.url).toString();
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={metaDescription} />
     <meta name="twitter:image" content={ogImage} />
+    <meta name="theme-color" content="#f8faff" />
     <title>{pageTitle}</title>
     <script is:inline>
       (() => {
-        const stored = localStorage.getItem("theme");
+        let stored;
+        try { stored = localStorage.getItem("theme"); } catch {}
         const dark = stored
           ? stored === "dark"
           : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -71,10 +73,10 @@ const ogImage = new URL("/og.png", site.url).toString();
     <header class="site-header">
       <div class="shell header-inner">
         <a class="brand" href="/" aria-label={site.title}>
-          <img class="brand-avatar" src={site.avatar} alt="" width="40" height="40" decoding="async" />
+          <img class="brand-avatar" src={site.avatar} alt="" width="36" height="36" decoding="async" />
           <span class="brand-text">
-            <span class="brand-name">{site.title}</span>
-            <span class="brand-line">{site.description}</span>
+            <span class="brand-name"><span class="brand-latin">{site.name}</span><span class="brand-dot">.</span><span class="brand-suffix">的博客</span></span>
+            <span class="brand-line">边学边记，慢慢生长。</span>
           </span>
         </a>
         <div class="header-actions">
@@ -93,26 +95,28 @@ const ogImage = new URL("/og.png", site.url).toString();
               })
             }
           </nav>
-          <a class="icon-button" href="/search/" aria-label="搜索">搜索</a>
+          <a class="icon-button search-button" href="/search/" aria-label="搜索文章" aria-current={currentPath.startsWith("/search/") ? "page" : undefined}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
+          </a>
           <button
             class="icon-button"
             type="button"
             id="theme-toggle"
             aria-label="切换深浅色"
           >
-            <span class="theme-dark-label">浅色</span>
-            <span class="theme-light-label">深色</span>
+            <svg class="theme-dark-label" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></svg>
+            <svg class="theme-light-label" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 14A8.5 8.5 0 0 1 10 4a8.5 8.5 0 1 0 10 10Z" /></svg>
           </button>
         </div>
       </div>
     </header>
-    <main class="shell main" id="main-content">
+    <main class="shell main" id="main-content" tabindex="-1">
       <slot />
     </main>
     <footer class="site-footer">
       <div class="shell footer-inner">
-        <span>© {new Date().getFullYear()} {site.name}. Built with Astro.</span>
-        <a href="/rss.xml">RSS</a>
+        <div><a class="footer-name" href="/">{site.name}<span>.</span></a><p>写下过程，也留下成长。</p></div>
+        <div class="footer-meta"><span>© {new Date().getFullYear()} {site.name} · Built with Astro</span><a href="/rss.xml">RSS 订阅 ↗</a></div>
       </div>
     </footer>
     <button class="to-top" type="button" id="to-top" aria-label="回到顶部" hidden>↑</button>
@@ -126,7 +130,8 @@ const ogImage = new URL("/og.png", site.url).toString();
         toggle();
         window.addEventListener("scroll", toggle, { passive: true });
         btn.addEventListener("click", () => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
+          const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          window.scrollTo({ top: 0, behavior: !reduced && window.scrollY < window.innerHeight ? "smooth" : "instant" });
         });
       })();
     </script>
@@ -134,18 +139,44 @@ const ogImage = new URL("/og.png", site.url).toString();
       (() => {
         const btn = document.getElementById("theme-toggle");
         if (!btn) return;
+        const syncLabel = () => {
+          const dark = document.documentElement.getAttribute("data-theme") === "dark";
+          btn.setAttribute("aria-label", dark ? "切换到浅色模式" : "切换到深色模式");
+          btn.setAttribute("aria-pressed", String(dark));
+        };
+        syncLabel();
         btn.addEventListener("click", () => {
           const isDark =
             document.documentElement.getAttribute("data-theme") === "dark";
           if (isDark) {
             document.documentElement.removeAttribute("data-theme");
-            localStorage.setItem("theme", "light");
+            try { localStorage.setItem("theme", "light"); } catch {}
           } else {
             document.documentElement.setAttribute("data-theme", "dark");
-            localStorage.setItem("theme", "dark");
+            try { localStorage.setItem("theme", "dark"); } catch {}
           }
+          syncLabel();
         });
       })();
+    </script>
+    <script is:inline>
+      // 长页远跳直接定位，避免把整篇文章卷过屏幕。
+      document.addEventListener("click", (event) => {
+        const link = event.target.closest?.('a[href^="#"]');
+        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        let target;
+        try { target = document.getElementById(decodeURIComponent(link.hash.slice(1))); } catch { return; }
+        if (!target) return;
+        if (Math.abs(target.getBoundingClientRect().top) > window.innerHeight) {
+          event.preventDefault();
+          history.pushState(null, "", link.hash);
+          target.scrollIntoView({ behavior: "instant", block: "start" });
+          if (target.matches('main, h1, h2, h3')) {
+            if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+            target.focus({ preventScroll: true });
+          }
+        }
+      });
     </script>
   </body>
 </html>
