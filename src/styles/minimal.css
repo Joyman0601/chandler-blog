@@ -175,6 +175,7 @@ html {
   letter-spacing: .025em;
 }
 .hero h1 { letter-spacing: .065em; line-height: 1.25; }
+.article h2, .article h3 { text-wrap: balance; }
 .hero-copy,
 .featured-note p,
 .summary,
