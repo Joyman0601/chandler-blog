@@ -48,15 +48,22 @@ if (cursor) {
     active = true;
     tx = x; ty = y;
     const control = target.closest<HTMLElement>(interactive);
-    // Use the hovered line of an inline link. Large article links keep a small
-    // ring, so a title cannot pull the pointer halfway across the reading column.
+    // Fitted outlines belong to compact controls. Text links retain a small
+    // circle and a local pull, independent of the size of their click area.
     const rects = control ? Array.from(control.getClientRects()) : [];
     const bounds = rects.find(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
-    const magnet = bounds && bounds.width <= 320 && bounds.height <= 80;
-    cursor!.toggleAttribute("data-magnet", Boolean(magnet));
-    cursor!.style.setProperty("--cursor-width", `${magnet ? bounds.width + 12 : control ? 28 : 20}px`);
-    cursor!.style.setProperty("--cursor-height", `${magnet ? bounds.height + 10 : control ? 28 : 20}px`);
-    if (magnet) { tx = bounds.left + bounds.width / 2; ty = bounds.top + bounds.height / 2; }
+    const outline = bounds && control?.matches("button, .button, .icon-button, [role='button']")
+      && bounds.width <= 72 && bounds.height <= 48;
+    cursor!.toggleAttribute("data-magnet", Boolean(outline));
+    cursor!.style.setProperty("--cursor-width", `${outline ? bounds.width + 12 : control ? 28 : 20}px`);
+    cursor!.style.setProperty("--cursor-height", `${outline ? bounds.height + 10 : control ? 28 : 20}px`);
+    if (bounds) {
+      const dx = bounds.left + bounds.width / 2 - x;
+      const dy = bounds.top + bounds.height / 2 - y;
+      const pull = outline ? 1 : Math.min(1, 8 / Math.max(Math.hypot(dx, dy), 1));
+      tx = x + dx * pull;
+      ty = y + dy * pull;
+    }
     if (entering || reduced.matches) { rx = tx; ry = ty; }
     render();
     root.classList.add("has-magnetic-cursor");
