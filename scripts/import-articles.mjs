@@ -105,7 +105,7 @@ function rewriteLinks(body, article, sourceRoot, published, stats) {
     stats.links++;
     return prefix + (angled ? `<${destination}>` : destination);
   });
-  const rewriteInline = (line) => {
+  const rewriteInline = (line, tableRow) => {
     let position = 0;
     let result = "";
     const runs = /`+/g;
@@ -114,21 +114,38 @@ function rewriteLinks(body, article, sourceRoot, published, stats) {
       let closing;
       while ((closing = runs.exec(line)) && closing[0].length !== opening[0].length) {}
       if (!closing) break;
-      result += rewriteProse(line.slice(position, opening.index)) + line.slice(opening.index, runs.lastIndex);
+      let code = line.slice(opening.index, runs.lastIndex);
+      // GFM splits table cells at pipes even inside code spans. Escape only
+      // these delimiters; the rendered code still reads exactly like the source.
+      if (tableRow) code = code.replace(/(\\*)\|/g, (whole, slashes) => {
+        if (slashes.length % 2) return whole;
+        stats.tableCodePipes++;
+        return `${slashes}\\|`;
+      });
+      result += rewriteProse(line.slice(position, opening.index)) + code;
       position = runs.lastIndex;
       if (position <= afterOpening) throw new Error("Invalid inline-code span");
     }
     return result + rewriteProse(line.slice(position));
   };
-  let fence;
-  return body.split(/(?<=\n)/).map((line) => {
+  let fence, table = false;
+  const lines = body.split(/(?<=\n)/);
+  const tableDivider = (line) => {
+    const cells = line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|");
+    return cells.length > 0 && cells.every((cell) => /^\s*:?-+:?\s*$/.test(cell));
+  };
+  return lines.map((line, index) => {
     const delimiter = line.match(/^ {0,3}(`{3,}|~{3,})([^\r\n]*)/);
     if (delimiter) {
+      table = false;
       if (!fence) fence = delimiter[1];
       else if (delimiter[1][0] === fence[0] && delimiter[1].length >= fence.length && !delimiter[2].trim()) fence = undefined;
       return line;
     }
-    return fence ? line : rewriteInline(line);
+    if (fence) return line;
+    if (!line.trim() || !line.includes("|")) table = false;
+    if (line.includes("|") && tableDivider(lines[index + 1] ?? "")) table = true;
+    return rewriteInline(line, table);
   }).join("");
 }
 
@@ -151,7 +168,7 @@ async function main() {
   articles.sort((a, b) => a.data.date.localeCompare(b.data.date) || a.relative.localeCompare(b.relative, "en"));
   const dates = publicationDates(articles.length);
   const published = new Set(articles.map((article) => article.absolute));
-  const stats = { mode: check ? "check" : "write", articles: articles.length, drafts: drafts.length, links: 0, created: 0, updated: 0, unchanged: 0, schedule: publicationWindow, dates: {} };
+  const stats = { mode: check ? "check" : "write", articles: articles.length, drafts: drafts.length, links: 0, tableCodePipes: 0, created: 0, updated: 0, unchanged: 0, schedule: publicationWindow, dates: {} };
   const plans = [];
   for (const [index, article] of articles.entries()) {
     const { data, relative } = article;

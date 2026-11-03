@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 4f4f05e088c0fc1c96403920c84b0eb53ab98877623c8feebf8b56c46158f703
+# import-articles-sha256: d8eba491d2e61c09721c08f4d02689ce68593d042901952a4c46f849e33a7c46
 # Imported by scripts/import-articles.mjs from posts/tooling/zsh-expansion-gotchas.md
 # Source date: 2026-10-09
 title: "zsh 和 bash 3.2 的七个展开坑：写法定死才不复发"
@@ -248,7 +248,7 @@ tool raw '{"name": "x", ...}'
 | 变量名 | 不用 `path`、`fpath`、`cdpath`、`manpath`、`status` |
 | 空格分隔的列表传给命令 | `${=VAR}` 或数组 |
 | 「命令加参数」的简写 | 函数，不用字符串变量 |
-| `grep -E` 的可选组 | `(a)?`，不写 `(a|)`；区分退出码 1 和 2 |
+| `grep -E` 的可选组 | `(a)?`，不写 `(a\|)`；区分退出码 1 和 2 |
 | 计数得 0 | 先看 stderr 有没有报错 |
 | 给别人粘贴的命令 | 一行一条、不带行内注释和尖括号，逐条跑过 |
 
