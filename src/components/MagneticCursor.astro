@@ -15,8 +15,8 @@
     pointer-events: none;
     opacity: 0;
     mix-blend-mode: difference;
-    --cursor-width: 38px;
-    --cursor-height: 38px;
+    --cursor-width: 20px;
+    --cursor-height: 20px;
     --ring-scale: 1;
   }
   .magnetic-cursor-dot, .magnetic-cursor-ring {
@@ -27,8 +27,8 @@
     will-change: transform;
   }
   .magnetic-cursor-dot {
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
     background: #fff;
     transform: translate3d(var(--cursor-x, -100px), var(--cursor-y, -100px), 0) translate(-50%, -50%);
   }
@@ -39,7 +39,6 @@
     transform: translate3d(var(--ring-x, -100px), var(--ring-y, -100px), 0) translate(-50%, -50%) scale(var(--ring-scale));
     transition: width 180ms, height 180ms, border-radius 180ms;
   }
-  .magnetic-cursor[data-magnet] .magnetic-cursor-ring { border-radius: 22px; }
   .magnetic-cursor[data-pressed] { --ring-scale: .82; }
   @media (hover: hover) and (pointer: fine) {
     html.has-magnetic-cursor, html.has-magnetic-cursor * { cursor: none !important; }

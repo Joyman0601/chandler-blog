@@ -54,8 +54,8 @@ if (cursor) {
     const bounds = rects.find(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
     const magnet = bounds && bounds.width <= 320 && bounds.height <= 80;
     cursor!.toggleAttribute("data-magnet", Boolean(magnet));
-    cursor!.style.setProperty("--cursor-width", `${magnet ? bounds.width + 12 : 38}px`);
-    cursor!.style.setProperty("--cursor-height", `${magnet ? bounds.height + 10 : 38}px`);
+    cursor!.style.setProperty("--cursor-width", `${control ? 28 : 20}px`);
+    cursor!.style.setProperty("--cursor-height", `${control ? 28 : 20}px`);
     if (magnet) { tx = bounds.left + bounds.width / 2; ty = bounds.top + bounds.height / 2; }
     if (entering || reduced.matches) { rx = tx; ry = ty; }
     render();
