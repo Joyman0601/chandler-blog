@@ -39,7 +39,8 @@ const ogImage = new URL("/og.png", site.url).toString();
     <meta name="author" content={site.name} />
     <meta name="generator" content={Astro.generator} />
     <link rel="canonical" href={canonicalUrl} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.svg?v=20261103" type="image/svg+xml" />
+    <link rel="alternate icon" href="/favicon.ico?v=20261103" sizes="32x32 48x48 64x64" />
     <link rel="alternate" type="application/rss+xml" title={site.title} href="/rss.xml" />
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={site.title} />
