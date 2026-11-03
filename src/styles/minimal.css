@@ -283,7 +283,9 @@ html {
 .article-layout { row-gap: 28px; }
 .article-heading { grid-column: 1; grid-row: 1; min-width: 0; }
 .article-body { grid-column: 1; grid-row: 2; min-width: 0; }
-.article-aside { grid-column: 2; grid-row: 1 / span 2; }
+.article-aside { grid-column: 2; grid-row: 1 / span 2; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; }
+.article .article-aside a { text-decoration: none; }
+.article .article-aside li + li { margin-top: 0; }
 .article-body > :first-child { margin-top: 0; }
 .series-title-desktop { font-size: inherit; font-weight: inherit; }
 .series-title-mobile, .series-label-mobile { display: none; }
