@@ -12,6 +12,9 @@
   --header-bg: #ffffff;
   --code-head: #202020;
   --shadow: none;
+  --font-display: "Noto Sans SC", "Hiragino Sans GB", "PingFang SC", sans-serif;
+  --font-reading: "Songti SC", "Noto Serif SC", "SimSun", serif;
+  --font-latin: "Courier New", Courier, monospace;
 }
 
 [data-theme="dark"] {
@@ -151,6 +154,39 @@ html {
 .footer-name span { color: inherit; }
 .to-top { border-radius: 2px; background: var(--surface); box-shadow: none; }
 .to-top:hover { background: var(--surface-soft); border-color: var(--text); }
+
+/* 03-gallery: ExtraLight display, Songti reading, quiet typewriter accents. */
+.hero h1,
+.featured-note h2,
+.section-heading h2,
+.article-card h3,
+.series-index h2,
+.project-card h3,
+.profile-id h2,
+.page-title,
+.series-header h2,
+.article h1,
+.article h2,
+.article h3,
+.comments-title {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-synthesis: none;
+  letter-spacing: .025em;
+}
+.hero h1 { letter-spacing: .065em; line-height: 1.25; }
+.hero-copy,
+.featured-note p,
+.summary,
+.detail-list,
+.about-tagline,
+.article { font-family: var(--font-reading); }
+.brand-latin, .brand-dot, .footer-name,
+.eyebrow, .section-kicker, .article-date,
+.note-topline time, .tag-count { font-family: var(--font-latin); }
+.brand-latin, .brand-dot, .footer-name { font-weight: 400; letter-spacing: -.035em; }
+.article .meta, .article .card-tags, .article .back-link,
+.copy-btn { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; }
 
 @media (max-width: 1050px) {
   .shell { width: calc(100% - 64px); }
