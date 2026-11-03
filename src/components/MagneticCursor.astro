@@ -1,0 +1,50 @@
+<div class="magnetic-cursor" aria-hidden="true">
+  <span class="magnetic-cursor-dot"></span>
+  <span class="magnetic-cursor-ring"></span>
+</div>
+
+<script>
+  import "../scripts/cursor";
+</script>
+
+<style is:global>
+  .magnetic-cursor {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    mix-blend-mode: difference;
+    --cursor-width: 38px;
+    --cursor-height: 38px;
+  }
+  .magnetic-cursor-dot, .magnetic-cursor-ring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 50%;
+    will-change: transform;
+  }
+  .magnetic-cursor-dot {
+    width: 5px;
+    height: 5px;
+    background: #fff;
+    transform: translate3d(var(--cursor-x, -100px), var(--cursor-y, -100px), 0) translate(-50%, -50%);
+  }
+  .magnetic-cursor-ring {
+    width: var(--cursor-width);
+    height: var(--cursor-height);
+    border: 1px solid #fff;
+    transform: translate3d(var(--ring-x, -100px), var(--ring-y, -100px), 0) translate(-50%, -50%);
+    transition: width 180ms, height 180ms, border-radius 180ms, scale 140ms;
+  }
+  .magnetic-cursor[data-magnet] .magnetic-cursor-ring { border-radius: 22px; }
+  .magnetic-cursor[data-pressed] .magnetic-cursor-ring { scale: .82; }
+  @media (hover: hover) and (pointer: fine) {
+    html.has-magnetic-cursor, html.has-magnetic-cursor * { cursor: none !important; }
+    html.has-magnetic-cursor .magnetic-cursor { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .magnetic-cursor-ring { transition: none; }
+  }
+</style>

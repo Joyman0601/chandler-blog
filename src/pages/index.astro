@@ -60,13 +60,14 @@ const series = [...new Set(sortedPosts.map((post) => post.data.series).filter(Bo
           <h2 id="series-title">沿着一个主题读</h2>
           <p class="aside-intro">把零散的问题，串成一条学习路径。</p>
           <ol>
-            {series.map((group) => (
+            {series.slice(0, 6).map((group) => (
               <li><a href={`/blog/#series-${group.key}`}>
                 <span><strong>{group.label}</strong><small>{group.entries.length} 篇笔记</small></span>
                 <span class="series-arrow" aria-hidden="true">→</span>
               </a></li>
             ))}
           </ol>
+          {series.length > 6 && <a class="text-link" href="/blog/">查看全部主题 →</a>}
         </section>
       )}
     </div>

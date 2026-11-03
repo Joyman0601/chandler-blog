@@ -111,6 +111,19 @@ git push origin main
 https://chandlerblog.com/blog/my-new-post/
 ```
 
+## 从技术文章库导入
+
+`scripts/import-articles.mjs` 将技术文章库的 `posts/` 导入 `src/content/blog/`，保留原稿，只发布 `draft: false` 的文章。README、索引和写作规范等管理文档不进入博客。
+
+```bash
+node scripts/import-articles.mjs /Users/chandler/Projects/personal/md
+node scripts/import-articles.mjs /Users/chandler/Projects/personal/md --check
+```
+
+分类映射到博客的系列分组；相对 `.md` 文章链接转换为站内 `/blog/` 地址并保留查询参数与锚点，代码示例保持原样。缺失文章链接、未知元数据格式或与既有文章冲突时导入失败。重复导入相同输入不会修改文件，手动编辑过的导入文章也不会被直接覆盖。
+
+本次 70 篇文章按原稿日期排序，使用固定随机种子，排在原站最新文章日期 **2026-08-01** 与 **2026-11-03** 之间，每天最多一篇、间隔不等。排期窗口固定，重复运行不会随当天日期变化；原稿日期保留在生成文件的注释中，正文不修改。`updated` 如存在则映射为不早于发布日期的 `updatedDate`。
+
 ## 部署
 
 项目代码推送到 GitHub `main` 分支后，Cloudflare 会自动触发构建和部署。

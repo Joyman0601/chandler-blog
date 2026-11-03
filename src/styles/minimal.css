@@ -95,6 +95,7 @@ html {
 .series-index { border: 0; padding-bottom: 20px; }
 .series-index h2 { font-size: 1.25rem; font-weight: 550; }
 .aside-intro { font-size: .875rem; margin-top: 14px; }
+.series-index > .text-link { display: inline-flex; margin-top: 20px; }
 .series-index li + li { border: 0; }
 .series-index li a { grid-template-columns: minmax(0, 1fr) 16px; gap: 16px; padding: 16px 0; }
 .series-number { display: none; }
