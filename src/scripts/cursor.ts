@@ -20,7 +20,7 @@ if (cursor) {
     frame = 0;
     if (!active) return;
     // Keep the same following speed on 60 Hz and high-refresh displays.
-    const weight = reduced.matches ? 1 : 1 - Math.pow(.8, Math.min(time - lastTime, 64) / (1000 / 60));
+    const weight = reduced.matches ? 1 : 1 - Math.pow(.75, Math.min(time - lastTime, 64) / (1000 / 60));
     lastTime = time;
     rx += (tx - rx) * weight;
     ry += (ty - ry) * weight;
@@ -54,8 +54,8 @@ if (cursor) {
     const bounds = rects.find(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
     const magnet = bounds && bounds.width <= 320 && bounds.height <= 80;
     cursor!.toggleAttribute("data-magnet", Boolean(magnet));
-    cursor!.style.setProperty("--cursor-width", `${control ? 28 : 20}px`);
-    cursor!.style.setProperty("--cursor-height", `${control ? 28 : 20}px`);
+    cursor!.style.setProperty("--cursor-width", `${magnet ? bounds.width + 12 : control ? 28 : 20}px`);
+    cursor!.style.setProperty("--cursor-height", `${magnet ? bounds.height + 10 : control ? 28 : 20}px`);
     if (magnet) { tx = bounds.left + bounds.width / 2; ty = bounds.top + bounds.height / 2; }
     if (entering || reduced.matches) { rx = tx; ry = ty; }
     render();

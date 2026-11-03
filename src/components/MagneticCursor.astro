@@ -39,6 +39,7 @@
     transform: translate3d(var(--ring-x, -100px), var(--ring-y, -100px), 0) translate(-50%, -50%) scale(var(--ring-scale));
     transition: width 180ms, height 180ms, border-radius 180ms;
   }
+  .magnetic-cursor[data-magnet] .magnetic-cursor-ring { border-radius: 22px; }
   .magnetic-cursor[data-pressed] { --ring-scale: .82; }
   @media (hover: hover) and (pointer: fine) {
     html.has-magnetic-cursor, html.has-magnetic-cursor * { cursor: none !important; }
