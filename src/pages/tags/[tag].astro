@@ -2,7 +2,6 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ArticleCard from "../../components/ArticleCard.astro";
-import ProfilePanel from "../../components/ProfilePanel.astro";
 import { sortByDateDesc } from "../../utils/posts";
 
 export async function getStaticPaths() {
@@ -24,10 +23,10 @@ const { tag, posts } = Astro.props;
 ---
 
 <BaseLayout title={`标签：${tag}`} description={`所有「${tag}」相关的文章`}>
-  <div class="layout">
+  <div class="index-page">
     <section>
       <div class="crumbs"><a href="/tags/">标签</a> / {tag}</div>
-      <h1 class="page-title">标签：{tag} <span class="series-count">{posts.length} 篇</span></h1>
+      <h1 class="page-title">{tag} <span class="series-count">{posts.length} 篇</span></h1>
       <div class="grid">
         {posts.map((post) => (
           <ArticleCard
@@ -35,11 +34,9 @@ const { tag, posts } = Astro.props;
             href={`/blog/${post.id}/`}
             date={post.data.pubDate}
             summary={post.data.description}
-            tags={post.data.tags}
           />
         ))}
       </div>
     </section>
-    <ProfilePanel />
   </div>
 </BaseLayout>

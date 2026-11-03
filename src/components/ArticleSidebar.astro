@@ -11,7 +11,7 @@ interface Props {
 const { toc, seriesLabel, seriesPosts = [], currentId } = Astro.props;
 ---
 
-<aside class="article-aside">
+<aside class="article-aside" data-pagefind-ignore>
   {toc.length > 0 && (
     <details class="aside-block article-toc" open>
       <summary>本文目录 <span>{toc.length} 节</span></summary>
@@ -28,8 +28,9 @@ const { toc, seriesLabel, seriesPosts = [], currentId } = Astro.props;
   )}
   {seriesPosts.length > 1 && (
     <details class="aside-block series-toc" open>
-      <summary>{seriesLabel ?? "本系列"}<span>{seriesPosts.length} 篇</span></summary>
+      <summary><strong class="series-title-desktop">{seriesLabel ?? "本系列"}</strong><strong class="series-title-mobile">本系列</strong><span>{seriesPosts.length} 篇</span></summary>
       <nav aria-label="本系列目录">
+      <p class="series-label-mobile">{seriesLabel}</p>
       <ol>
         {seriesPosts.map((post) => (
           <li>
@@ -77,16 +78,25 @@ const { toc, seriesLabel, seriesPosts = [], currentId } = Astro.props;
             else l.removeAttribute("aria-current");
           });
         };
-        const obs = new IntersectionObserver(
-          (entries) => {
-            const visible = entries
-              .filter((e) => e.isIntersecting)
-              .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-            if (visible[0]) setActive(visible[0].target.id);
-          },
-          { rootMargin: "-100px 0px -65% 0px", threshold: 0 },
-        );
-        headings.forEach((h) => obs.observe(h));
+        let pending = false;
+        const update = () => {
+          pending = false;
+          const offset = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+          let current = headings[0];
+          for (const heading of headings) {
+            if (heading.getClientRects().length && heading.getBoundingClientRect().top <= offset + 2) current = heading;
+          }
+          if (current) setActive(current.id);
+        };
+        const schedule = () => {
+          if (!pending) { pending = true; requestAnimationFrame(update); }
+        };
+        window.addEventListener("scroll", schedule, { passive: true });
+        window.addEventListener("resize", schedule);
+        window.addEventListener("load", schedule);
+        document.addEventListener("toggle", schedule, true);
+        document.addEventListener("blog:navigation", schedule);
+        update();
       };
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", initToc, { once: true });

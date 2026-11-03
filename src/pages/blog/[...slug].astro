@@ -72,18 +72,10 @@ const jsonLd = {
     slot="head"
     set:html={JSON.stringify(jsonLd)}
   />
-  <div class="reading-progress" aria-hidden="true"><span id="reading-bar"></span></div>
-  <div class="layout article-layout">
-    <ArticleSidebar
-      toc={toc}
-      seriesLabel={post.data.seriesLabel}
-      seriesPosts={seriesPosts}
-      currentId={post.id}
-    />
-    <div class="main-col">
-    <article class="article" data-pagefind-body>
+  <article class="layout article-layout article" data-pagefind-body aria-labelledby="post-title">
+    <header class="article-heading">
       <a class="back-link" href="/blog/">← 返回文章列表</a>
-      <h1>{post.data.title}</h1>
+      <h1 id="post-title">{post.data.title}</h1>
       <div class="meta article-meta">
         <time datetime={post.data.pubDate.toISOString()}>{formattedDate}</time>
         {formattedUpdated && <span>更新于 {formattedUpdated}</span>}
@@ -96,6 +88,14 @@ const jsonLd = {
           ))}
         </div>
       )}
+    </header>
+    <ArticleSidebar
+      toc={toc}
+      seriesLabel={post.data.seriesLabel}
+      seriesPosts={seriesPosts}
+      currentId={post.id}
+    />
+    <div class="article-body">
       <Content />
 
       {(prev || next) && (
@@ -114,10 +114,9 @@ const jsonLd = {
           ) : <span class="post-nav-spacer" />}
         </nav>
       )}
-    </article>
-    <Comments />
+      <div data-pagefind-ignore><Comments /></div>
     </div>
-  </div>
+  </article>
 
   <script is:inline>
     (() => {
@@ -198,7 +197,7 @@ const jsonLd = {
         a.addEventListener("click", (e) => {
           e.preventDefault();
           const url = location.origin + location.pathname + "#" + h.id;
-          history.replaceState(null, "", "#" + h.id);
+          history.replaceState(history.state, "", "#" + h.id);
           navigator.clipboard?.writeText(url).then(() => {
             a.classList.add("copied");
             setTimeout(() => a.classList.remove("copied"), 1200);

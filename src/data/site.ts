@@ -60,8 +60,8 @@ export const site = {
         "使用 Astro 生成静态页面，文章通过 Markdown 管理。",
         "通过 GitHub 和 Cloudflare 自动部署，支持自定义域名和基础 SEO。",
       ],
-      href: "",
-      featured: true,
+      href: "https://github.com/Joyman0601/chandler-blog",
+      featured: false,
     },
     {
       title: "后端工程实践笔记",
@@ -74,6 +74,7 @@ export const site = {
       ],
       href: "",
       featured: false,
+      planned: true,
     },
   ],
   // giscus 评论（基于 GitHub Discussions）。

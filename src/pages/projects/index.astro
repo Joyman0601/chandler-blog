@@ -1,18 +1,17 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import ProfilePanel from "../../components/ProfilePanel.astro";
 import { site } from "../../data/site";
 ---
 
 <BaseLayout title="项目" description="Chandler 的项目实践，记录个人技术博客、AI 知识库应用和后端工程化探索。">
-  <div class="layout">
+  <div class="index-page">
     <section>
-      <h1 class="page-title">项目</h1>
+      <header class="page-heading"><h1 class="page-title">项目实践</h1><p class="page-description">把概念做成可以运行的代码，留下过程与源码。</p></header>
       <div class="grid">
         {
-          site.projects.map((project) => (
+          site.projects.filter((project) => project.featured).map((project) => (
             <article class="project-card">
-              <h3>{project.title}</h3>
+              <h2>{project.title}</h2>
               <div class="meta">{project.meta}</div>
               <p class="summary">{project.summary}</p>
               {project.details.length > 0 && (
@@ -22,14 +21,15 @@ import { site } from "../../data/site";
               )}
               {project.href && (
                 <div class="link-row compact">
-                  <a class="button" href={project.href} target="_blank" rel="noreferrer">查看源码</a>
+                  <a class="button" href={project.href} target="_blank" rel="noreferrer">查看源码 ↗</a>
                 </div>
               )}
             </article>
           ))
         }
       </div>
+      <section class="project-plans site-project"><h2>这个网站</h2>{site.projects.filter((project) => !project.featured && !("planned" in project)).map((project) => <><p class="summary">{project.summary}</p><a class="text-link" href={project.href} target="_blank" rel="noreferrer">博客源码 ↗</a></>)}</section>
+      <section class="project-plans"><h2>持续整理的笔记</h2>{site.projects.filter((project) => "planned" in project).map((project) => <p class="summary">{project.summary}</p>)}</section>
     </section>
-    <ProfilePanel />
   </div>
 </BaseLayout>

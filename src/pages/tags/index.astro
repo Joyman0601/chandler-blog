@@ -1,7 +1,6 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import ProfilePanel from "../../components/ProfilePanel.astro";
 
 const posts = await getCollection("blog");
 const counts = new Map<string, number>();
@@ -14,17 +13,16 @@ const tags = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
 ---
 
 <BaseLayout title="标签" description="按标签浏览 Chandler 博客的所有文章">
-  <div class="layout">
+  <div class="index-page">
     <section class="content-card">
-      <h1 class="page-title">标签</h1>
-      <div class="tag-cloud">
+      <header class="page-heading"><h1 class="page-title">按主题查找</h1><p class="page-description">跨系列浏览同一主题，数字为相关文章数。</p></header>
+      <div class="tag-index">
         {tags.map(([tag, count]) => (
-          <a class="tag tag-link" href={`/tags/${tag}/`}>
-            {tag} <span class="tag-count">{count}</span>
+          <a class="tag-index-link" href={`/tags/${tag}/`}>
+            <span>{tag}</span><span class="tag-count">{count}</span>
           </a>
         ))}
       </div>
     </section>
-    <ProfilePanel />
   </div>
 </BaseLayout>

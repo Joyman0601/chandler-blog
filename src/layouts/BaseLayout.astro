@@ -59,6 +59,24 @@ const ogImage = new URL("/og.png", site.url).toString();
     <meta name="twitter:image" content={ogImage} />
     <meta name="theme-color" content="#f8faff" />
     <title>{pageTitle}</title>
+    <style is:inline>
+      /* Opt in before pagereveal, including a cold Back navigation. */
+      @media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }
+    </style>
+    <script is:inline>
+      for (const type of ["pageswap", "pagereveal"]) {
+        window.addEventListener(type, (event) => {
+          const transition = event.viewTransition;
+          if (!transition) return;
+          const controller = new AbortController();
+          for (const input of ["wheel", "touchstart", "keydown"]) {
+            window.addEventListener(input, () => transition.skipTransition(), { passive: true, signal: controller.signal });
+          }
+          // A browser may skip a transition; that is normal navigation, not an error.
+          transition.finished.catch(() => {}).finally(() => controller.abort());
+        });
+      }
+    </script>
     <script is:inline>
       (() => {
         let stored;
@@ -76,10 +94,8 @@ const ogImage = new URL("/og.png", site.url).toString();
     <header class="site-header">
       <div class="shell header-inner">
         <a class="brand" href="/" aria-label={site.title}>
-          <img class="brand-avatar" src={site.avatar} alt="" width="36" height="36" decoding="async" />
           <span class="brand-text">
-            <span class="brand-name"><span class="brand-latin">{site.name}</span><span class="brand-dot">.</span><span class="brand-suffix">的博客</span></span>
-            <span class="brand-line">边学边记，慢慢生长。</span>
+            <span class="brand-name"><span class="brand-latin">{site.name}</span></span>
           </span>
         </a>
         <div class="header-actions">
@@ -124,13 +140,14 @@ const ogImage = new URL("/og.png", site.url).toString();
         observer.observe(header);
       })();
     </script>
+    {ogType === "article" && <div class="reading-progress" aria-hidden="true"><span id="reading-bar"></span></div>}
     <main class="shell main" id="main-content" tabindex="-1">
       <slot />
     </main>
     <footer class="site-footer">
       <div class="shell footer-inner">
-        <div><a class="footer-name" href="/">{site.name}<span>.</span></a><p>写下过程，也留下成长。</p></div>
-        <div class="footer-meta"><span>© {new Date().getFullYear()} {site.name} · Built with Astro</span><a href="/rss.xml">RSS 订阅 ↗</a></div>
+        <span class="footer-copyright">© {new Date().getFullYear()} {site.name}</span>
+        <div class="footer-meta"><a href={site.links[0].href} target="_blank" rel="noreferrer">GitHub ↗</a><a href="/rss.xml">RSS 订阅</a></div>
       </div>
     </footer>
     <button class="to-top" type="button" id="to-top" aria-label="回到顶部" hidden>↑</button>
@@ -143,10 +160,7 @@ const ogImage = new URL("/og.png", site.url).toString();
         };
         toggle();
         window.addEventListener("scroll", toggle, { passive: true });
-        btn.addEventListener("click", () => {
-          const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          window.scrollTo({ top: 0, behavior: !reduced && window.scrollY < window.innerHeight ? "smooth" : "instant" });
-        });
+
       })();
     </script>
     <script is:inline>
@@ -173,24 +187,8 @@ const ogImage = new URL("/og.png", site.url).toString();
         });
       })();
     </script>
-    <script is:inline>
-      // 长页远跳直接定位，避免把整篇文章卷过屏幕。
-      document.addEventListener("click", (event) => {
-        const link = event.target.closest?.('a[href^="#"]');
-        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        let target;
-        try { target = document.getElementById(decodeURIComponent(link.hash.slice(1))); } catch { return; }
-        if (!target) return;
-        if (Math.abs(target.getBoundingClientRect().top) > window.innerHeight) {
-          event.preventDefault();
-          history.pushState(null, "", link.hash);
-          target.scrollIntoView({ behavior: "instant", block: "start" });
-          if (target.matches('main, h1, h2, h3')) {
-            if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
-            target.focus({ preventScroll: true });
-          }
-        }
-      });
+    <script>
+      import "../scripts/navigation";
     </script>
   </body>
 </html>
