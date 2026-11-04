@@ -19,7 +19,7 @@ const tags = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
       <div class="tag-index">
         {tags.map(([tag, count]) => (
           <a class="tag-index-link" href={`/tags/${tag}/`}>
-            <span>{tag}</span><span class="tag-count">{count}</span>
+            <span data-cursor-anchor>{tag}</span><span class="tag-count">{count}</span>
           </a>
         ))}
       </div>

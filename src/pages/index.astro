@@ -62,7 +62,7 @@ const series = [...new Set(sortedPosts.map((post) => post.data.series).filter(Bo
           <ol>
             {series.slice(0, 6).map((group) => (
               <li><a href={`/blog/#series-${group.key}`}>
-                <span><strong>{group.label}</strong><small>{group.entries.length} 篇笔记</small></span>
+                <span><strong><span data-cursor-anchor>{group.label}</span></strong><small>{group.entries.length} 篇笔记</small></span>
                 <span class="series-arrow" aria-hidden="true">→</span>
               </a></li>
             ))}

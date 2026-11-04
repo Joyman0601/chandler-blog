@@ -48,19 +48,29 @@ if (cursor) {
     active = true;
     tx = x; ty = y;
     const control = target.closest<HTMLElement>(interactive);
-    // Fitted outlines belong to compact controls. Text links retain a small
-    // circle and a local pull, independent of the size of their click area.
+    // Rows respond around their primary label; short controls can fit their
+    // outline. Long reading links retain the quieter circle.
     const rects = control ? Array.from(control.getClientRects()) : [];
     const bounds = rects.find(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
-    const outline = bounds && control?.matches("button, .button, .icon-button, [role='button']")
+    const label = control?.querySelector<HTMLElement>("[data-cursor-anchor]");
+    const labelBounds = label && Array.from(label.getClientRects()).find(r => r.width > 0 && r.height > 0);
+    const compact = bounds && control?.matches("button, .button, .icon-button, [role='button']")
       && bounds.width <= 72 && bounds.height <= 48;
-    cursor!.toggleAttribute("data-magnet", Boolean(outline));
-    cursor!.style.setProperty("--cursor-width", `${outline ? bounds.width + 12 : control ? 28 : 20}px`);
-    cursor!.style.setProperty("--cursor-height", `${outline ? bounds.height + 10 : control ? 28 : 20}px`);
-    if (bounds) {
-      const dx = bounds.left + bounds.width / 2 - x;
-      const dy = bounds.top + bounds.height / 2 - y;
-      const pull = outline ? 1 : Math.min(1, 8 / Math.max(Math.hypot(dx, dy), 1));
+    const shortLink = bounds && control?.matches("a[href]") && rects.length === 1
+      && bounds.width <= 144 && bounds.height <= 48;
+    const fitted = compact || shortLink;
+    cursor!.toggleAttribute("data-magnet", Boolean(labelBounds || fitted));
+    const width = labelBounds ? Math.min(128, Math.max(44, labelBounds.width + 20))
+      : fitted ? bounds!.width + 12 : control ? 28 : 20;
+    const height = labelBounds ? Math.min(38, Math.max(28, labelBounds.height + 12))
+      : fitted ? bounds!.height + 10 : control ? 28 : 20;
+    cursor!.style.setProperty("--cursor-width", `${width}px`);
+    cursor!.style.setProperty("--cursor-height", `${height}px`);
+    const attraction = labelBounds || bounds;
+    if (attraction) {
+      const dx = attraction.left + attraction.width / 2 - x;
+      const dy = attraction.top + attraction.height / 2 - y;
+      const pull = fitted && !labelBounds ? 1 : Math.min(1, (labelBounds ? 24 : 8) / Math.max(Math.hypot(dx, dy), 1));
       tx = x + dx * pull;
       ty = y + dy * pull;
     }
