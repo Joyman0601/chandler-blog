@@ -116,13 +116,21 @@ https://chandlerblog.com/blog/my-new-post/
 `scripts/import-articles.mjs` 将技术文章库的 `posts/` 导入 `src/content/blog/`，保留原稿，只发布 `draft: false` 的文章。README、索引和写作规范等管理文档不进入博客。
 
 ```bash
-node scripts/import-articles.mjs /Users/chandler/Projects/personal/md
-node scripts/import-articles.mjs /Users/chandler/Projects/personal/md --check
+node scripts/import-articles.mjs ../md
+node scripts/import-articles.mjs ../md --check
 ```
 
 分类映射到博客的系列分组；相对 `.md` 文章链接转换为站内 `/blog/` 地址并保留查询参数与锚点，代码内容保持原样，表格内行内代码的竖线作必要转义，避免被当成分列符。缺失文章链接、未知元数据格式或与既有文章冲突时导入失败。重复导入相同输入不会修改文件，手动编辑过的导入文章也不会被直接覆盖。
 
-本次 70 篇文章按原稿日期排序，使用固定随机种子，排在原站最新文章日期 **2026-08-01** 与 **2026-11-03** 之间，每天最多一篇、间隔不等。排期窗口固定，重复运行不会随当天日期变化；原稿日期保留在生成文件的注释中，正文内容保留。`updated` 如存在则映射为不早于发布日期的 `updatedDate`。
+文章库的 `date` 表示素材发生日期，可选 `pubDate` 表示明确的公开发布日期。新文章优先使用 `pubDate`，没有时使用 `date`；已有导入文章没有显式 `pubDate` 时，保留博客中经过来源标识及完整摘要校验的既有发布日期。需要主动改发布日期时，在原稿中明确填写 `pubDate`。
+
+新增、补录或修改文章不会重新分配旧文日期。日常新稿在文章库填写实际整理发布的 `pubDate`；不再随机排日期，不限制每天的篇数，也没有固定日期窗口。脚本不以运行当天覆盖日期。原稿 `date` 保留在生成文件的注释中；`updated` 如存在则映射为不早于发布日期的 `updatedDate`。
+
+导入文章以文章库原稿为正文维护源。`--check` 只检查导入副本是否同步，不写入文件。日期、手动改稿保护和失败时不写入等回归用例可直接运行：
+
+```bash
+node --test scripts/import-articles.test.mjs
+```
 
 ## 部署
 

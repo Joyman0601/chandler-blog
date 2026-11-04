@@ -3,8 +3,6 @@ import { readFile, readdir, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Keep this publication window fixed: importing again must not move existing dates.
-const publicationWindow = { from: "2026-08-01", through: "2026-11-03", seed: 20261103 };
 const labels = {
   "model-onboarding": "模型接入",
   "billing-regression": "计费与上线回归",
@@ -50,7 +48,7 @@ function parseArticle(raw, relative) {
     const entry = line.match(/^([A-Za-z][A-Za-z0-9]*):\s*(.*?)\s*$/);
     if (!entry || Object.hasOwn(data, entry[1])) throw new Error(`${relative}: invalid or duplicate metadata: ${line}`);
     const [, key, value] = entry;
-    if (!["title", "description", "date", "updated", "category", "tags", "draft"].includes(key)) {
+    if (!["title", "description", "date", "pubDate", "updated", "category", "tags", "draft"].includes(key)) {
       throw new Error(`${relative}: unsupported metadata field ${key}`);
     }
     if (value.startsWith('"') || value.startsWith("[")) data[key] = JSON.parse(value);
@@ -61,6 +59,7 @@ function parseArticle(raw, relative) {
     if (typeof data[key] !== "string" || !data[key]) throw new Error(`${relative}: missing ${key}`);
   }
   validDate(data.date, "date", relative);
+  if (data.pubDate !== undefined) validDate(data.pubDate, "pubDate", relative);
   if (data.updated !== undefined) validDate(data.updated, "updated", relative);
   if (!Array.isArray(data.tags) || data.tags.some((tag) => typeof tag !== "string")) {
     throw new Error(`${relative}: tags must be a JSON array of strings`);
@@ -72,23 +71,19 @@ function parseArticle(raw, relative) {
   return { data, body: raw.slice(match[0].length) };
 }
 
-function publicationDates(count) {
-  const day = 86400000;
-  const start = Date.parse(publicationWindow.from);
-  const available = (Date.parse(publicationWindow.through) - start) / day;
-  if (count > available) throw new Error(`The fixed publication window has ${available} days for ${count} articles`);
-  const days = Array.from({ length: available }, (_, index) => index + 1);
-  let state = publicationWindow.seed >>> 0;
-  const random = () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
-  for (let index = days.length - 1; index > 0; index--) {
-    const other = Math.floor(random() * (index + 1));
-    [days[index], days[other]] = [days[other], days[index]];
+function existingPublicationDate(existing, relative, marker) {
+  if (existing === undefined) return undefined;
+  const header = existing.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1];
+  const lines = header?.split("\n") ?? [];
+  const digests = lines.filter((line) => line.startsWith(digestPrefix));
+  const digestLine = digests[0];
+  if (!existing.startsWith(`---\n${digestPrefix}`) || !lines.includes(marker) || digests.length !== 1
+    || sha256(existing.replace(`${digestLine}\n`, "")) !== digestLine.slice(digestPrefix.length)) {
+    throw new Error(`${relative}: refusing to overwrite an existing or manually edited article`);
   }
-  return days.slice(0, count).sort((a, b) => a - b)
-    .map((offset) => new Date(start + offset * day).toISOString().slice(0, 10));
+  const dates = lines.filter((line) => line.startsWith("pubDate:"));
+  const date = dates.length === 1 ? dates[0].match(/^pubDate: (\d{4}-\d{2}-\d{2})$/)?.[1] : undefined;
+  return validDate(date, "existing pubDate", relative);
 }
 
 function rewriteLinks(body, article, sourceRoot, published, stats) {
@@ -166,14 +161,20 @@ async function main() {
     (parsed.data.draft ? drafts : articles).push(article);
   }
   articles.sort((a, b) => a.data.date.localeCompare(b.data.date) || a.relative.localeCompare(b.relative, "en"));
-  const dates = publicationDates(articles.length);
   const published = new Set(articles.map((article) => article.absolute));
-  const stats = { mode: check ? "check" : "write", articles: articles.length, drafts: drafts.length, links: 0, tableCodePipes: 0, created: 0, updated: 0, unchanged: 0, schedule: publicationWindow, dates: {} };
+  const stats = { mode: check ? "check" : "write", articles: articles.length, drafts: drafts.length, links: 0, tableCodePipes: 0, created: 0, updated: 0, unchanged: 0, dates: {} };
   const plans = [];
-  for (const [index, article] of articles.entries()) {
+  for (const article of articles) {
     const { data, relative } = article;
-    const pubDate = dates[index];
     const marker = `# Imported by scripts/import-articles.mjs from posts/${relative}`;
+    const destination = path.join(outputRoot, relative);
+    const existing = await readFile(destination, "utf8").catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+      return undefined;
+    });
+    // Trust a saved publication date only after checking the complete imported copy.
+    const previousPubDate = existingPublicationDate(existing, relative, marker);
+    const pubDate = data.pubDate ?? previousPubDate ?? data.date;
     const metadata = [marker, `# Source date: ${data.date}`, `title: ${JSON.stringify(data.title)}`,
       `description: ${JSON.stringify(data.description)}`, `pubDate: ${pubDate}`];
     if (data.updated) metadata.push(`updatedDate: ${data.updated < pubDate ? pubDate : data.updated}`);
@@ -181,18 +182,6 @@ async function main() {
     const body = rewriteLinks(article.body, article, sourceRoot, published, stats);
     const unsigned = `---\n${metadata.join("\n")}\n---\n${body}`;
     const output = unsigned.replace("---\n", `---\n${digestPrefix}${sha256(unsigned)}\n`);
-    const destination = path.join(outputRoot, relative);
-    const existing = await readFile(destination, "utf8").catch((error) => {
-      if (error.code !== "ENOENT") throw error;
-      return undefined;
-    });
-    if (existing !== undefined && existing !== output) {
-      const digestLine = existing.split("\n").find((line) => line.startsWith(digestPrefix));
-      if (!existing.startsWith(`---\n${digestPrefix}`) || !existing.split("\n").includes(marker) || !digestLine
-        || sha256(existing.replace(`${digestLine}\n`, "")) !== digestLine.slice(digestPrefix.length)) {
-        throw new Error(`${relative}: refusing to overwrite an existing or manually edited article`);
-      }
-    }
     stats.dates[pubDate] = (stats.dates[pubDate] ?? 0) + 1;
     if (existing === output) stats.unchanged++;
     else if (existing === undefined) stats.created++;

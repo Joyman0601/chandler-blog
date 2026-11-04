@@ -12,25 +12,28 @@
 - **不要**安装 `@astrojs/cloudflare` adapter——本站无 SSR 需求，装了反而会引入 SESSION KV 等麻烦。
 - 部署由根目录 `wrangler.jsonc` 钉死为静态资源上传（`assets.directory: ./dist`，无 worker、无 KV 绑定）。
 - 仓库：`Joyman0601/chandler-blog`。
-- 博客文章在 `src/content/blog/`；front-matter 字段受 `src/content.config.ts` 约束，仅允许：`title / description / pubDate / tags / series / seriesLabel`，多写字段会构建失败。同 `series` 值的文章在首页按 `seriesLabel` 分组。
+- 博客文章在 `src/content/blog/`；front-matter 按 `src/content.config.ts` 使用 `title / description / pubDate / updatedDate / tags / series / seriesLabel`。同 `series` 值的文章在首页按 `seriesLabel` 分组。
 
 ## 发布博客文章的标准流程（新窗口照此执行，无需通读项目）
 
 新增 / 修改文章并上线，按这套来：
 
 1. **放置文件**：Markdown 放进 `src/content/blog/`。独立文章直接放根下；属于某系列的放进对应子目录（如 `ms-learn/`、`dev-env/`、`jeecgboot/`）。
-2. **写 front-matter**：只能用这 6 个字段，多写任何字段都会构建失败——
-   - `title`（字符串）、`description`（字符串）、`pubDate`（`YYYY-MM-DD`，不加引号）、`tags`（数组）、`series`（可选）、`seriesLabel`（可选）。
+2. **写 front-matter**：使用上述 7 个字段——
+   - `title`（字符串）、`description`（字符串）、`pubDate`（`YYYY-MM-DD`，不加引号）、`updatedDate`（可选，`YYYY-MM-DD`）、`tags`（数组）、`series`（可选）、`seriesLabel`（可选）。
    - 同 `series` 值的文章在首页按 `seriesLabel` 归到一组；想让一组文章聚合显示，就给它们相同的 `series` + `seriesLabel`。
 3. **本地构建验证**：跑 `npm run build`，必须 exit 0、页数符合预期（每篇文章 = 1 页）。构建报错通常是 front-matter 字段不对或日期格式不对。
 4. **提交**：`git add` 具体文件 → `git commit`，commit message 说清改了什么。
 5. **推送前先问用户**（见下方协作约定），得到同意后再 `git push origin main`。
 6. **推送后**：Cloudflare 自动重新构建上线。可把线上 URL 报给用户：`https://chandlerblog.com/blog/<相对 src/content/blog 的路径，去掉 .md，末尾加 />`，例如 `src/content/blog/ms-learn/05-sentinel.md` → `https://chandlerblog.com/blog/ms-learn/05-sentinel/`。
 
+来自技术文章库的文章，先改原稿，再运行 `scripts/import-articles.mjs` 导入；不直接修改导入副本。原稿 `date` 是素材日期，可选 `pubDate` 是公开发布日期，`updated` 映射为 `updatedDate`。新文使用显式 `pubDate`，缺省回退 `date`；旧文缺省保留已校验导入副本的发布日期。导入后先跑 `--check`，再构建，具体命令见 README。
+
 ## 协作约定
 
 - **用中文回复，不要日文。**
 - **推送 GitHub 前先征得用户同意，再 `git push`。**
+- 文章持续整理与发布，停止随机分配日期；保留既有文章日期，新稿填写实际整理发布的 `pubDate`，同日多篇正常。
 - 页面沿用用户选定的 03-gallery 字体方向；改稿先判断元素用途，不机械保留旧模板。目录切换采用约 0.35s 的模糊与小幅滑动，并尊重减少动态效果；具体取舍维护在 DESIGN.md。
 
 ## 踩坑记录
