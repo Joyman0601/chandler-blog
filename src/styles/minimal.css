@@ -12,8 +12,8 @@
   --header-bg: #ffffff;
   --code-head: #202020;
   --shadow: none;
-  --font-display: "Noto Sans SC", "Hiragino Sans GB", "PingFang SC", sans-serif;
-  --font-reading: "Songti SC", "Noto Serif SC", "SimSun", serif;
+  --font-display: "PingFang SC", "Noto Sans SC", sans-serif;
+  --font-reading: "PingFang SC", "Noto Sans SC", sans-serif;
   --font-latin: "Courier New", Courier, monospace;
 }
 
@@ -99,7 +99,7 @@ html {
 .series-index li + li { border: 0; }
 .series-index li a { grid-template-columns: minmax(0, 1fr) 16px; gap: 16px; padding: 16px 0; }
 .series-number { display: none; }
-.series-index strong { font-size: .9375rem; font-weight: 500; }
+.series-index strong { font-size: .9375rem; font-weight: 400; }
 .series-index li a:hover strong,
 .series-index li a:focus-visible strong {
   text-decoration: underline;
@@ -162,7 +162,7 @@ html {
 .to-top { border-radius: 2px; background: var(--surface); box-shadow: none; }
 .to-top:hover { background: var(--surface-soft); border-color: var(--text); }
 
-/* 03-gallery: ExtraLight display, Songti reading, quiet typewriter accents. */
+/* Light display, regular sans reading, quiet typewriter accents. */
 .hero h1,
 .featured-note h2,
 .section-heading h2,
@@ -191,7 +191,11 @@ html {
 .summary,
 .detail-list,
 .about-tagline,
-.article { font-family: var(--font-reading); }
+.article {
+  font-family: var(--font-reading);
+  font-weight: 400;
+  font-synthesis: style;
+}
 .brand-latin, .brand-dot, .footer-name,
 .eyebrow, .section-kicker, .article-date,
 .note-topline time, .tag-count { font-family: var(--font-latin); }
