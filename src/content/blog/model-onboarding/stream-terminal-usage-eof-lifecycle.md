@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 8f26f892fca43fdb898a326430a24548d8d2f8e9f169e3892fc191e1e0adc224
+# import-articles-sha256: b1f01094c1b8a78f7d5c4f7915f0235b2c9c94715213e93474e2716442771c77
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/stream-terminal-usage-eof-lifecycle.md
 # Source date: 2026-11-01
 title: "流式收尾：终态、用量、EOF 和保活要分开"
 description: "内容已经输出完，连接却迟迟不结束；看到终态就关连接，又可能截掉慢传用量。我从一次流式收尾复盘中梳理四个独立信号，用不结束的 HTTP 上游、分段用量和反向守卫验证结束条件，避免普通响应桩掩盖缺陷。"
-pubDate: 2026-10-23
+pubDate: 2026-11-01
 tags: ["Go","API 网关","错误处理","测试设计","回归测试"]
 series: model-onboarding
 seriesLabel: "模型接入"

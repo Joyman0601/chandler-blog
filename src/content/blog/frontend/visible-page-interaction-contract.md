@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 765c97b4390ffab7f59ab5a5d2690de88cde2af8557eee6944cbfeef3f044c56
+# import-articles-sha256: 28a1637f5c9383b7344d4c80035d6a379d280c8c6123f744e6cffdf9671963ed
 # Imported by scripts/import-articles.mjs from posts/frontend/visible-page-interaction-contract.md
 # Source date: 2026-11-01
 title: "页面已经显示：还要验证动作真正生效"
 description: "语言链接能跳转，却可能在 React 水合前丢失手动选择；手机下拉有全部选项，却可能被固定导航截走点击。两次排查分别从时间和空间说明：可见、可点击和业务动作完成要独立观察，并用能复现旧问题的负对照验收。"
-pubDate: 2026-10-19
+pubDate: 2026-11-01
 tags: ["前端","React","Next.js","Playwright","测试设计","多语言"]
 series: frontend
 seriesLabel: "前端实践"

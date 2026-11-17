@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 072ee91618aa37da3a7ee929f5f50c881a6f51448fd260c27232acbfd91ecb23
+# import-articles-sha256: 22b688031b4b65c3e5838b6ffb4e52839724eb89cf63d5c7e9b49c4d6063f87c
 # Imported by scripts/import-articles.mjs from posts/methods/source-tiers-meeting-transcript.md
 # Source date: 2026-10-11
 title: "信息来源分三级：实测、文档、转述，逐字稿要读到话题结束"
 description: "我说了一句「我去官方确认了」，助手在进度汇报里写成了「已向厂商确认」；一段会议摘录停在了拍板人改口之前。之后每个判断都标三级来源，逐字稿按话题切段、读到结束。附来源标注表和逐字稿摘录表。"
-pubDate: 2026-09-14
+pubDate: 2026-10-11
 tags: ["工作方法","调研","报告","复盘"]
 series: methods
 seriesLabel: "工作方法"

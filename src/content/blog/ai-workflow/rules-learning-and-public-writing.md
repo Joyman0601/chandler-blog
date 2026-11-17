@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: bb7b9fe8ec8c6ec0f2de06a7f9cd67f93b296a95f87de942b3f778acb9d0a35f
+# import-articles-sha256: 2ed37d38d1585b6a282301090352e25e1409ee305365b0d6d3138a12f68d8233
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/rules-learning-and-public-writing.md
 # Source date: 2026-11-02
 title: "知识沉淀分三处：执行规则、个人理解和公开文章"
 description: "经验写进 AI 技能，不代表本人已经理解，私人素材也需要经过改写才能公开。我把执行规则、学习笔记和文章按用途分开，再区分维护位置、按需读取和公开范围；用唯一源生成备份，从远端隔离恢复，核验文件、权限、链接和必要依赖。"
-pubDate: 2026-10-24
+pubDate: 2026-11-02
 updatedDate: 2026-11-04
 tags: ["AI 编程","Skill","工作方法","复盘","文档","脱敏"]
 series: ai-workflow

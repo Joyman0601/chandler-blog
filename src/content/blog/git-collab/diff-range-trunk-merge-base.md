@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 60ade64e347fd20eff8862809784266c07cf510317a0e0e6b503bf5428395e30
+# import-articles-sha256: 9e62470b2f9deb81611863d475de9ea83e4c2601c8fa618de7be1df10783800b
 # Imported by scripts/import-articles.mjs from posts/git-collab/diff-range-trunk-merge-base.md
 # Source date: 2026-10-16
 title: "出 diff 前先定主干和起点：让 diff 骗人的五种情况"
 description: "审分支、出快照、挪基线时，diff 的输出本身没错，错在拿什么和什么比。认错主干、基线前进后用两点 diff、在子目录里写根路径、rebase 零冲突就收工、审视工具看不到未提交改动，每种都附一段能直接用的命令。"
-pubDate: 2026-09-26
+pubDate: 2026-10-16
 tags: ["Git","Code Review","多仓库"]
 series: git-collab
 seriesLabel: "Git 与协作"

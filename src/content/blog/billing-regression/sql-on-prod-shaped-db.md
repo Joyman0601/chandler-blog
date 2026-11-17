@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: abf22f1dfa310f5263e54025b7e677efa7f098febad4eeaf59c7dd0fd278180b
+# import-articles-sha256: 942a64cb18cae9a14a8423495fdfcd361953450af9cd69534b5146b8a308f124
 # Imported by scripts/import-articles.mjs from posts/billing-regression/sql-on-prod-shaped-db.md
 # Source date: 2026-10-09
 title: "要进生产库的 SQL：先在生产形状的库上整份真跑"
 description: "三份数据脚本都是验收全绿、交出去才被审出问题：列宽、缺列缺键、排序规则。原因都是验证用的表结构来自开发库。我把生产形状的表结构、四套排序规则、固定场景和 phpMyAdmin 网页通道做成一条命令，顺带讲按型号认渠道、锁范围实测和回滚对照。"
-pubDate: 2026-09-04
+pubDate: 2026-10-09
 tags: ["SQL","MySQL","数据脚本","上线","Playwright"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 77c362d564e217e9e63dc52dc6e43dd450ade355b86d87a5a393b65862e939ee
+# import-articles-sha256: 3a284751f01f6ad747fd36fff3205ee6b7497d0112a8b59d587fa199bddb4a43
 # Imported by scripts/import-articles.mjs from posts/methods/directory-migration-compatibility.md
 # Source date: 2026-11-02
 title: "整理项目目录：迁移后仍要按旧入口验证"
 description: "研究目录整理涉及脚本、报告、相对链接和仍在运行的任务。一次迁移让我把文件位置与使用入口分开：先盘点依赖，再生成操作清单，保留必要兼容路径，最后分别核内容完整、链接语义、Git 状态和回滚条件。"
-pubDate: 2026-10-27
+pubDate: 2026-11-02
 tags: ["工作方法","文档","命令行","Git"]
 series: methods
 seriesLabel: "工作方法"

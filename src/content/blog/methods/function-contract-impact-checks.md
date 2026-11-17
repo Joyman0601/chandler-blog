@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 2b64ea634cf9599faf30451c14640b40120347d91aeb9194c4b3233c9fb1bb68
+# import-articles-sha256: ed13df66f9124fc132918b0e3894f93c2e2bef78f53bb00a2ab2f05d1e528722
 # Imported by scripts/import-articles.mjs from posts/methods/function-contract-impact-checks.md
 # Source date: 2026-11-01
 title: "函数职责记录：在行为保证未变的边界停止追查"
 description: "重构绕过公共函数后，主要结果正确，隐藏的事件与统计却可能丢失。我尝试把函数自身职责、依赖的具体保证和审阅版本关联起来：首次理解后建立记录，变化时按保证传播影响，调用索引提供候选，实际出口和独立业务预期负责找漏项。"
-pubDate: 2026-10-22
+pubDate: 2026-11-01
 tags: ["Code Review","AI 编程","工作方法","测试设计","文档"]
 series: methods
 seriesLabel: "工作方法"

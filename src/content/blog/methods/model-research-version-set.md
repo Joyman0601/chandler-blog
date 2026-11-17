@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 61738520d051b87ba78fc93919c641424b5aa44dcddf519b38b11739c7ec100a
+# import-articles-sha256: 705a7f2eae28344005f1c762b58850465474e25f8320eea0a39a2ad3a7b43a28
 # Imported by scripts/import-articles.mjs from posts/methods/model-research-version-set.md
 # Source date: 2026-09-24
 title: "新模型调研：先核对版本全集，再写参数、计费、迁移"
 description: "第一份调研被 leader 打回，一次迁移调研差点把最急的事判成不急。之后我把新模型调研固定成几步：找正本、核版本全集、按参数 / 计费 / 迁移三个维度写、核价带四个限定词、退役日期按平台查，附一份调研骨架。"
-pubDate: 2026-08-12
+pubDate: 2026-09-24
 tags: ["调研","模型接入","上游探测","工作方法"]
 series: methods
 seriesLabel: "工作方法"

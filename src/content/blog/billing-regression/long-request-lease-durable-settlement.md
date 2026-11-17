@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: acc66e291b431de2012ab40186212902d5aad7befb8443289dc12b4f9f2b29b5
+# import-articles-sha256: 52283abfd61f8ed8ada5b785db455e1f313a928c962197c347d3806e08c9f454
 # Imported by scripts/import-articles.mjs from posts/billing-regression/long-request-lease-durable-settlement.md
 # Source date: 2026-11-01
 title: "长请求计费：租约、实际工作与补扣各有生命周期"
 description: "长请求还在执行，预扣却先过期；补扣记录已落库，消费者又没有启动。这类问题不能只靠延长超时解决。我把估算、工作租约、持久结算、原请求统计和消费者升级放在同一时间线上，整理出可复用的验收不变量。"
-pubDate: 2026-10-18
+pubDate: 2026-11-01
 tags: ["计费","异步任务","Go","测试设计","对账"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

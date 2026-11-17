@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 455eced7ab4c6e704e495cd2177272308405b3afa259ebb5442533aede6d997d
+# import-articles-sha256: d77ac5e7d800d4251d82e30f2395927564df3e6c88c34690b7c188d5906b1bc1
 # Imported by scripts/import-articles.mjs from posts/billing-regression/billing-rule-pitfalls.md
 # Source date: 2026-10-09
 title: "计费规则的几个暗坑：子串匹配、查价兜底、阈值格式化和推断锁价"
 description: "两周里碰到的七个计费暗坑：新同族名字在预扣和结算两边落到不同规则、查价失败的兜底把按秒计费放大数倍、缺定价行要到换渠道后才咬人、同一阈值两处格式化、明细时间字段两个口径、前端推断模式锁价，以及页面上没有来源的数字。"
-pubDate: 2026-09-03
+pubDate: 2026-10-09
 tags: ["计费","对账","API 网关","测试设计","Go"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

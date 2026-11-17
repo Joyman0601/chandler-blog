@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 12ca330e222fb9c49196ddd066459c9c5b1203eaaa21d238b494f2244b1cc2d3
+# import-articles-sha256: 80259e3747ce59b54d063a60ac01d4c98c1469331fc3e6dd1d282e160f8baef1
 # Imported by scripts/import-articles.mjs from posts/frontend/async-seam-url-variant.md
 # Source date: 2026-09-23
 title: "一个 await 就是一道缝：异步回写和 URL 变体的首帧"
 description: "多变体页面上，上传结果写进了另一档、草稿存到了别的键。记录一条能机械套用的审查方法：对每个 await 问写到哪、读哪个时刻的值、目的地还在不在；以及变体存在 URL 参数里、挂载后才回读时，首帧和切档那一帧为什么会写错键。"
-pubDate: 2026-08-10
+pubDate: 2026-09-23
 tags: ["前端","React","TypeScript","Code Review","测试设计"]
 series: frontend
 seriesLabel: "前端实践"

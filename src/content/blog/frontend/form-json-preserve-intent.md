@@ -1,11 +1,10 @@
 ---
-# import-articles-sha256: 6a583c074b28c071da3e917194991e340f6a134799bb9277131253406181f392
+# import-articles-sha256: 34f377572e4f9b99bcc79661aefb23e5ee23e99776d0388f6a1053edfc81fc31
 # Imported by scripts/import-articles.mjs from posts/frontend/form-json-preserve-intent.md
 # Source date: 2026-11-04
 title: "双模式编辑器：校验前保留原始意图"
 description: "表单和 JSON 共用请求校验后，非法蒙版仍被清洗成缺省值；上传结果也可能覆盖等待期间的新输入。复盘编辑文本、请求对象与异步结果之间的信息损失，说明怎样保留原文、区分缺失与非法，并用真实提交次数验证防线。"
 pubDate: 2026-11-04
-updatedDate: 2026-11-17
 tags: ["前端","React","TypeScript","测试设计","Code Review"]
 series: frontend
 seriesLabel: "前端实践"

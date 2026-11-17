@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 7914f174342f522c4ee2fe302d049beca158b34d73528f10d3ce133cb677ad4a
+# import-articles-sha256: 9d4e7d8c3363700c90c310a9079dccbd62c01e749d94f1ab792fb7f9f4b8b675
 # Imported by scripts/import-articles.mjs from posts/testing/guard-tests-three-rules.md
 # Source date: 2026-10-09
 title: "守卫测试的三个要求：改动前会红、断言打在行为上、比对全部调用方"
 description: "新写的守卫测试全绿，放到改动前的代码上也是绿的。整理几次守卫测试空转、假红的经过，以及分清存量失败、夹具别钉死实况数据、不改仓库跑临时用例的做法。"
-pubDate: 2026-09-08
+pubDate: 2026-10-09
 tags: ["守卫测试","测试设计","TypeScript","Go","Code Review"]
 series: testing
 seriesLabel: "测试与验收"

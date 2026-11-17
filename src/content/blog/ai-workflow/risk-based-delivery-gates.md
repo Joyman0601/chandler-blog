@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 5e2fba34d09df661ba521c8582c63fa3ded8a44235c7693152ebdd4cc1497870
+# import-articles-sha256: 277c2ffd3b8a9b28e26cd331b3a8a01e4911b1396b54ea19093d71adfde8f2c9
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/risk-based-delivery-gates.md
 # Source date: 2026-11-04
 title: "交付闸按风险分级：小改走短路，分流器本身严查"
 description: "三个文件的博客样式改动，助手走完整审视花了四十多分钟。我把交付流程按错误后果分级：静态改动走短路，关键业务保留严密检查，判级的系统本身从严验。同一周还补了两件事：备份要从远端恢复才算数，必读分流后少读多少和整轮快多少要分开看。"
-pubDate: 2026-11-17
+pubDate: 2026-11-05
 tags: ["AI 编程","Hooks","Skill","工作方法","复盘"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

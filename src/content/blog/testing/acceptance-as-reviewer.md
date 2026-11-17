@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: dbac71f10618cefec85dd5b9cb53e663d4c1c0aadf766430490d18008c3d96e2
+# import-articles-sha256: 4201b2ab35b57132f5b5722ba7b7599424579cdf27c87f33553192933dbe7877
 # Imported by scripts/import-articles.mjs from posts/testing/acceptance-as-reviewer.md
 # Source date: 2026-09-29
 title: "当验收者而不是开发者：每条结论自己跑出来"
 description: "验收一次跨仓库的模型接入时，开发会话留下的脚手架和「已验证」都不能直接用。记录分轨并行、出站字节和账本取证、「应该看到」要有来源、污染环境先重跑，以及结论三样齐的做法。"
-pubDate: 2026-08-20
+pubDate: 2026-09-29
 tags: ["验收","测试设计","端到端测试","API 网关","模型接入"]
 series: testing
 seriesLabel: "测试与验收"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 8c4231ab0071ba2b151d7a0a1e176f54f547b9327db33603b5f1953de9472070
+# import-articles-sha256: c81a849e3670c1ddbe72a8e5b586d34c1135e9f3485570518428005002b7a449
 # Imported by scripts/import-articles.mjs from posts/methods/others-decision-default-log.md
 # Source date: 2026-10-17
 title: "归别人定的事：先问谁定，按保守默认落地，写进决策日志"
 description: "一个偏离只写在组件注释里，一个价格被替别人定进了初始化脚本，一套限额和一套熔断都是平台早就有的。整理出动手前的「谁定」三问、保守默认怎么取、解释数字的顺序，和一条决策日志的模板。"
-pubDate: 2026-09-28
+pubDate: 2026-10-17
 tags: ["工作方法","协作","复盘","Code Review"]
 series: methods
 seriesLabel: "工作方法"

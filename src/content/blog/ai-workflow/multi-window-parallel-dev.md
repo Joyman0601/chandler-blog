@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 151f78d5f26276408c9c7562d93d1ca3bf160a54053dec00a9a2caa53bca6430
+# import-articles-sha256: 1354190a243ef2851eb638576c39cf1818c6433e0c9295a206fe63b7f39cece7
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/multi-window-parallel-dev.md
 # Source date: 2026-10-09
 title: "多窗口并行开发：派生简报、交接文件和各写各的记录"
 description: "把一个任务拆给五到七个 AI 编程窗口并行做时踩过的四类坑：简报覆盖原文、改名命令吞掉指令、共写记录被整份重写、编排续跑重跑已完成的代理，以及每类现在的固定做法。"
-pubDate: 2026-09-02
+pubDate: 2026-10-09
 tags: ["Claude Code","Codex","多代理","协作","上下文管理"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

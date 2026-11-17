@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: b5b3219df32ed3a7a817c027edfb3d489dcc6e3f51d85c32143175e73de66bdf
+# import-articles-sha256: ebaec3d884947f2f8863ded09d0a11755b0de476e6acd769f88274b2e007e9f9
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/long-rulebook-partial-read.md
 # Source date: 2026-10-06
 title: "长规范只读了不到三分之一就开工：规则清单、检查卡和读取守卫"
 description: "一份近九百行的页面规范，AI 每次都挑两节读完就动手。翻会话记录查到它读了哪几行，再把「整读」做成留下文件的动作，让规则在写文件那一刻出现；后来又发现工具会截输出，读全要由 hook 按读取记录核。"
-pubDate: 2026-08-27
+pubDate: 2026-10-06
 tags: ["Claude Code","Hooks","上下文管理","前端","AI 编程"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

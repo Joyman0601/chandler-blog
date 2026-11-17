@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 7cfdd3fe9f5be93292baf3ed3b8753784b03db5bce857c593409b55e5ae47503
+# import-articles-sha256: 25cc120c5dd98ced8d776ee2fb3a13f4d21d40bff4251a0e4dc93eb5c470d9ee
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/context-compaction-cost.md
 # Source date: 2026-10-10
 title: "上下文花费的大头是重读前缀：用历史会话定压缩阈值"
 description: "长会话每一轮的花费，大头是按缓存价重读前面的上下文。我从本机会话记录量出这件事，拿一百多个历史会话模拟自动压缩阈值，定在 30 万 token；上线两周后又发现压缩次数被低估，各道 hook 跟着重复触发。"
-pubDate: 2026-09-10
+pubDate: 2026-10-10
 tags: ["Claude Code","上下文管理","Hooks","AI 编程","复盘"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: ee0351330f84a97663cb336675215b3fdb7880b17c652433582d06076dac6523
+# import-articles-sha256: e56f52ce91715cb91f944a4875a4113fb68d31245d6d78c1c8cd99468b9ebb51
 # Imported by scripts/import-articles.mjs from posts/billing-regression/regression-core-set-single-key.md
 # Source date: 2026-10-25
 title: "缩短上线回归：先缩范围，再决定是否并行"
 description: "上线回归越来越慢，未必是请求跑得慢，也可能重复了验收、文档检查和等待记账。一次流程调整让我重新划定核心集、计时边界和对账范围：只有一把密钥时如何保留逐单证据，多请求并行时又有哪些结论不能下。"
-pubDate: 2026-10-08
+pubDate: 2026-10-25
 tags: ["回归测试","测试设计","对账","工作方法","复盘"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

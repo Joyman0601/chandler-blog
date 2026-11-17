@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 57d1ecd580a4e2f7a9497799655e12c1dadd385f310a5a188e92abc855ae4f54
+# import-articles-sha256: c483529feb1eb21dfdffdb1668238a5d54edbc658db9f8b9724d8c315ab47f9c
 # Imported by scripts/import-articles.mjs from posts/git-collab/sdk-field-release-dependency.md
 # Source date: 2026-10-29
 title: "SDK 加了字段：本地通过还要核发版依赖"
 description: "共享结构体新增字段，经 JSON 发给另一个进程，旧版消费者可能不报错就把它丢掉。本地依赖替换又会掩盖这个差异。结合一次跨仓修复，整理从解码夹具、依赖版本到实际构建产物的验证方法，以及持续集成记录应该怎样判读。"
-pubDate: 2026-10-14
+pubDate: 2026-10-29
 tags: ["Go","多仓库","Code Review","测试设计","协作"]
 series: git-collab
 seriesLabel: "Git 与协作"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: e779c4c38a30c4f07a4dc5ef8ceb88e553b60ec7150a897b37c83737a27dda41
+# import-articles-sha256: dfcab515d82fd4fb78aed122ba13bc60b5788fa2b842131b97dd5fb895470c17
 # Imported by scripts/import-articles.mjs from posts/frontend/google-one-tap-dark-mode.md
 # Source date: 2026-10-12
 title: "Google One Tap 暗色模式白框：查清根因和条款前提"
 description: "线上反馈 Google One Tap 在暗色模式下出现白色矩形、弹窗里也没有条款提示。记录不用真实凭证在本地复现的办法、白框的根因是 color-scheme 不一致、条款「没配置」的前提为什么不成立，以及视觉通过和真实登录通过要分开判定。"
-pubDate: 2026-09-17
+pubDate: 2026-10-12
 tags: ["前端","登录","CSS","Playwright","验收"]
 series: frontend
 seriesLabel: "前端实践"

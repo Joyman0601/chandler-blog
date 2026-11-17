@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 6225ea4a25d2b5c0c834dbd0cb5fece1633616333f04ae629cfd739e8018a996
+# import-articles-sha256: 18fa509008e70e1ea7cc37e361ee3c0d2e04ca2b5b25d217a9d14392f284b8c8
 # Imported by scripts/import-articles.mjs from posts/testing/blind-crosscheck-page.md
 # Source date: 2026-10-09
 title: "做一个盲核页：让人先写下看到的，再揭开报告值"
 description: "自己截图核对，只能证明「我看到的和我写的一致」。记录怎么做一个本地盲核页：题目只问来源里写的是多少，报告值先藏着；关键项全核、其余分层抽；直达链接按落点测；一题不一致就按错法扩大复核。"
-pubDate: 2026-09-06
+pubDate: 2026-10-09
 tags: ["调研","验收","测试设计","报告","工作方法"]
 series: testing
 seriesLabel: "测试与验收"

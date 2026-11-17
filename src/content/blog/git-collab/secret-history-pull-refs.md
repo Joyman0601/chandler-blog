@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: d03945cf3fc43f07d857c3b65c78d76a99c80afab470bb84599462ba9a88a4de
+# import-articles-sha256: cf84cc83229e4f446d6fd48245b1b6004d173d99eef8dfbdabd4c66703f8f314
 # Imported by scripts/import-articles.mjs from posts/git-collab/secret-history-pull-refs.md
 # Source date: 2026-11-03
 title: "密钥从主分支消失后：旧 PR 仍可能公开"
 description: "检查公开仓库时，当前文件已删除，旧 PR 的引用却仍保留敏感版本。本文区分工作树、提交历史、远端引用和匿名可读性，给出不回显凭据的核查办法，并说明撤销凭据、本地清理与平台处理各自能证明什么。"
-pubDate: 2026-11-01
+pubDate: 2026-11-03
 tags: ["Git","GitHub","复盘","测试设计"]
 series: git-collab
 seriesLabel: "Git 与协作"

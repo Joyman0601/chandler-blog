@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 924f71a6833c5fdc2dbd539a29d665bdceb0b2c77d5b6e0309e30ce797891e35
+# import-articles-sha256: 81305fa55a3afdd24c1fa616d3de3ff71ab694344ef273ba066dd813fbcf4e9e
 # Imported by scripts/import-articles.mjs from posts/git-collab/push-status-ask-remote.md
 # Source date: 2026-10-19
 title: "推送和 PR 状态只问远端：ls-remote、竞态和主干保护"
 description: "没设 upstream 不等于没推送，本地的 origin/* 也会过期。清点「推了还没开 PR」的分支要按自己的提交筛、每次重新枚举；把两个 PR 合成一个有竞态；「不推主干」的规则拦不住自己开 PR 再自己合。附核对脚本、守卫示例和推送前清单。"
-pubDate: 2026-10-01
+pubDate: 2026-10-19
 tags: ["Git","协作","Claude Code","Hooks"]
 series: git-collab
 seriesLabel: "Git 与协作"

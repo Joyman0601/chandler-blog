@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 352141b8bb523877424b4c17749937c024edfb6effa99d5840359e72cee49298
+# import-articles-sha256: 109fc919d62b574a6dd2cee5b55d01cc804a3fa045e116a747493e49dc30c349
 # Imported by scripts/import-articles.mjs from posts/billing-regression/pre-launch-regression-real-billing.md
 # Source date: 2026-10-10
 title: "上线前回归：真实账号真实扣费，四个数逐单对上"
 description: "代码部署到生产、对外开放之前的最后一道回归怎么做：准备加十步的流程，上线判定用故意写错参数的请求零花费探路由，计费要让历史记录、任务日志、余额差和独立公式逐单相等，兜底值等于实时值时用改写代理推一推。"
-pubDate: 2026-09-11
+pubDate: 2026-10-10
 tags: ["回归测试","上线","计费","对账","验收"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

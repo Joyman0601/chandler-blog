@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: ea4dda20a1d8986ddbbc2ee8d50fb834d737a83b43142651547a44aa60e830a0
+# import-articles-sha256: 1b628cc1692f20537c894c93b0b5f1101147edb670e56a4790f08a79d18fc2c1
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/error-classifier-channel-disable.md
 # Source date: 2026-10-17
 title: "错误分类、重试和渠道禁用：新上游的错误原文要逐条过分类器"
 description: "网关拿到一条上游错误，要同时决定给用户看什么、要不要重试或换渠道、记不记进渠道禁用和模型健康度。分类规则只认写它时见过的措辞，消费方各有各的匹配范围。讲接新上游时怎么核错误分类、失败上报、重试和熔断阈值。"
-pubDate: 2026-09-29
+pubDate: 2026-10-17
 tags: ["API 网关","错误处理","重试","模型接入","测试设计"]
 series: model-onboarding
 seriesLabel: "模型接入"

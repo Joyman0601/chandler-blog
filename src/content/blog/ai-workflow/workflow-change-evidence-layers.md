@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: abb00268d8e48a317793d35c12eeda52903db548bf9ef9e18760b701ce4c0f26
+# import-articles-sha256: db20695a981c244f9c6e0891e5c0b97d29228b569e213f20151d32264e75f701
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/workflow-change-evidence-layers.md
 # Source date: 2026-11-02
 title: "吸收新流程：先补缺口，再证明实际收益"
 description: "公开技能里有很多好方法，整套搬进现流程却可能增加重复阅读、等待和留档。一次吸收与复盘让我把「已保存、实际执行、有收益」分开：先查已有覆盖，只给具体缺口补动作，分别验证适用和不适用场景，再用真实任务比较质量、耗时与返工。"
-pubDate: 2026-10-25
+pubDate: 2026-11-02
 tags: ["AI 编程","Skill","测试设计","复盘","工作方法"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: ac6a1aa5b314e285edd356c80f9884bf542e58386b56e3a10e35cdfe047217d8
+# import-articles-sha256: ee0d67b8a3df784d2ad8cc655b1413e01fca5da35ee1bd30546f0aaf17284daa
 # Imported by scripts/import-articles.mjs from posts/methods/customer-docs-claims.md
 # Source date: 2026-10-19
 title: "对外文档和文案：每句承诺都要过四道对照"
 description: "模型页和 API 文档上的一句「输出一样长」「支持 WebP」「向上取整」，上线前都被逐句改过。整理出四道对照（官方限制、真上游实测、计费代码、同页规则），加新型号按能力逐项决定，多语言按要点对，附一张交付前清单。"
-pubDate: 2026-10-02
+pubDate: 2026-10-19
 tags: ["文档","多语言","工作方法","复盘"]
 series: methods
 seriesLabel: "工作方法"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: d8eba491d2e61c09721c08f4d02689ce68593d042901952a4c46f849e33a7c46
+# import-articles-sha256: 2c57151fb9199efe6da13cc81344af78785a110adc4fb2bb10ecc9a041654788
 # Imported by scripts/import-articles.mjs from posts/tooling/zsh-expansion-gotchas.md
 # Source date: 2026-10-09
 title: "zsh 和 bash 3.2 的七个展开坑：写法定死才不复发"
 description: "macOS 的默认 shell 是 zsh，自带的 bash 停在 3.2。从 Linux 和 bash 习惯带过来的命令，会在变量后的冒号、开头的等号、不加引号的星号、变量后的中文等地方静默出错。七个坑各给现象、根因和写法，附一行能扫出「变量后紧跟中文」的 perl。"
-pubDate: 2026-09-09
+pubDate: 2026-10-09
 tags: ["zsh","命令行","macOS","开发环境"]
 series: tooling
 seriesLabel: "开发环境与工具"

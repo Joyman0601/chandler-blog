@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: da6ab9a3d5f5081e0eab210f5fffdfb9911a604edc53966276c43dca554698e9
+# import-articles-sha256: d674b97b038dd28783f2089bb9b62d52ba56086097673e0966256bd51306f550
 # Imported by scripts/import-articles.mjs from posts/billing-regression/reserve-fallback-partial-delivery.md
 # Source date: 2026-10-24
 title: "结算缺价：预扣封顶之后，还要处理少交付"
 description: "预扣额已经含有时长和档位，缺价时再把它当单价会重复放大。封顶能挡住多扣，却未必退回未交付部分。结合一次预扣修复及后续提交，梳理正常查价、缺价兜底、部分交付和旧任务之间的边界，以及能区分这些路径的测试。"
-pubDate: 2026-10-06
+pubDate: 2026-10-24
 tags: ["计费","对账","API 网关","测试设计","复盘"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

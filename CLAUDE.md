@@ -27,13 +27,13 @@
 5. **推送前先问用户**（见下方协作约定），得到同意后再 `git push origin main`。
 6. **推送后**：Cloudflare 自动重新构建上线。可把线上 URL 报给用户：`https://chandlerblog.com/blog/<相对 src/content/blog 的路径，去掉 .md，末尾加 />`，例如 `src/content/blog/ms-learn/05-sentinel.md` → `https://chandlerblog.com/blog/ms-learn/05-sentinel/`。
 
-来自技术文章库的文章，先改原稿，再运行 `scripts/import-articles.mjs` 导入；不直接修改导入副本。原稿 `date` 是素材日期，可选 `pubDate` 是公开发布日期，`updated` 映射为 `updatedDate`。新文使用显式 `pubDate`，缺省回退 `date`；旧文缺省保留已校验导入副本的发布日期。导入后先跑 `--check`，再构建，具体命令见 README。
+来自技术文章库的文章，先改原稿，再运行 `scripts/import-articles.mjs` 导入；不直接修改导入副本。原稿 `date` 是素材日期，可选 `pubDate` 是公开发布日期，`updated` 映射为 `updatedDate`。原稿每篇都写显式 `pubDate`，取文章对应复盘的日期（不是导入或推送当天），缺省才回退 `date`。导入后先跑 `--check`，再构建，具体命令见 README。
 
 ## 协作约定
 
 - **用中文回复，不要日文。**
 - **推送 GitHub 前先征得用户同意，再 `git push`。**
-- 文章持续整理与发布，停止随机分配日期；保留既有文章日期，新稿填写实际整理发布的 `pubDate`，同日多篇正常。
+- 文章持续整理与发布，停止随机分配日期；导入文章的日期跟原稿对应复盘的日期走，不用导入或推送当天，同日多篇正常。
 - 页面沿用用户选定的 03-gallery 字体方向；改稿先判断元素用途，不机械保留旧模板。目录切换采用约 0.35s 的模糊与小幅滑动，并尊重减少动态效果；具体取舍维护在 DESIGN.md。
 
 ## 踩坑记录

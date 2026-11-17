@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 1c80a6b5a98ddd35bfafc7d16d807118f0438a1b163c6d321a79c74e40599fcf
+# import-articles-sha256: 838a8a4f462ee9208850479ddf6566f8dd63f84cf1a3062f2e3dd2f1f429a7d9
 # Imported by scripts/import-articles.mjs from posts/frontend/facet-filter-redesign.md
 # Source date: 2026-09-30
 title: "模型列表页筛选改版：从交集改并集，标签按语义取舍"
 description: "给模型列表页做多选能力标签，评审要求从交集改成并集。记录跟着要改的计数、跨组规则、命中提示和行宽，标签按定义而不是覆盖率取舍，以及打标要有实测证据、换掉数据源后旧读取方不报错的坑。"
-pubDate: 2026-08-24
+pubDate: 2026-09-30
 tags: ["前端","测试设计","验收","React","TypeScript"]
 series: frontend
 seriesLabel: "前端实践"

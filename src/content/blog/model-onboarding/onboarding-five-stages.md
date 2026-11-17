@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 4cc99a870a5e69d88456f347998c73b9686139bb487e56eb387d803585a34523
+# import-articles-sha256: 8085d6e2dfae822ae78c32043d01ddf57d386ef5965f5468fda97d17e2e4fe5d
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/onboarding-five-stages.md
 # Source date: 2026-10-06
 title: "接一个新模型的五段流程：先搜旧分支、先查同族再动手"
 description: "把一个上游模型接进多仓库的网关链路，按契约、SDK、网关、worker、数据初始化五段推进。几次返工都出在开工前：没搜旧分支、没按同族名查主干、照先例抄了默认值。附开工命令和上线前配置清单。"
-pubDate: 2026-08-28
+pubDate: 2026-10-06
 tags: ["模型接入","API 网关","Git","多仓库","工作方法"]
 series: model-onboarding
 seriesLabel: "模型接入"

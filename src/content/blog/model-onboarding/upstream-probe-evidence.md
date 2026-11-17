@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: a7acf40dddb162fe6a8212444862291e981f680edcdc8c2a034be535154756c0
+# import-articles-sha256: dde262e485045df4d636c64867440c67fbd01e6396b91771c429a3e138bfc35b
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/upstream-probe-evidence.md
 # Source date: 2026-09-29
 title: "上游接口实测：判通判拒都要指到证明它的字段"
 description: "接第三方模型时文档常常过时或自相矛盾，状态码也会骗人：401 被记成按预期被拒，未知参数 200 照收，兼容端点把模型静默换掉。讲预检、三类拒绝、证明字段、SDK 路径和按接口核事实的做法，附一个探测执行器骨架。"
-pubDate: 2026-08-19
+pubDate: 2026-09-29
 tags: ["上游探测","模型接入","测试设计","API 网关","Python"]
 series: model-onboarding
 seriesLabel: "模型接入"

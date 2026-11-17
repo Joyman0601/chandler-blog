@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 378b5e3b8c72de0ab84667be92592cb62911312c3225cddd6b370e11cb875a6a
+# import-articles-sha256: fb1ebab357dba6db1599106b3e55a79cde2b61707ea763db9b435354670745e7
 # Imported by scripts/import-articles.mjs from posts/git-collab/integrate-green-branches-inventory.md
 # Source date: 2026-11-15
 title: "合并全绿分支再盘点未合分支：交叉处和「没变化」都要验"
 description: "几条各自全绿的分支合成一套，新问题出在交叉处：一条的输出是另一条的输入、两条测试互相矛盾、源分支的头本来就红。盘点没合入的分支时，「已解决」有四种强弱不同的依据，裸克隆镜像会让「没变化」变成假结论。附交叉点清单和命令。"
-pubDate: 2026-11-17
+pubDate: 2026-11-15
 tags: ["Git","多仓库","测试设计","协作","AI 编程"]
 series: git-collab
 seriesLabel: "Git 与协作"

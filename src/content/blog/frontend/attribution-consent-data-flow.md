@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 56edc6fd20e96154dac603a8074e4f83a9ecc9ab13d4979d1dc453b69caae412
+# import-articles-sha256: 5207d93caf4882392c539a56a7d6fe924979924702e4a1ef215545a513d0d0a4
 # Imported by scripts/import-articles.mjs from posts/frontend/attribution-consent-data-flow.md
 # Source date: 2026-11-03
 title: "统计与来源归因：沿数据流理解同意控制"
 description: "Cookie 弹窗不是采集链路本身。先分清业务目的、分析工具、存储与控制，再检查进站、登录、排队任务和后端发送。用一个新访客编号的反例，解释拒绝后为何可能再次写入，以及不写 Cookie 为什么不等于不发送请求。"
-pubDate: 2026-10-29
+pubDate: 2026-11-03
 tags: ["前端","测试设计","文档","工作方法","复盘"]
 series: frontend
 seriesLabel: "前端实践"

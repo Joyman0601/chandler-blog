@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 5294e9098906a955f1a803ad254425bd01d016614dc0d1ef62fc5764281bea88
+# import-articles-sha256: 8676b3d2e4c79a6b3f6308136b68d357a1131f7e206ef74362adf214bc5a2921
 # Imported by scripts/import-articles.mjs from posts/frontend/first-load-bundle-lighthouse.md
 # Source date: 2026-09-29
 title: "首屏包体与 Lighthouse：共享注册表把全量文案打进首屏"
 description: "一个迁移完的页面 Lighthouse 稳定比同类页面低 3 分。查出两个原因：复用的共享估算器把全量注册表和多语言文案带进首屏，HTML 又刚好跨过模拟网络的一个 RTT 阈值。顺带记下本地生产构建会打到正式第三方、本地命令给出假结果这两类坑。"
-pubDate: 2026-08-15
+pubDate: 2026-09-29
 tags: ["前端","性能","Lighthouse","Next.js","开发环境"]
 series: frontend
 seriesLabel: "前端实践"

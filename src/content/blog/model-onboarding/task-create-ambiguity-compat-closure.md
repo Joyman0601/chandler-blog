@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 2521e3abae47c8e35fe0783ba48a274cbcfe1cf99fe23fc616983d5fa97449ee
+# import-articles-sha256: d468b20661cb54d821623fc3834454e445bba3414b361de8fecbb8f43710c2fe
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/task-create-ambiguity-compat-closure.md
 # Source date: 2026-11-04
 title: "任务型接口的边界：建单超时不等于没接单"
 description: "建单请求等不到响应时，上游可能已经接单；兼容旧调用时，回显旧名也不代表还跑旧版本。从两次修复复盘出发，整理建单结果的分类判断表、关停回收的生命周期、线上生效的证据分层，以及兼容迁移要一起收口的政策、元数据和下载入口。"
-pubDate: 2026-11-17
+pubDate: 2026-11-05
 tags: ["异步任务","重试","错误处理","API 网关","测试设计","Go"]
 series: model-onboarding
 seriesLabel: "模型接入"

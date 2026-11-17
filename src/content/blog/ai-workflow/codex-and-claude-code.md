@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 19e806eee7fb0def28eaa0936096ef1562cd0e939c99e5c4abeafd8f99b8a33e
+# import-articles-sha256: d9df631474d25614f91c124996e1d95c8cfd2103870241697b6b0a466ec26989
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/codex-and-claude-code.md
 # Source date: 2026-10-15
 title: "同一套流程搬到 Codex：skill、hook 和子代理的对应"
 description: "我在 Claude Code 里用顺了一套 skill 和 hook，后来想让 Codex 在同一个工作区里照着跑。指令文件和 skill 格式基本通用，麻烦出在 hook 的工具名、加密的子代理消息和沙箱上；有一道搬过去的闸，派子代理那一步在 Codex 里从来没拦过。"
-pubDate: 2026-09-18
+pubDate: 2026-10-15
 tags: ["Codex","Claude Code","Skill","Hooks","多代理"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

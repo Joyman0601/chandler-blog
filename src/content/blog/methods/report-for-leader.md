@@ -1,11 +1,11 @@
 ---
-# import-articles-sha256: b4aa41bfa0bcc2ac2c336606028e97c3c1f37f585836f84b670f19d049c3085f
+# import-articles-sha256: 7b2328a02e00e9447c20b61cd10da36299925ca6f465c57a47aa7fbae5f692d4
 # Imported by scripts/import-articles.mjs from posts/methods/report-for-leader.md
 # Source date: 2026-10-15
 title: "给 leader 的报告：第一屏回答验收点，待拍板不超过三条"
 description: "给 leader 的报告被退回过好几次：按自拟结构交、待拍板列了十几条、结论里塞读者不认识的前提、测试方案写成流程文档、周报把等别人的事算成没做完。整理出第一屏模板、待拍板筛法和用例表格式。"
-pubDate: 2026-09-23
-updatedDate: 2026-11-17
+pubDate: 2026-10-15
+updatedDate: 2026-11-06
 tags: ["报告","工作方法","协作","测试设计"]
 series: methods
 seriesLabel: "工作方法"

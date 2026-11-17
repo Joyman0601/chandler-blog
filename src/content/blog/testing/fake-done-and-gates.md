@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 6e90224929de6b8ddd8dc6b7046a88730726ac65489ecb2ccf3bfc942e1dfd68
+# import-articles-sha256: 11aa74e673aeb85165cc62d9b1df92ae10c3cf64b0e5f59e973fb372e43f2fc4
 # Imported by scripts/import-articles.mjs from posts/testing/fake-done-and-gates.md
 # Source date: 2026-09-22
 title: "两次「假完成」之后：给交付装上机器闸"
 description: "页面迁移第一周，进度文档说没做的其实做完了，状态脚本和几十个契约测试全绿的页面排版却还是旧版。记录两次「假完成」的根因，以及先造闸再修页、强制项三件套的做法。"
-pubDate: 2026-08-07
+pubDate: 2026-09-22
 tags: ["验收","测试设计","前端","Code Review","AI 编程"]
 series: testing
 seriesLabel: "测试与验收"

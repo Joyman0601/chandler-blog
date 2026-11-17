@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 747daaa3c9d058ba768baea3386021b38fff26db99a879b46747758ca87d7e4b
+# import-articles-sha256: df0075678f6fd44a6dd89cbe22d03460d5aef20bc5b6d90d65c1ab317d5689d6
 # Imported by scripts/import-articles.mjs from posts/frontend/sticky-layout-failures.md
 # Source date: 2026-10-05
 title: "sticky 在真实页面上的五种失败：先查 top 和直接父元素"
 description: "做模型列表页的吸顶筛选栏和侧栏时，sticky 在样稿里一切正常，放进站点后接连失效。按现象归成五种情形，每种给出根因、最小复现和修法，再给一套用脚本在两个视口高度下量位置、断言不重叠的验收方法。"
-pubDate: 2026-08-26
+pubDate: 2026-10-05
 tags: ["前端","CSS","Playwright","验收","React"]
 series: frontend
 seriesLabel: "前端实践"

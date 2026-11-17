@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: fdaf0eeba57e8d8228a77f5e0de1990791b639d856a9ee0491d398b4bb6d994b
+# import-articles-sha256: 0a8f4e020211403eac47aa4fda6dcb061a9b8e0c0bec5e21352e73595e3988fe
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/subagent-findings-are-leads.md
 # Source date: 2026-10-07
 title: "子代理的审查发现是线索：五步验证和新上下文复核"
 description: "把代码审视和调研拆给并行的子代理，换来了覆盖面，也换来一堆没核过的结论。记下主审逐条过的五步验证、派活时怎么为验证做准备，以及机器检查全绿之后，为什么还要派一个新上下文的子代理来复核。"
-pubDate: 2026-08-29
+pubDate: 2026-10-07
 tags: ["Code Review","多代理","Claude Code","调研","AI 编程"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

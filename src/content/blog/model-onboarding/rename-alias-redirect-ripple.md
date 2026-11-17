@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 25cbc8aca6ae4879271cb28c3ff2fc3428e082ae3ccfb041448a666631e7339c
+# import-articles-sha256: 6f487195e42f307e77d643ae48e58f75bbc60a8593a089cc215b083aa50e9629
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/rename-alias-redirect-ripple.md
 # Source date: 2026-10-08
 title: "改名、别名和重定向：每处按名字查表的地方都代入一遍"
 description: "网关里的模型名是最常用的键：查表查不到就回落默认值，子串规则先命中哪条算哪条，存量配置先解析别名再做键。改名、加同族名字、改别名指向、换默认档时，这些地方都不报错、只悄悄改行为。讲七类情形和一套代入法。"
-pubDate: 2026-08-31
+pubDate: 2026-10-08
 tags: ["API 网关","模型接入","Go","上线","Code Review"]
 series: model-onboarding
 seriesLabel: "模型接入"

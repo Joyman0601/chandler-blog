@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: dda84be3e800068fe3fd547be18b5686ba80ae1bd5a70e83d5c1f05cd81a0eff
+# import-articles-sha256: 63863de465755de89b3cb709df277d086e34c78c11d169d3aa806b5fd03fb52f
 # Imported by scripts/import-articles.mjs from posts/billing-regression/paid-test-design.md
 # Source date: 2026-10-15
 title: "按次付费接口的测试设计：合并维度、先跑负向、每天一个预算"
 description: "生成类接口一单一付费时怎么排用例：观测量独立的维度合进一条请求，极端值不穷举，先看失败扣不扣费，金标准跨渠道对照；真打前单独做一步免费核对，用例写成可粘贴的命令。附 Mac 睡眠冻住守护、推理档位被上限压平两个坑。"
-pubDate: 2026-09-21
+pubDate: 2026-10-15
 tags: ["测试设计","付费测试","回归测试","macOS","工作方法"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

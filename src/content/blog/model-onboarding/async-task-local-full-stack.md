@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 2ab4e3cb27d27649683a26b276e2deb81376741b5a50d9c0c9f0423116590e9e
+# import-articles-sha256: ebe88756128d14ca515e7acbad5f3ec3a137d696ceb015285913dc68ef494c56
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/async-task-local-full-stack.md
 # Source date: 2026-10-09
 title: "异步任务链路：从建任务到结算，在本地起全栈怎么测"
 description: "视频、图像这类任务型接口要经过建任务、预扣、投递、worker 执行、轮询、转存、回调、结算好几跳，单测和创建级冒烟只覆盖前两跳。讲本地全栈的搭法：mock 与假上游两种模式、自签登录、只丢一类回调的转发代理，以及一串只在全栈里才出现的坑。"
-pubDate: 2026-09-05
+pubDate: 2026-10-09
 tags: ["异步任务","端到端测试","API 网关","测试设计","Python"]
 series: model-onboarding
 seriesLabel: "模型接入"

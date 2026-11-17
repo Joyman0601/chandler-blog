@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 5a7a1a68fe70a2c0495fa1e02199eccf6971e5e64603e797aee73a5db9e1cb47
+# import-articles-sha256: 8499b87dca0f86fc13d5857ca96d77fe88ca92fdfe69604ab3cf35c063031c56
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/daily-report-from-sessions.md
 # Source date: 2026-09-30
 title: "从会话记录汇总每天做了什么：按本地日切分和三次改归类规则"
 description: "我写了个脚本，每天把 Claude Code 的会话记录按项目归成一条时间线。按本地日切分不难，难的是把笔记库的维护单独归一类、又不把工作调用卷进去：归类规则改了三次，每次都是拿新旧两版脚本回放历史才发现问题。"
-pubDate: 2026-08-23
+pubDate: 2026-09-30
 tags: ["Python","Claude Code","AI 编程","复盘","工作方法"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

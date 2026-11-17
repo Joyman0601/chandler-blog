@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 11ccfa0dc44dd1a9b0103125a592cdc21fff719d69e50d15b96531ab6bb5627d
+# import-articles-sha256: d10f58f905afc3d041ddae1628189e92106432a54e05d71c0eb551e013226d60
 # Imported by scripts/import-articles.mjs from posts/billing-regression/usage-snapshots-items-authority.md
 # Source date: 2026-11-03
 title: "多源用量计数：先分清快照、条目和权威值"
 description: "同一次工具调用既出现在累计回执里，又补来完成条目，把它们都加到总数就会重复计费。这次复盘让我把来源、范围、单位和权威性分开定义，并用乱序、重发、显式零和缺失字段验证合并规则。"
-pubDate: 2026-10-28
+pubDate: 2026-11-03
 tags: ["计费","对账","测试设计","API 网关","Python"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

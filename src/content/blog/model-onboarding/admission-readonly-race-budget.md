@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 3a19d1e07ac047aa648293a125a7da163d54d26910ee0554893c26dc3ff6a112
+# import-articles-sha256: f4bdcb177c154bc9bc205950b3fd8258e62b69bd3c97cf74b7ee11aa4994ae94
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/admission-readonly-race-budget.md
 # Source date: 2026-10-27
 title: "只读准入探测：余量、竞争和总超时"
 description: "网关先查看余量，任务执行器稍后才占位，两步之间的时间差会让最优选择变成集中拥堵。结合一次调度改动的后续修正，整理加权选择、短期放行、等待时间、候选错误隔离和回调总预算，说明只读探测能够保证什么。"
-pubDate: 2026-10-13
+pubDate: 2026-10-27
 tags: ["API 网关","异步任务","重试","Redis","测试设计"]
 series: model-onboarding
 seriesLabel: "模型接入"

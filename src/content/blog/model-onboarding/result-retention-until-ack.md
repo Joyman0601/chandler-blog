@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: b20ae46ceae10dc3d7cc91fb1b12ae448f23cde18b439ad4a54c34d58a11cf9f
+# import-articles-sha256: 2f0770ead7407f228680713d7885c4894afc15344db270be459c6611bcacc16b
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/result-retention-until-ack.md
 # Source date: 2026-10-25
 title: "结果已经存好：为何回报失败仍会丢掉任务"
 description: "异步任务的生成成功、文件存储完成、网关确认是三个不同阶段。回看一组结果存储修复，梳理回报失败为何会落入超时、等待预算怎样对齐网关截止时间，以及旧投递收尾为何必须只清理自己的登记。"
-pubDate: 2026-10-11
+pubDate: 2026-10-25
 tags: ["异步任务","错误处理","重试","API 网关","测试设计"]
 series: model-onboarding
 seriesLabel: "模型接入"

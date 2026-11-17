@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 9d632744b89acc7541889e689af75a2b359e09c0c685b1e8f1d775a24e928b6c
+# import-articles-sha256: 1d78a14fd6b28faef96d9eb1e9bd36626bf9f560afbe0ea1847a6393b21ba893
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/claude-code-hooks-inject-context.md
 # Source date: 2026-09-30
 title: "Claude Code hooks：提示拦不住命令，要拒绝一次"
 description: "给 AI 编程助手装了几类 hook 之后的复盘：事前提示随结果一起到，拦不住这一次；失败的命令走另一个事件；大段输出会被截成预览；关键词规则要先拿历史会话回放调噪音。"
-pubDate: 2026-08-22
+pubDate: 2026-09-30
 tags: ["Claude Code","Hooks","上下文管理","AI 编程"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: d0a0b5e886be906c9b67350cd5bcc1df27328b03478f9c87a8b5c4440e5a3099
+# import-articles-sha256: c6c316f3e27d8ad55adf6761d5e0e61e6946de993825ac19f5fdcbd9c2639aba
 # Imported by scripts/import-articles.mjs from posts/billing-regression/paid-regression-execution-discipline.md
 # Source date: 2026-11-04
 title: "付费回归的执行纪律：发送为零、账号独占、两套口径"
 description: "几次上线后付费回归里，出问题的多是执行而不是产品：前置检查失败了付费单照发、余额差混进别的窗口、预扣和结算被当成一个数核。这篇整理成三条纪律和一个发送前检查的最小脚本。"
-pubDate: 2026-11-17
+pubDate: 2026-11-05
 tags: ["回归测试","付费测试","对账","计费","复盘"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

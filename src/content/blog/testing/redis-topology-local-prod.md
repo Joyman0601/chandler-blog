@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 0fda64cca5785cdc66615d505678636c89cb0a546c830c24ba4ef3a3b6da630a
+# import-articles-sha256: 0bcda58e57072901cdc916435c9561d6d9eece069ba1641693af5529fb3b6bb7
 # Imported by scripts/import-articles.mjs from posts/testing/redis-topology-local-prod.md
 # Source date: 2026-10-29
 title: "本地全栈全绿：两台 Redis 暴露的读错库"
 description: "网关和任务执行器共用一套限流逻辑，本地验收全部通过，上线后却看不到彼此的状态。复盘一次被单台 Redis 掩盖的错误：如何按生产拓扑设计夹具，结合访问记录、正向断言和修复前后对照，验证跨进程状态确实共享。"
-pubDate: 2026-10-16
+pubDate: 2026-10-29
 tags: ["端到端测试","测试设计","Redis","异步任务","复盘"]
 series: testing
 seriesLabel: "测试与验收"

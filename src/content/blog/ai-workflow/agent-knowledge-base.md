@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 2f5cc44d0adf0b50d63cebe08e9af5fc61dc495d6a6c2768f31dfc6e31add0df
+# import-articles-sha256: bb2545b82bb334e2e8d4749f4da75f5aa8a7810467e4edc714266f85f260ace9
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/agent-knowledge-base.md
 # Source date: 2026-09-29
 title: "给 AI 搭一个会自己调出的经验库：记录、触发、复习"
 description: "同一个坑踩第二次之后，我给 AI 编程助手搭了一个经验库：一条只讲一个点、写入前三层脱敏、目录常驻上下文、按命令和文件路径触发、到期复习。记下它怎么设计、哪些试过又关掉，以及至今量不出来的部分。"
-pubDate: 2026-08-14
+pubDate: 2026-09-29
 tags: ["Claude Code","Skill","Hooks","脱敏","工作方法"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"

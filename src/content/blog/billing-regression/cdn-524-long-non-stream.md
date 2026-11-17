@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 1d3487e5ea0a5386ed364657e4e98a38cde5436ca69ed97008ce9597d4e9f514
+# import-articles-sha256: 3ffe86fbdb8af75f63dc46b598cea8a40802d99ec3aa3b8603bda88a4a45a696
 # Imported by scripts/import-articles.mjs from posts/billing-regression/cdn-524-long-non-stream.md
 # Source date: 2026-10-15
 title: "经 CDN 的非流式长请求：客户端 524，源站照常扣费"
 description: "一笔非流式长请求在 125.8 秒收到 Cloudflare 524，拿不到结果和请求 ID，源站照常跑完扣费。第二天按文档默认地址复核，影响面收窄到走备用地址的用户。附带 CDN 拦 Python urllib 的 1010。"
-pubDate: 2026-09-20
+pubDate: 2026-10-15
 tags: ["CDN","计费","回归测试","错误处理","Python"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: f96290649313e7cf72812e83cc80cf3ffb796b7ea7e033ae6f052f4c73408648
+# import-articles-sha256: 2d658add8cd6b9b2032f374cf9496be305a7f2e30a053bb30ecfdbb061f60b85
 # Imported by scripts/import-articles.mjs from posts/git-collab/worktree-multi-task.md
 # Source date: 2026-09-28
 title: "多任务并行的 git 用法：按任务隔离 worktree"
 description: "几个任务同时在一台机器上推进，又分散在互相依赖的几个仓库里。平铺的 worktree 让任务共用同一份依赖检出，构建悄悄串线。这篇讲按任务分目录、显式起点、多仓审视、同一行追加的合并、共用检出时只暂存自己的改动。"
-pubDate: 2026-08-13
+pubDate: 2026-09-28
 tags: ["Git","worktree","多仓库","协作"]
 series: git-collab
 seriesLabel: "Git 与协作"

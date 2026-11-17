@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: b0a187ab29c81c3bffd061fd20aa3662e95915d64a5084fffbb4d48b9fdd6647
+# import-articles-sha256: b81dc0755b3fca8ddd2d2b4d61bb0f28b6425b424ed8682e5fd0f988400bdad9
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/gateway-outbound-body-pitfalls.md
 # Source date: 2026-09-29
 title: "网关改写请求的漏洞：结构体改了，上游没收到"
 description: "网关在请求上补默认值、整流、合并附加参数、展开替换规则，每一步都可能和上游真正收到的字节对不上。讲五个实测漏洞和统一的验证法：用 mock 上游记录出站 body，每个端点用同一组输入变体各发一轮。"
-pubDate: 2026-08-18
+pubDate: 2026-09-29
 tags: ["API 网关","Go","模型接入","错误处理","测试设计"]
 series: model-onboarding
 seriesLabel: "模型接入"

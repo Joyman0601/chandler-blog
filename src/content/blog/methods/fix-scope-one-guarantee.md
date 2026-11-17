@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 908a4dcadb6117d62020f1c2c56018c6eb18f7c6095bbab4e1ccb9529d54e537
+# import-articles-sha256: fcb8000f7e2851e33df4aaba89d6b1b4af6b3915801cae8e195ffdefe6da1c78
 # Imported by scripts/import-articles.mjs from posts/methods/fix-scope-one-guarantee.md
 # Source date: 2026-11-15
 title: "修复先定一件事：审查意见不自动变成新机制"
 description: "三次缺陷修复，两次越改越大，一次没碰报的那个失败。整理出开工前写「这次保证什么」、审查意见逐条判范围、共用估算值只改点名那一处的做法，附一张读取方清单和一个最小示例。"
-pubDate: 2026-11-17
+pubDate: 2026-11-15
 tags: ["工作方法","Code Review","复盘","AI 编程","计费"]
 series: methods
 seriesLabel: "工作方法"

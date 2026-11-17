@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: b89229d5382e16138026967ab84b59ef5692b35f892e7a3c34788c378e1e77f0
+# import-articles-sha256: 823e0b29494b3cb6d91795744b7a4376c6ca66fab098d909627c315cfe9990c2
 # Imported by scripts/import-articles.mjs from posts/methods/identify-upstream-fingerprint.md
 # Source date: 2026-10-07
 title: "判断自部署还是转售：按信号强弱取证，线索要有区分力"
 description: "同一个模型，很多平台都在卖，每家背后走的是谁？一次竞品调研里，汇总表判错过两次：一次漏看托管方标记，一次拿两边都有的证据下了结论。整理出四档信号、区分力规则和一张判定表。"
-pubDate: 2026-08-30
+pubDate: 2026-10-07
 tags: ["调研","上游探测","工作方法","复盘"]
 series: methods
 seriesLabel: "工作方法"

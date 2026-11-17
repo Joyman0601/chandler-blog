@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 856ad1aa0f822acd41963869a412c34c8ad7afbb6b0d0620e34ba127405a5ae8
+# import-articles-sha256: 1c4073bd15c0446fbae6dc77a0b5d0adfe72ca077561daf13090e6a9ebf7b463
 # Imported by scripts/import-articles.mjs from posts/billing-regression/agent-api-token-cost.md
 # Source date: 2026-10-15
 title: "估 agent 类接口的花费：缓存读才是大头"
 description: "agent 一次任务反复调用模型，每次都重带越来越长的上下文，大多命中缓存，按「每轮输入 + 输出」估不准。要把三类输入的占比写成算式第一行的前提，再用实测回填；附两天账单回填，以及长任务、缓存过期和自动压缩对用量的影响。"
-pubDate: 2026-09-19
+pubDate: 2026-10-15
 tags: ["计费","调研","测试设计","付费测试","Claude Code"]
 series: billing-regression
 seriesLabel: "计费与上线回归"

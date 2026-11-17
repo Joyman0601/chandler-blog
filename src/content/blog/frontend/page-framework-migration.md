@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 2867012ade474e187fc474f7a86125acb90cca807ce31a6afc0b5628d2d2a5c4
+# import-articles-sha256: 299be49fd8b1028c4eb9e2ba8fa9ec9a2f4400c16318deef2ac576089b7be628
 # Imported by scripts/import-articles.mjs from posts/frontend/page-framework-migration.md
 # Source date: 2026-09-22
 title: "把旧页面迁到新页面框架：机器闸兜底，人只验机器验不了的"
 description: "把文本、图像、视频三类模型详情页迁到新的页面框架上。记录并行迁移的做法、契约测试挡下的真缺陷、交付证据包的形态，以及一次改版里把原有控件按样稿重画了的教训。"
-pubDate: 2026-08-04
+pubDate: 2026-09-22
 tags: ["前端","验收","多语言","worktree","React"]
 series: frontend
 seriesLabel: "前端实践"

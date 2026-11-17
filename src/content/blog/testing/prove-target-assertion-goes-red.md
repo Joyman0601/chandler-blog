@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: b8223ffa9e784721ca77a12c97ccd49d2ae621028866f5d457ca7ab1630db7d2
+# import-articles-sha256: 4f43cb765a93a89eadaabf92fdec7abe503463c530ef79197b4be976302c4add
 # Imported by scripts/import-articles.mjs from posts/testing/prove-target-assertion-goes-red.md
 # Source date: 2026-11-04
 title: "测试全绿之前：先证明目标断言真的会红"
 description: "旧版红了不等于守卫有效，可能红在别的断言上；新版绿了也不等于守住了，可能目标代码根本没执行。整理两周里七种「绿灯对应的东西和以为的不一样」，以及交出全绿前要问的清单。"
-pubDate: 2026-11-17
+pubDate: 2026-11-15
 tags: ["守卫测试","测试设计","Code Review","AI 编程","Go"]
 series: testing
 seriesLabel: "测试与验收"

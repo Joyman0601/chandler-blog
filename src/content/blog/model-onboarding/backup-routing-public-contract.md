@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: e6932497152927a4b984398a65f78369c3a10e0598d39af0df4bd16d1148da9a
+# import-articles-sha256: 6978eb9a7e4514ddf025fd5eaeb17c8c8da79addd40b3deb3a066282c447727a
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/backup-routing-public-contract.md
 # Source date: 2026-10-26
 title: "备份上游兼容性：从公开契约逐项核对"
 description: "给已有模型增加备份渠道，字段黑名单通过了测试，仍可能漏掉提示词语法、参数取值、输入格式和隐式归一。复盘一次能力路由补漏，说明如何从公开承诺建立对照表，分别验证本地转换与真实上游行为，并防止过度排除。"
-pubDate: 2026-10-12
+pubDate: 2026-10-26
 tags: ["模型接入","API 网关","上游探测","测试设计","文档"]
 series: model-onboarding
 seriesLabel: "模型接入"

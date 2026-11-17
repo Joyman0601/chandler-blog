@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: f5f7beabace837cba66e2dc7e16737051d4982f79bfaf7f1f72e50b5dae952dc
+# import-articles-sha256: 5e03d2e7f1677fb7b50052feb4d98a2071f548058bbacfa9a1b5acfca0b70ff2
 # Imported by scripts/import-articles.mjs from posts/frontend/bounded-navigation-browser-focus.md
 # Source date: 2026-11-02
 title: "长报告导航：控制可见位移，也尊重浏览器边界"
 description: "长距离跳转只缩短时间，仍可能让整篇文字快速掠过。记录把远跳、返回和折叠恢复统一成短时过渡的做法，以及后台打开外链时，普通网页、浏览器原生操作与扩展分别能控制什么。"
-pubDate: 2026-10-26
+pubDate: 2026-11-02
 tags: ["前端","CSS","验收","Playwright","工作方法"]
 series: frontend
 seriesLabel: "前端实践"

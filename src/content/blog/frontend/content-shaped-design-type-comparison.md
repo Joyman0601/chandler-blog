@@ -1,11 +1,11 @@
 ---
-# import-articles-sha256: b436474122fe8e914f55822f65d39731f93b7784ceee8ae113373b105314d600
+# import-articles-sha256: c0eb1dc62414b8ac3ce219592f0488b74dff030c08c66d8bfc49eea91c2b673c
 # Imported by scripts/import-articles.mjs from posts/frontend/content-shaped-design-type-comparison.md
 # Source date: 2026-11-03
 title: "网页个性与字体搭配：先分清要比较的变量"
 description: "把高级、艺术化的模糊要求变成可比较的页面：字体试验固定内容和网格，风格试验改变视觉主角与交互。再从一次手机单字尾行和字体子集的反例，说明自动检查、截图归档与可复用模板分别能证明什么。"
-pubDate: 2026-10-31
-updatedDate: 2026-11-17
+pubDate: 2026-11-03
+updatedDate: 2026-11-04
 tags: ["前端","CSS","工作方法","复盘","AI 编程"]
 series: frontend
 seriesLabel: "前端实践"

@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: ffed4b026bfa1d0a2095355661eb432bde53ffda0b5f77945af2516143576396
+# import-articles-sha256: c2a45a965368735ce0ed0be06f8ab8abcd98db72d69f7ad72751b0dac2c8ee4a
 # Imported by scripts/import-articles.mjs from posts/testing/playwright-walkthrough-gotchas.md
 # Source date: 2026-10-15
 title: "用 Playwright 走查页面、截证据图的一串坑"
 description: "让脚本替人点一遍真实页面、再截图当证据时，定位、等待、本地状态、焦点和截图本身都会让结论出错。按出错的位置整理成几组坑，每组附可直接抄的写法和判断规则。"
-pubDate: 2026-09-25
+pubDate: 2026-10-15
 tags: ["Playwright","端到端测试","验收","前端","测试设计"]
 series: testing
 seriesLabel: "测试与验收"

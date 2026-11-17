@@ -1,10 +1,10 @@
 ---
-# import-articles-sha256: 8ea43378a0fe26e4cfbc485429a48fde089aa6a42bf6fabcd08fb5a4adbe77f5
+# import-articles-sha256: 00d8ac28ac1c49eb1b2177c688a9c42700d7703f3b0a92d959c6ca30d4564197
 # Imported by scripts/import-articles.mjs from posts/tooling/mac-dev-machine-ops.md
 # Source date: 2026-10-22
 title: "Mac 开发机的日常排障：代理、磁盘、负载和后台进程"
 description: "一台 Mac 同时跑多个开发窗口和代理，常见的故障看起来都像代码问题。这篇按网络、磁盘、负载、进程的顺序，记下 Node 构建 TLS 断开、SSH 卡在密钥交换、磁盘一两天就满、负载 17 的真正元凶，以及停进程、切长截图、Go 只编译时的几个假失败。"
-pubDate: 2026-10-05
+pubDate: 2026-10-22
 tags: ["macOS","代理","开发环境","Go","命令行"]
 series: tooling
 seriesLabel: "开发环境与工具"
