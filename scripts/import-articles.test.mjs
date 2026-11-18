@@ -202,3 +202,52 @@ test("article links retain queries and anchors while code remains literal", asyn
   assert.match(content, /`\[代码\]\(missing\.md\)`/);
   assert.match(content, /```md\n\[代码\]\(missing\.md\)\n```/);
 });
+
+const drawing = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text x="1" y="8">图</text></svg>\n';
+
+async function figure(f, name, content = drawing) {
+  await mkdir(path.join(f.source, "posts/testing/figures"), { recursive: true });
+  await writeFile(path.join(f.source, "posts/testing/figures", name), content);
+}
+
+test("figures are copied beside the article, keep their relative link, and count as pending in check mode", async (t) => {
+  const f = await fixture(t);
+  await figure(f, "flow.svg");
+  await f.article("with-figure", {}, "![流程](figures/flow.svg)\n\n```md\n![代码里的写法](figures/none.svg)\n```\n");
+  failure(f.run("--check"), /Import is out of date: 1 missing, 0 changed, 1 figures missing or changed/);
+  await assert.rejects(readFile(path.join(f.output, "figures/flow.svg")), { code: "ENOENT" });
+  const stats = success(f.run());
+  assert.equal(stats.figures, 1);
+  assert.equal(await readFile(path.join(f.output, "figures/flow.svg"), "utf8"), drawing);
+  assert.match(await f.read("with-figure"), /!\[流程\]\(figures\/flow\.svg\)/);
+  assert.equal(success(f.run("--check")).figuresChanged, 0);
+  const redrawn = drawing.replace("图", "新图");
+  await figure(f, "flow.svg", redrawn);
+  failure(f.run("--check"), /0 missing, 0 changed, 1 figures missing or changed/);
+  assert.equal(await readFile(path.join(f.output, "figures/flow.svg"), "utf8"), drawing);
+  success(f.run());
+  assert.equal(await readFile(path.join(f.output, "figures/flow.svg"), "utf8"), redrawn);
+});
+
+test("a missing, outside, or not self-contained figure stops the import before anything is written", async (t) => {
+  const f = await fixture(t);
+  await f.article("with-figure", {}, "![流程](figures/flow.svg)\n");
+  failure(f.run(), /with-figure\.md: figure is missing: posts\/testing\/figures\/flow\.svg/);
+  await assert.rejects(f.read("with-figure"), { code: "ENOENT" });
+  for (const bad of ['<script>alert(1)</script>', '<image href="data:image/png;base64,AAAA"/>', '<a href="https://example.com"><text>x</text></a>',
+    '<rect onload="x()"/>', '<foreignObject><p>x</p></foreignObject>', '<rect fill="url(https://example.com/p.svg#g)"/>']) {
+    await figure(f, "flow.svg", drawing.replace("</svg>", `${bad}</svg>`));
+    failure(f.run(), /a figure must be a self-contained SVG drawing/);
+    await assert.rejects(f.read("with-figure"), { code: "ENOENT" });
+    await assert.rejects(readFile(path.join(f.output, "figures/flow.svg")), { code: "ENOENT" });
+  }
+  await figure(f, "flow.svg", "not a drawing\n");
+  failure(f.run(), /a figure must be a self-contained SVG drawing/);
+  await figure(f, "flow.svg", drawing.replace("</svg>", '<defs><marker id="m"/></defs><path marker-end="url(#m)" d="M0 0"/><use href="#m"/></svg>'));
+  await f.article("escapes", {}, "![外面的图](../../outside.svg)\n");
+  failure(f.run(), /escapes\.md: figure is outside posts\//);
+  await assert.rejects(f.read("with-figure"), { code: "ENOENT" });
+  await rm(path.join(f.source, "posts/testing/escapes.md"));
+  success(f.run());
+  assert.match(await readFile(path.join(f.output, "figures/flow.svg"), "utf8"), /marker-end="url\(#m\)"/);
+});

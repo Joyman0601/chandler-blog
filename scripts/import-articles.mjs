@@ -18,6 +18,7 @@ const repoRoot = fileURLToPath(new URL("../", import.meta.url));
 const outputRoot = path.join(repoRoot, "src/content/blog");
 const digestPrefix = "# import-articles-sha256: ";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const unsafeFigure = /<script|<foreignObject|<iframe|<image[\s>]|\son[a-z]+\s*=|href\s*=\s*["'](?!#)|url\(\s*["']?(?!#)/i;
 
 async function markdownFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -86,12 +87,20 @@ function existingPublicationDate(existing, relative, marker) {
   return validDate(date, "existing pubDate", relative);
 }
 
-function rewriteLinks(body, article, sourceRoot, published, stats) {
+function rewriteLinks(body, article, sourceRoot, published, stats, figures) {
   const rewriteProse = (text) => text.replace(/(\]\(\s*)(<[^>\n]*>|[^\s)]+)(?=[\s)])/g, (whole, prefix, wrapped) => {
     const angled = wrapped.startsWith("<");
     const url = angled ? wrapped.slice(1, -1) : wrapped;
     if (/^(?:[a-zA-Z][a-zA-Z\d+.-]*:|\/|#)/.test(url)) return whole;
     const [, pathname, suffix = ""] = url.match(/^([^?#]*)([?#][\s\S]*)?$/);
+    if (pathname.endsWith(".svg")) {
+      // A figure keeps its relative link: the file is copied to the same place under the blog content tree.
+      const figure = path.resolve(path.dirname(article.absolute), decodeURIComponent(pathname));
+      const figureRelative = path.relative(sourceRoot, figure).split(path.sep).join("/");
+      if (figureRelative.startsWith("../") || path.isAbsolute(figureRelative)) throw new Error(`${article.relative}: figure is outside posts/: ${url}`);
+      if (!figures.has(figure)) figures.set(figure, { relative: figureRelative, from: article.relative });
+      return whole;
+    }
     if (!pathname.endsWith(".md")) return whole;
     const target = path.resolve(path.dirname(article.absolute), decodeURIComponent(pathname));
     const targetRelative = path.relative(sourceRoot, target).split(path.sep).join("/");
@@ -162,8 +171,9 @@ async function main() {
   }
   articles.sort((a, b) => a.data.date.localeCompare(b.data.date) || a.relative.localeCompare(b.relative, "en"));
   const published = new Set(articles.map((article) => article.absolute));
-  const stats = { mode: check ? "check" : "write", articles: articles.length, drafts: drafts.length, links: 0, tableCodePipes: 0, created: 0, updated: 0, unchanged: 0, dates: {} };
+  const stats = { mode: check ? "check" : "write", articles: articles.length, drafts: drafts.length, links: 0, tableCodePipes: 0, created: 0, updated: 0, unchanged: 0, figures: 0, figuresChanged: 0, dates: {} };
   const plans = [];
+  const figures = new Map();
   for (const article of articles) {
     const { data, relative } = article;
     const marker = `# Imported by scripts/import-articles.mjs from posts/${relative}`;
@@ -179,7 +189,7 @@ async function main() {
       `description: ${JSON.stringify(data.description)}`, `pubDate: ${pubDate}`];
     if (data.updated) metadata.push(`updatedDate: ${data.updated < pubDate ? pubDate : data.updated}`);
     metadata.push(`tags: ${JSON.stringify(data.tags)}`, `series: ${data.category}`, `seriesLabel: ${JSON.stringify(labels[data.category])}`);
-    const body = rewriteLinks(article.body, article, sourceRoot, published, stats);
+    const body = rewriteLinks(article.body, article, sourceRoot, published, stats, figures);
     const unsigned = `---\n${metadata.join("\n")}\n---\n${body}`;
     const output = unsigned.replace("---\n", `---\n${digestPrefix}${sha256(unsigned)}\n`);
     stats.dates[pubDate] = (stats.dates[pubDate] ?? 0) + 1;
@@ -196,12 +206,38 @@ async function main() {
       if (error.code !== "ENOENT") throw error;
     }
   }
-  if (check && (stats.created || stats.updated)) throw new Error(`Import is out of date: ${stats.created} missing, ${stats.updated} changed`);
+  // Figures are public files too: read and vet every one before anything is written.
+  const figurePlans = [];
+  for (const [absolute, { relative, from }] of figures) {
+    const content = await readFile(absolute).catch((error) => {
+      if (error.code === "ENOENT" || error.code === "EISDIR") throw new Error(`${from}: figure is missing: posts/${relative}`);
+      throw error;
+    });
+    // Text must stay text (the article library scans it), and the drawing must not load or run anything.
+    if (!/<svg[\s>]/.test(content.toString("utf8")) || unsafeFigure.test(content.toString("utf8"))) {
+      throw new Error(`posts/${relative}: a figure must be a self-contained SVG drawing (no scripts, event handlers, embedded images, or external references)`);
+    }
+    const destination = path.join(outputRoot, relative);
+    const existing = await readFile(destination).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+    stats.figures++;
+    if (!existing?.equals(content)) stats.figuresChanged++;
+    figurePlans.push({ destination, content, existing });
+  }
+  if (check && (stats.created || stats.updated || stats.figuresChanged)) {
+    throw new Error(`Import is out of date: ${stats.created} missing, ${stats.updated} changed, ${stats.figuresChanged} figures missing or changed`);
+  }
   if (!check) {
     for (const { destination, output, existing } of plans) {
       if (existing === output) continue;
       await mkdir(path.dirname(destination), { recursive: true });
       await writeFile(destination, output, "utf8");
+    }
+    for (const { destination, content, existing } of figurePlans) {
+      if (existing?.equals(content)) continue;
+      await mkdir(path.dirname(destination), { recursive: true });
+      await writeFile(destination, content);
     }
   }
   console.log(JSON.stringify(stats, null, 2));

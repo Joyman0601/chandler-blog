@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 5869ab99cec72ce2ea02b093dc74831e362d54a0d567d87517dd29c9eba54174
+# import-articles-sha256: e2a6e66d025925eef7192cd4218949fcfd95d4125e88c5f2ebd8c99578f1b131
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/resend-by-stage-not-error-text.md
 # Source date: 2026-11-17
 title: "失败后能不能再发：看请求走到了哪一步"
@@ -22,12 +22,7 @@ issue 里附了建议的修法。SDK 里有一个现成的通用判定，输入�
 
 ## 1. 先有一张图：一单请求经过哪几层
 
-```text
-用户 ──HTTP──▶ 主后端网关 ──消息队列──▶ 任务 worker ──函数调用──▶ 供应商 SDK ──HTTPS──▶ 上游
-              在跑的程序                在跑的程序              一段代码，不是程序
-              路由、计费、               取任务、调 SDK、         编进网关和 worker 里
-              决定换不换渠道             轮询结果、回报网关
-```
+![一单请求经过的几层：用户经 HTTP 到主后端网关，网关经消息队列到任务 worker，worker 用函数调用进供应商 SDK，SDK 经 HTTPS 到上游。网关和 worker 是在跑的程序，SDK 是编进两者里的一段代码](figures/resend-by-stage-layers.svg)
 
 四件事要记住。
 
@@ -42,12 +37,7 @@ issue 里附了建议的修法。SDK 里有一个现成的通用判定，输入�
 
 这家上游的计费规则有公开文档：只对成功返回（HTTP 200）的请求收费，4xx 和 5xx 不收（文档）。有了这条规则，一次请求按走到哪一步分三种：
 
-```text
-① 还没发出去                ② 发出去了，没等到回包        ③ 收到了状态码
-  取凭证、下载输入图失败       连接断开、读超时              非 200 + 上游自己的错误体 → 明确拒绝，没收钱
-  上游没收到 → 没收钱         不知道上游做没做              非 200 + 一页 HTML 或纯文本 → 不知道是谁回的
-                                                          200 → 已经收钱；这时读响应体断了，钱花了、图没拿到
-```
+![请求的三个阶段和各自的结论：还没发出去，上游没收钱；发出去了没等到回包，不知道上游做没做；收到了状态码，再按状态码和响应体分三种](figures/resend-by-stage-stages.svg)
 
 规则只有一句：**只有确定没被收钱，才在同一渠道再发**。能确定的只有 ①，和 ③ 里「上游明确拒绝」那一种。
 

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="545" viewBox="0 0 400 419" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>一单请求经过哪几层</title>
+  <text x="44" y="20" text-anchor="middle" font-size="15" font-weight="600" fill="#191919">用户</text>
+  <path d="M44 30V63" stroke="#191919" stroke-width="1.2" fill="none"/>
+  <path d="M40 61H48L44 68Z" fill="#191919"/>
+  <text x="60" y="54" font-size="12.5" fill="#626262">HTTP</text>
+  <rect x="8.5" y="72.5" width="383" height="64" rx="4" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="24" y="99" font-size="15" font-weight="600" fill="#191919">主后端网关</text>
+  <text x="376" y="99" text-anchor="end" font-size="12.5" fill="#626262">在跑的程序</text>
+  <text x="24" y="121" font-size="13" fill="#626262">路由、计费、决定换不换渠道</text>
+  <path d="M44 137V170" stroke="#191919" stroke-width="1.2" fill="none"/>
+  <path d="M40 168H48L44 175Z" fill="#191919"/>
+  <text x="60" y="161" font-size="12.5" fill="#626262">消息队列</text>
+  <rect x="8.5" y="179.5" width="383" height="64" rx="4" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="24" y="206" font-size="15" font-weight="600" fill="#191919">任务 worker</text>
+  <text x="376" y="206" text-anchor="end" font-size="12.5" fill="#626262">在跑的程序</text>
+  <text x="24" y="228" font-size="13" fill="#626262">取任务、调 SDK、轮询结果、回报网关</text>
+  <path d="M44 244V277" stroke="#191919" stroke-width="1.2" fill="none"/>
+  <path d="M40 275H48L44 282Z" fill="#191919"/>
+  <text x="60" y="268" font-size="12.5" fill="#626262">函数调用</text>
+  <rect x="8.5" y="286.5" width="383" height="64" rx="4" fill="none" stroke="#191919" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="24" y="313" font-size="15" font-weight="600" fill="#191919">供应商 SDK</text>
+  <text x="376" y="313" text-anchor="end" font-size="12.5" fill="#626262">一段代码，不是程序</text>
+  <text x="24" y="335" font-size="13" fill="#626262">编进网关和 worker 里</text>
+  <path d="M44 351V384" stroke="#191919" stroke-width="1.2" fill="none"/>
+  <path d="M40 382H48L44 389Z" fill="#191919"/>
+  <text x="60" y="375" font-size="12.5" fill="#626262">HTTPS</text>
+  <text x="44" y="409" text-anchor="middle" font-size="15" font-weight="600" fill="#191919">上游</text>
+</svg>

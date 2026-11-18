@@ -212,6 +212,9 @@ main:focus { outline: none; }
 .article li > p { margin-block: 10px; }
 .article p a, .article li a { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
 .article img { height: auto; border-radius: 4px; }
+/* Line figures: drawn in the light theme's ink on a transparent ground, flipped for the dark theme. */
+.article img[src*=".svg"] { margin: 30px 0; border-radius: 0; }
+[data-theme="dark"] .article img[src*=".svg"] { filter: invert(1) hue-rotate(180deg); }
 .article code { font-family: var(--mono); font-size: .85em; }
 .article :not(pre) > code { background: var(--surface-soft); color: var(--accent); padding: 2px 5px; border-radius: 3px; }
 .article pre { margin: 20px 0; overflow-x: auto; padding: 20px; border-radius: 5px; background: var(--code-bg); color: var(--code-text); line-height: 1.75; overflow-wrap: normal; }
