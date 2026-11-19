@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: b1f01094c1b8a78f7d5c4f7915f0235b2c9c94715213e93474e2716442771c77
+# import-articles-sha256: ed7c082cc81ebf1b0c08f96f26fa1d882a131c366c72784f42635f584bdae244
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/stream-terminal-usage-eof-lifecycle.md
 # Source date: 2026-11-01
 title: "流式收尾：终态、用量、EOF 和保活要分开"
@@ -65,15 +65,7 @@ SSE（Server-Sent Events，服务端发送事件）用空行划分事件，冒�
 
 可使用本地 HTTP 假上游：发完终态和用量后 Flush，随后保持 handler 存活，直到请求 context 被网关取消。还可以周期性发送注释，让网络持续有字节，但没有新的业务数据。
 
-```text
-假上游发业务终态与完整用量
-    ↓
-持续发送注释，保持响应体不 EOF
-    ↓
-网关应在应用宽限结束后返回
-    ↓
-假上游观察到取消，退出 handler
-```
+![假上游发业务终态与完整用量，再持续发送注释、保持响应体不 EOF；网关应在应用宽限结束后返回，假上游观察到取消后退出 handler](figures/stream-terminal-usage-eof-lifecycle-hanging-fixture.svg)
 
 测试同时观察下游何时返回、上游是否被取消、响应体是否关闭、用量是否保留。只给整个测试设一个超时，跑完没挂，不足以证明是目标结束条件生效。
 

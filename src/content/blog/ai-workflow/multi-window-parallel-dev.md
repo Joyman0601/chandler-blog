@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 1354190a243ef2851eb638576c39cf1818c6433e0c9295a206fe63b7f39cece7
+# import-articles-sha256: d7d0d895b7cadc33ebdb27b7bbaaa4a3b06a8a0394e1f54fd1ea16390c3c933b
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/multi-window-parallel-dev.md
 # Source date: 2026-10-09
 title: "多窗口并行开发：派生简报、交接文件和各写各的记录"
@@ -28,18 +28,7 @@ seriesLabel: "AI 辅助开发"
 
 所有窗口共用一个任务目录，结构固定：
 
-```text
-<任务目录>/
-├── PLAN.md               # 统筹窗口写：现状、分工、公共约定、交付清单、资源登记
-├── windows/
-│   ├── W1-backend.md     # 每个窗口一份简报
-│   └── W2-frontend.md
-├── DECISIONS-W1.md       # 决策日志：每个窗口一份
-├── DECISIONS-W2.md
-├── 台账-W1.md            # 真实调用的花费记录：每个窗口一份
-├── inbox-W2.md           # 发给 W2 的消息（给没有消息工具的代理用）
-└── out/W1/               # 各窗口的中间产物
-```
+![任务目录下的文件：PLAN.md 由统筹窗口写，记现状、分工、公共约定、交付清单、资源登记；windows/ 里每个窗口一份简报（W1-backend.md、W2-frontend.md）；DECISIONS-W1.md、DECISIONS-W2.md 是决策日志，每个窗口一份；台账-W1.md 是真实调用的花费记录，每个窗口一份；inbox-W2.md 是发给 W2 的消息，给没有消息工具的代理用；out/W1/ 放各窗口的中间产物](figures/multi-window-parallel-dev-task-dir.svg)
 
 PLAN.md 照一份固定模板写。§0 是「各窗口不用再查」的现状：代码落点、主干是哪条、所有远端分支里有没有前人做过；§0.5 记我已经定了的事，比如开几个窗口、真实调用的预算。§1 是分工表，写每个窗口改哪组 worktree、产出交给谁、依赖谁；§2 是时间表。§3 是公共约定：目录和 worktree 布局、推送前先问我、真实调用在日预算内记账、超出才问。§4 是交付清单，逐条照抄任务原文里要交的东西。§5 登记端口、容器这类资源被谁占着。
 

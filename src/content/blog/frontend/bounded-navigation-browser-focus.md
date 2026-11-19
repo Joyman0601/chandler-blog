@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 5e03d2e7f1677fb7b50052feb4d98a2071f548058bbacfa9a1b5acfca0b70ff2
+# import-articles-sha256: d539195a8f39f8a1a76f473e9628cad9044ddb1a41885bab50912e341775f9d0
 # Imported by scripts/import-articles.mjs from posts/frontend/bounded-navigation-browser-focus.md
 # Source date: 2026-11-02
 title: "长报告导航：控制可见位移，也尊重浏览器边界"
@@ -50,14 +50,7 @@ seriesLabel: "前端实践"
 
 可以把一次返回想成以下步骤，而不是直接复制成所有项目的实现：
 
-```text
-接收返回动作
-→ 结束尚未完成的导航
-→ 恢复这一条历史对应的折叠状态
-→ 等待需要的布局变化完成
-→ 定位到原阅读位置
-→ 使用与正向一致的显示策略
-```
+![一次返回依次是：接收返回动作，结束尚未完成的导航，恢复这一条历史对应的折叠状态，等待需要的布局变化完成，定位到原阅读位置，再使用与正向一致的显示策略](figures/bounded-navigation-browser-focus-back-restore.svg)
 
 浏览器前进、后退与页面自己的返回按钮，都应进入相同的状态恢复约定。快速连续点击时，还要防止旧动画结束回调覆盖新一条历史。这里检查的是最终稳定状态，不能只看一次慢速操作成功。
 

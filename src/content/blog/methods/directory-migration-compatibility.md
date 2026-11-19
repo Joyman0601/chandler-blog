@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 3a284751f01f6ad747fd36fff3205ee6b7497d0112a8b59d587fa199bddb4a43
+# import-articles-sha256: f29671b351bfe58a191b643e2eaa13892878380187b5b157de2f1b9344b4b677
 # Imported by scripts/import-articles.mjs from posts/methods/directory-migration-compatibility.md
 # Source date: 2026-11-02
 title: "整理项目目录：迁移后仍要按旧入口验证"
@@ -52,13 +52,7 @@ seriesLabel: "工作方法"
 
 我最需要留意的是「文件没变，链接却变了」。下面是重新编写的目录例子：
 
-```text
-notes/
-  draft/
-    report.html
-  assets/
-    diagram.svg
-```
+![notes/ 目录下两个子目录：draft/ 里放 report.html，assets/ 里放 diagram.svg](figures/directory-migration-compatibility-notes-tree.svg)
 
 假设报告通过 `../assets/diagram.svg` 引用图片。把报告单独移到 `notes/archive/draft/`，相同字符串会尝试定位另一层目录。文件摘要完全一致，浏览器也可能打不开图片。
 

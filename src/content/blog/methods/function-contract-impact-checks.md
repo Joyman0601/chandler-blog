@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: ed13df66f9124fc132918b0e3894f93c2e2bef78f53bb00a2ab2f05d1e528722
+# import-articles-sha256: 3b4e799d76350a3af98d964ac439827cb487a8f47e3b32d5b436a17def0b5586
 # Imported by scripts/import-articles.mjs from posts/methods/function-contract-impact-checks.md
 # Source date: 2026-11-01
 title: "函数职责记录：在行为保证未变的边界停止追查"
@@ -50,19 +50,7 @@ seriesLabel: "工作方法"
 
 下面是自编的职责拆分示意，和任何实际业务代码无关。
 
-```text
-A：完成一次导出
-  自己保证：文件可取得后才返回成功。
-  使用 B 的保证：保存文件；对有效订阅者记录一次完成通知。
-  前置责任：把本次操作的订阅上下文传给 B。
-
-B：保存结果并记录通知
-  自己保证：保存失败则不产生完成通知；重复操作不重复记录。
-  使用 C 的保证：写入可以原子提交。
-
-C：持久化
-  自己保证：提交成功后数据可读取；失败返回明确错误。
-```
+![A 完成一次导出：自己保证文件可取得后才返回成功，使用 B 的保证保存文件并对有效订阅者记录一次完成通知，前置责任是把本次操作的订阅上下文传给 B；B 保存结果并记录通知：自己保证保存失败则不产生完成通知、重复操作不重复记录，使用 C 的保证写入可以原子提交；C 持久化：自己保证提交成功后数据可读取，失败返回明确错误](figures/function-contract-impact-checks-layer-guarantees.svg)
 
 A 不需要知道 C 具体怎样写存储，却要知道自己必须把通知所需的数据交给 B。只写「调用 B」仍然过粗，因为丢失的恰好可能是那项附带保证。
 

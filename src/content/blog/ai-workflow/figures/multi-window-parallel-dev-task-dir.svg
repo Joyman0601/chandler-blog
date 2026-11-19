@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="478" viewBox="0 0 400 368" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>多窗口任务目录里的文件和各自谁写、写什么</title>
+  <path d="M14 333.5H27.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 289.5H28" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 245.5H28" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 221.5H28" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 177.5H28" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 85.5H27.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 41.5H28" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 23.0V333.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 153.5H48" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 109.5H48" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 91.0V153.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <circle cx="14" cy="17.5" r="3.5" fill="#191919"/>
+  <text x="26" y="22" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">&lt;任务目录&gt;/</text>
+  <circle cx="34" cy="41.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="46" y="46" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">PLAN.md</text>
+  <text x="46" y="64" font-size="13" fill="#626262">统筹窗口写：现状、分工、公共约定、交付清单、资源登记</text>
+  <circle cx="34" cy="85.5" r="3.5" fill="#191919"/>
+  <text x="46" y="90" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">windows/</text>
+  <circle cx="54" cy="109.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="66" y="114" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">W1-backend.md</text>
+  <text x="66" y="132" font-size="13" fill="#626262">每个窗口一份简报</text>
+  <circle cx="54" cy="153.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="66" y="158" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">W2-frontend.md</text>
+  <circle cx="34" cy="177.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="46" y="182" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">DECISIONS-W1.md</text>
+  <text x="46" y="200" font-size="13" fill="#626262">决策日志：每个窗口一份</text>
+  <circle cx="34" cy="221.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="46" y="226" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">DECISIONS-W2.md</text>
+  <circle cx="34" cy="245.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="46" y="250" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">台账-W1.md</text>
+  <text x="46" y="268" font-size="13" fill="#626262">真实调用的花费记录：每个窗口一份</text>
+  <circle cx="34" cy="289.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="46" y="294" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">inbox-W2.md</text>
+  <text x="46" y="312" font-size="13" fill="#626262">发给 W2 的消息（给没有消息工具的代理用）</text>
+  <circle cx="34" cy="333.5" r="3.5" fill="#191919"/>
+  <text x="46" y="338" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">out/W1/</text>
+  <text x="46" y="356" font-size="13" fill="#626262">各窗口的中间产物</text>
+</svg>

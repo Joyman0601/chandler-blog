@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="247" viewBox="0 0 400 190" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>非法蒙版怎样变成获准提交的请求</title>
+  <path d="M14 18V50" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 58V83" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 105V130" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 138V170" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <text x="30" y="20" font-size="17" font-weight="300" fill="#191919">表单中有一份非法蒙版</text>
+  <circle cx="14" cy="14" r="4" fill="#191919"/>
+  <text x="30" y="60" font-size="17" font-weight="300" fill="#191919">解析失败</text>
+  <circle cx="14" cy="54" r="4" fill="#191919"/>
+  <text x="30" y="100" font-size="17" font-weight="300" fill="#191919">构造函数省略 mask</text>
+  <path d="M14 83V105" stroke="#191919" stroke-width="3" fill="none"/>
+  <text x="30" y="140" font-size="17" font-weight="300" fill="#191919">校验器看到「没有提供可选蒙版」</text>
+  <circle cx="14" cy="134" r="4" fill="#191919"/>
+  <text x="30" y="180" font-size="17" font-weight="300" fill="#191919">请求获准提交</text>
+  <circle cx="14" cy="174" r="4" fill="#191919"/>
+</svg>

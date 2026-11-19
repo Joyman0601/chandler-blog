@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 28a1637f5c9383b7344d4c80035d6a379d280c8c6123f744e6cffdf9671963ed
+# import-articles-sha256: 4438d87fa5a00e43fec4e02e5a69948fd9486051e187fdd749225d8eb85e23ef
 # Imported by scripts/import-articles.mjs from posts/frontend/visible-page-interaction-contract.md
 # Source date: 2026-11-01
 title: "页面已经显示：还要验证动作真正生效"
@@ -34,14 +34,7 @@ seriesLabel: "前端实践"
 
 但如果「记住选择」只写在 React 的点击处理里，交互代码未接入以前，点击仍然可能完成导航，却不执行那次保存。目标页最早运行的自动识别逻辑看不到记录，就再次参考浏览器语言。
 
-```text
-原语言页已显示链接
-→ 用户点击 English
-→ 原生 href 导航成功
-→ 保存手动选择的处理尚未接入
-→ 目标页读不到选择
-→ 按默认规则回到原语言
-```
+![原语言页已显示链接，用户点击 English，原生 href 导航成功，但保存手动选择的处理尚未接入，目标页读不到选择，按默认规则回到原语言](figures/visible-page-interaction-contract-language-link.svg)
 
 这不是浏览器语言被改回去了。浏览器语言一直没变，丢的是「这一次访问来自用户主动选择」的信息。
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 5207d93caf4882392c539a56a7d6fe924979924702e4a1ef215545a513d0d0a4
+# import-articles-sha256: 0226f61b0940c48285e999574e32b1980698f13802ddc2cc31c8f82e7c21547a
 # Imported by scripts/import-articles.mjs from posts/frontend/attribution-consent-data-flow.md
 # Source date: 2026-11-03
 title: "统计与来源归因：沿数据流理解同意控制"
@@ -43,13 +43,7 @@ Clarity 提供行为分析、热力图与会话回放；Google Ads 的网站转�
 
 假设一个虚构网站在社区文章里放了带来源参数的链接。访客打开页面，网站希望知道这批来访后来有没有注册，而不是只知道页面被打开了几次。
 
-```text
-链接带 utm_source=community
-→ 浏览器获得访客编号 V1
-→ 记录首次来源与最近一次明确来源
-→ 注册成为账号 U1
-→ 按约定把 V1、来源与 U1 的事件关联
-```
+![链接带 utm_source=community 进站，浏览器获得访客编号 V1，记录首次来源与最近一次明确来源，注册成为账号 U1 后，按约定把 V1、来源与 U1 的事件关联](figures/attribution-consent-data-flow-attribution-chain.svg)
 
 这里有三个不同对象。UTM 参数是入口信息；访客编号用于识别某次浏览器环境；账号编号属于注册后的业务身份。把它们连接起来，才形成跨阶段的归因。它们不会因为名字相近就自动属于同一个平台。
 
@@ -65,13 +59,7 @@ Clarity 提供行为分析、热力图与会话回放；Google Ads 的网站转�
 
 需要把触发条件写完整：
 
-```text
-假设产品采用拒绝后清理对应归因记录的方案
-→ 进站采集停止
-→ 后来发生登录
-→ 登录路径读取空存储
-→ 辅助函数生成新编号 V2 并写回
-```
+![假设产品采用拒绝后清理对应归因记录的方案：进站采集停止，后来发生登录，登录路径读取空存储，辅助函数生成新编号 V2 并写回](figures/attribution-consent-data-flow-login-rewrite.svg)
 
 这里重新创建的是一个空来源记录和新编号，不是把旧 UTM 历史恢复出来。一次保存的离线局部验证支持的也只是这个范围：固定函数在空存储下执行后，新增编号，来源字段仍为空。它没有模拟完整拒绝界面，更没有证明线上用户已经经历了这条链路。
 

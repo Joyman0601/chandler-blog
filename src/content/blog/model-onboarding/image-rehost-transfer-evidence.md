@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: fcddb6fac15ea488ca016a75d8359fc7f964e647fc124b4fac4396baff64bc14
+# import-articles-sha256: 49a2e59d3b43e4808e81059f63e4cd5a4552d215c5e4916a15b4292f8fe7db32
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/image-rehost-transfer-evidence.md
 # Source date: 2026-11-03
 title: "图片取图失败：换传输路径，还要分清证据边界"
@@ -120,9 +120,7 @@ Go 的 `http.Client.Timeout` 包含连接、重定向和读取响应体，返回
 
 完整比较至少有三个位置：
 
-```text
-原站该次响应 → 文件服务该次收到的字节 → 存储后下载的字节
-```
+![完整比较的三个位置，依次是原站该次响应、文件服务该次收到的字节、存储后下载的字节](figures/image-rehost-transfer-evidence-three-byte-checkpoints.svg)
 
 如果只在两台客户端分别访问动态 URL，得到不同内容并不意外。即使 URL 相同，也不能假定图片相同。固定版本素材或保存真实下载样本，才能缩小因果范围。
 

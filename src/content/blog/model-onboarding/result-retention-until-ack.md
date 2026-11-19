@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 2f0770ead7407f228680713d7885c4894afc15344db270be459c6611bcacc16b
+# import-articles-sha256: 1f00b78f02930ec5767ccfe5a4c6e33156d53863738a2e279fe38c38bee2484c
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/result-retention-until-ack.md
 # Source date: 2026-10-25
 title: "结果已经存好：为何回报失败仍会丢掉任务"
@@ -121,9 +121,7 @@ stateDiagram-v2
 
 我会用这条时间线核查：
 
-```text
-A 持有 → A 变慢 → 租约过期 → B 接管 → A 迟到
-```
+![时间线依次是 A 持有、A 变慢、租约过期、B 接管、A 迟到](figures/result-retention-until-ack-lease-late-holder.svg)
 
 发布和释放时都校验持有者身份，并与写入具备原子边界。只在开始时核一次身份，不能保护结束时的迟到写入。临界区等待也要服从调用方剩余预算，不能把原本有限的关停时间变成无限等待。
 

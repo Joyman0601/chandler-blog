@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="234" viewBox="0 0 400 180" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>验证终态宽限的假上游夹具时序</title>
+  <path d="M14 26V66" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 74V114" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 122V162" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <circle cx="14" cy="22" r="4" fill="#191919"/>
+  <text x="30" y="28" font-size="17" font-weight="300" fill="#191919">假上游发业务终态与完整用量</text>
+  <circle cx="14" cy="70" r="4" fill="#191919"/>
+  <text x="30" y="76" font-size="17" font-weight="300" fill="#191919">持续发送注释，保持响应体不 EOF</text>
+  <circle cx="14" cy="118" r="4" fill="#191919"/>
+  <text x="30" y="124" font-size="17" font-weight="300" fill="#191919">网关应在应用宽限结束后返回</text>
+  <circle cx="14" cy="166" r="4" fill="#191919"/>
+  <text x="30" y="172" font-size="17" font-weight="300" fill="#191919">假上游观察到取消，退出 handler</text>
+</svg>

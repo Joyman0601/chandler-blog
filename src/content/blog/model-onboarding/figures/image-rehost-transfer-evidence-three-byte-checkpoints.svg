@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="161" viewBox="0 0 400 124" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>字节保真要比较的三个位置</title>
+  <path d="M14 26V62" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 70V106" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <circle cx="14" cy="22" r="4" fill="#191919"/>
+  <text x="30" y="28" font-size="17" font-weight="300" fill="#191919">原站该次响应</text>
+  <circle cx="14" cy="66" r="4" fill="#191919"/>
+  <text x="30" y="72" font-size="17" font-weight="300" fill="#191919">文件服务该次收到的字节</text>
+  <circle cx="14" cy="110" r="4" fill="#191919"/>
+  <text x="30" y="116" font-size="17" font-weight="300" fill="#191919">存储后下载的字节</text>
+</svg>

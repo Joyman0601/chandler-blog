@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="255" viewBox="0 0 400 196" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>租约过期后旧持有者迟到的时间线</title>
+  <path d="M14 26V58" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 66V98" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 106V138" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 146V178" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <circle cx="14" cy="22" r="4" fill="#191919"/>
+  <text x="30" y="28" font-size="17" font-weight="300" fill="#191919">A 持有</text>
+  <circle cx="14" cy="62" r="4" fill="#191919"/>
+  <text x="30" y="68" font-size="17" font-weight="300" fill="#191919">A 变慢</text>
+  <circle cx="14" cy="102" r="4" fill="#191919"/>
+  <text x="30" y="108" font-size="17" font-weight="300" fill="#191919">租约过期</text>
+  <circle cx="14" cy="142" r="4" fill="#191919"/>
+  <text x="30" y="148" font-size="17" font-weight="300" fill="#191919">B 接管</text>
+  <circle cx="14" cy="182" r="4" fill="#191919"/>
+  <text x="30" y="188" font-size="17" font-weight="300" fill="#191919">A 迟到</text>
+</svg>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="489" viewBox="0 0 400 376" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>按任务分的 worktree 目录布局</title>
+  <path d="M14 133.5H27.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 109.5H27.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 85.5H27.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 41.5H27.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 23.0V133.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 293.5H47.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 157.5H47.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 139.0V293.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M54 341.5H67.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M54 317.5H67.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M54 299.0V341.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M54 269.5H67.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M54 225.5H67.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M54 181.5H67.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M54 163.0V269.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <circle cx="14" cy="17.5" r="3.5" fill="#191919"/>
+  <text x="26" y="22" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">work/</text>
+  <circle cx="34" cy="41.5" r="3.5" fill="#191919"/>
+  <text x="46" y="46" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">repo-a/</text>
+  <text x="46" y="64" font-size="13" fill="#626262">主检出，停在默认分支</text>
+  <circle cx="34" cy="85.5" r="3.5" fill="#191919"/>
+  <text x="46" y="90" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">sdk/</text>
+  <circle cx="34" cy="109.5" r="3.5" fill="#191919"/>
+  <text x="46" y="114" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">worker/</text>
+  <circle cx="34" cy="133.5" r="3.5" fill="#191919"/>
+  <text x="46" y="138" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">wt/</text>
+  <circle cx="54" cy="157.5" r="3.5" fill="#191919"/>
+  <text x="66" y="162" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">task-a/</text>
+  <circle cx="74" cy="181.5" r="3.5" fill="#191919"/>
+  <text x="86" y="186" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">repo-a/</text>
+  <text x="86" y="204" font-size="13" fill="#626262">task-a 的分支</text>
+  <circle cx="74" cy="225.5" r="3.5" fill="#191919"/>
+  <text x="86" y="230" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">sdk/</text>
+  <text x="86" y="248" font-size="13" fill="#626262">task-a 的 SDK 分支</text>
+  <circle cx="74" cy="269.5" r="3.5" fill="#191919"/>
+  <text x="86" y="274" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">worker/</text>
+  <circle cx="54" cy="293.5" r="3.5" fill="#191919"/>
+  <text x="66" y="298" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">task-b/</text>
+  <circle cx="74" cy="317.5" r="3.5" fill="#191919"/>
+  <text x="86" y="322" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">repo-a/</text>
+  <circle cx="74" cy="341.5" r="3.5" fill="#191919"/>
+  <text x="86" y="346" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">sdk -&gt; ../../sdk</text>
+  <text x="86" y="364" font-size="13" fill="#626262">这个任务不改 SDK，软链到主检出</text>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="166" viewBox="0 0 400 128" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>notes 目录例子：报告和它引用的图片</title>
+  <path d="M14 89.5H27.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 41.5H27.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 23.0V89.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 113.5H48" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 95.0V113.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 65.5H48" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M34 47.0V65.5" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <circle cx="14" cy="17.5" r="3.5" fill="#191919"/>
+  <text x="26" y="22" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">notes/</text>
+  <circle cx="34" cy="41.5" r="3.5" fill="#191919"/>
+  <text x="46" y="46" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">draft/</text>
+  <circle cx="54" cy="65.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="66" y="70" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">report.html</text>
+  <circle cx="34" cy="89.5" r="3.5" fill="#191919"/>
+  <text x="46" y="94" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">assets/</text>
+  <circle cx="54" cy="113.5" r="3" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <text x="66" y="118" font-size="14" font-family="'Courier New', Courier, monospace" fill="#191919">diagram.svg</text>
+</svg>

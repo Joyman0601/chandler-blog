@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="546" viewBox="0 0 400 420" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>A、B、C 三层各自的保证：每层写自己保证、用下一层的哪些保证、前置责任</title>
+  <path d="M14 343V416" stroke="#191919" stroke-width="3" fill="none"/>
+  <path d="M14 197V317" stroke="#191919" stroke-width="3" fill="none"/>
+  <path d="M14 4V171" stroke="#191919" stroke-width="3" fill="none"/>
+  <text x="30" y="22" font-size="17" font-weight="300" fill="#191919">A：完成一次导出</text>
+  <text x="30" y="50" font-size="13" font-weight="500" fill="#191919">自己保证</text>
+  <text x="30" y="70" font-size="13" fill="#626262">文件可取得后才返回成功。</text>
+  <text x="30" y="97" font-size="13" font-weight="500" fill="#191919">使用 B 的保证</text>
+  <text x="30" y="117" font-size="13" fill="#626262">保存文件；对有效订阅者记录一次完成通知。</text>
+  <text x="30" y="144" font-size="13" font-weight="500" fill="#191919">前置责任</text>
+  <text x="30" y="164" font-size="13" fill="#626262">把本次操作的订阅上下文传给 B。</text>
+  <path d="M14 171V197" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <text x="30" y="215" font-size="17" font-weight="300" fill="#191919">B：保存结果并记录通知</text>
+  <text x="30" y="243" font-size="13" font-weight="500" fill="#191919">自己保证</text>
+  <text x="30" y="263" font-size="13" fill="#626262">保存失败则不产生完成通知；重复操作不重复记录。</text>
+  <text x="30" y="290" font-size="13" font-weight="500" fill="#191919">使用 C 的保证</text>
+  <text x="30" y="310" font-size="13" fill="#626262">写入可以原子提交。</text>
+  <path d="M14 317V343" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <text x="30" y="361" font-size="17" font-weight="300" fill="#191919">C：持久化</text>
+  <text x="30" y="389" font-size="13" font-weight="500" fill="#191919">自己保证</text>
+  <text x="30" y="409" font-size="13" fill="#626262">提交成功后数据可读取；失败返回明确错误。</text>
+</svg>

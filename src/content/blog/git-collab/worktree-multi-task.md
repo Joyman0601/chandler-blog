@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 2d658add8cd6b9b2032f374cf9496be305a7f2e30a053bb30ecfdbb061f60b85
+# import-articles-sha256: 1bc3a442ff9e31bfdb715527b3b97a1a7dab1a8a9de0b55ae031e00fac2b18d8
 # Imported by scripts/import-articles.mjs from posts/git-collab/worktree-multi-task.md
 # Source date: 2026-09-28
 title: "多任务并行的 git 用法：按任务隔离 worktree"
@@ -38,20 +38,7 @@ replace example.com/core => ../core
 
 **修复**：目录按任务分，任务目录里的仓库名和原仓库一模一样，不加后缀：
 
-```text
-work/
-├── repo-a/                 主检出，停在默认分支
-├── sdk/
-├── worker/
-└── wt/
-    ├── task-a/
-    │   ├── repo-a/         task-a 的分支
-    │   ├── sdk/            task-a 的 SDK 分支
-    │   └── worker/
-    └── task-b/
-        ├── repo-a/
-        └── sdk -> ../../sdk    这个任务不改 SDK，软链到主检出
-```
+![work/ 下 repo-a/ 是主检出，停在默认分支，旁边是 sdk/、worker/；wt/task-a/ 里放 task-a 的 repo-a、sdk、worker 分支；wt/task-b/ 里有 repo-a，这个任务不改 SDK，sdk 软链到主检出 ../../sdk](figures/worktree-multi-task-layout.svg)
 
 这样 `wt/task-a/repo-a/../sdk` 自然就是 `wt/task-a/sdk`，相对路径的 replace 和 compose 里的 `../worker` 一行都不用改，各自指向本任务的副本。任务不改某个仓库时，软链到主检出即可，前提是主检出约定只停在默认分支。
 

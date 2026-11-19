@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: f4bdcb177c154bc9bc205950b3fd8258e62b69bd3c97cf74b7ee11aa4994ae94
+# import-articles-sha256: 797735f6a81d71978b4019ca517fc2f0e1627c18b0ea54169b1cc9dc22bda0eb
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/admission-readonly-race-budget.md
 # Source date: 2026-10-27
 title: "只读准入探测：余量、竞争和总超时"
@@ -24,12 +24,7 @@ seriesLabel: "模型接入"
 
 先看一个时序：
 
-```text
-时刻 A：网关甲读到渠道还有一个名额
-时刻 B：网关乙读到同一个名额
-时刻 C：甲、乙分别把任务送入队列
-时刻 D：执行器开始领取，只有一个任务成功
-```
+![时刻 A 网关甲读到渠道还有一个名额，时刻 B 网关乙读到同一个名额，时刻 C 甲、乙分别把任务送入队列，时刻 D 执行器开始领取，只有一个任务成功](figures/admission-readonly-race-budget-read-then-claim-race.svg)
 
 把读取放进 Redis 的 Lua 脚本，可以保证这次脚本执行期间的原子性。Redis 官方对这个保证有明确说明，见[Lua 脚本执行语义](https://redis.io/docs/latest/develop/programmability/eval-intro/)。但脚本结束后，另一条请求仍能改变状态。
 

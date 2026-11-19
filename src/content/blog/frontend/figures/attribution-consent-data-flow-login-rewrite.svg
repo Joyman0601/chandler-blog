@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="256" viewBox="0 0 400 197" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>拒绝后，登录路径又写回新编号</title>
+  <path d="M14 58V90" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 98V130" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 138V163" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <text x="0" y="18" font-size="13" fill="#626262">假设产品采用拒绝后清理对应归因记录的方案</text>
+  <text x="30" y="60" font-size="17" font-weight="300" fill="#191919">进站采集停止</text>
+  <circle cx="14" cy="54" r="4" fill="#191919"/>
+  <text x="30" y="100" font-size="17" font-weight="300" fill="#191919">后来发生登录</text>
+  <circle cx="14" cy="94" r="4" fill="#191919"/>
+  <text x="30" y="140" font-size="17" font-weight="300" fill="#191919">登录路径读取空存储</text>
+  <circle cx="14" cy="134" r="4" fill="#191919"/>
+  <text x="30" y="180" font-size="17" font-weight="300" fill="#191919">辅助函数生成新编号 V2 并写回</text>
+  <path d="M14 163V185" stroke="#191919" stroke-width="3" fill="none"/>
+</svg>

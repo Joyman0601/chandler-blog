@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="299" viewBox="0 0 400 230" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <title>点了 English 却回到原语言</title>
+  <path d="M14 18V50" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 58V90" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 98V123" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 145V170" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 178V210" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <text x="30" y="20" font-size="17" font-weight="300" fill="#191919">原语言页已显示链接</text>
+  <circle cx="14" cy="14" r="4" fill="#191919"/>
+  <text x="30" y="60" font-size="17" font-weight="300" fill="#191919">用户点击 English</text>
+  <circle cx="14" cy="54" r="4" fill="#191919"/>
+  <text x="30" y="100" font-size="17" font-weight="300" fill="#191919">原生 href 导航成功</text>
+  <circle cx="14" cy="94" r="4" fill="#191919"/>
+  <text x="30" y="140" font-size="17" font-weight="300" fill="#191919">保存手动选择的处理尚未接入</text>
+  <path d="M14 123V145" stroke="#191919" stroke-width="3" fill="none"/>
+  <text x="30" y="180" font-size="17" font-weight="300" fill="#191919">目标页读不到选择</text>
+  <circle cx="14" cy="174" r="4" fill="#191919"/>
+  <text x="30" y="220" font-size="17" font-weight="300" fill="#191919">按默认规则回到原语言</text>
+  <circle cx="14" cy="214" r="4" fill="#191919"/>
+</svg>
