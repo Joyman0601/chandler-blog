@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 80259e3747ce59b54d063a60ac01d4c98c1469331fc3e6dd1d282e160f8baef1
+# import-articles-sha256: 48cdfdf25a309af975376a2664a171b0283a883606cff5626826ac7f3874c181
 # Imported by scripts/import-articles.mjs from posts/frontend/async-seam-url-variant.md
 # Source date: 2026-09-23
 title: "一个 await 就是一道缝：异步回写和 URL 变体的首帧"
@@ -132,6 +132,9 @@ test.each(files)('%s：多档状态 → 上传控件带 onUploadDone', (file) =>
 
 ```tsx
 // upload-switch.test.tsx：上传途中切档，结果只归发起档
+import userEvent from '@testing-library/user-event'
+// Playground、mockUpload、readDraft 是被测组件、上传的 mock 和读草稿的小工具，这里省略
+
 function deferred<T>() {
   let resolve!: (v: T) => void
   const promise = new Promise<T>((r) => (resolve = r))
@@ -139,6 +142,7 @@ function deferred<T>() {
 }
 
 test('上传途中切档，新档表单里没有这张图', async () => {
+  const user = userEvent.setup() // ← 新加：模拟用户操作的实例
   const pending = deferred<string>()
   mockUpload.mockReturnValueOnce(pending.promise)
 
@@ -166,7 +170,7 @@ test('上传途中切档，新档表单里没有这张图', async () => {
 
 **根因**：切档那一帧里有两个 effect 先后执行：
 
-1. 切档 effect：把旧档表单存成快照，再给新档铺默认值。但 `setState` 要到下一帧才生效，这一帧里 state 还是旧档的；
+1. 切档 effect：把旧档表单存成快照，再给新档铺默认值。但 `setState` 要到下一次渲染才生效，这一轮 effect 读到的 state 还是旧档的；
 2. 落盘 effect：「表单变了就写 `localStorage`」，它的依赖里有草稿键，键由当前变体派生，已经是新档的。
 
 键是新档的，值是旧档的，旧档的内容就被写进了新档的草稿键。**同一帧里「上下文已是新档、state 还是旧档」是正常状态**，不是 bug。错的是落盘 effect 把键和值从两个不同的来源取。

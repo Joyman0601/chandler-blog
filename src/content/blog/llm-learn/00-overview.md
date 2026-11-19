@@ -1,13 +1,13 @@
 ---
 title: "大模型应用岗学习路线：从基础直觉到工程落地"
-description: "一条围绕「企业知识库 RAG 系统」展开的大模型应用学习路线：从 Transformer 直觉、RAG 检索与评估，到 Agent 原理、进阶检索范式、微调部署与工程生态，每一块都落到真实项目改造上。"
+description: "一条围绕「企业知识库 RAG 系统」展开的大模型应用学习路线：从 Transformer 直觉、RAG 检索与评估，到 Agent 原理、进阶检索范式、微调部署与工程生态。检索、评估、Agent、可观测性几块落到了项目改造上，其余是概念梳理。"
 pubDate: 2026-06-01
 tags: ["AI", "LLM", "RAG", "Agent", "学习路线"]
 series: "llm-learn"
 seriesLabel: "大模型应用岗学习"
 ---
 
-> 系列开篇。这是一条面向「大模型应用」方向的系统学习路线——不碰模型训练算法，而是站在后端工程的角度，把 LLM、RAG、Agent 落地到真实业务系统里。整条路线围绕一个贯穿始终的项目展开：一个企业知识库 RAG 系统，每学一块就拿它来改造，最终沉淀出带数据的优化结论，而不是堆砌名词。
+> 系列开篇。这是一条面向「大模型应用」方向的系统学习路线——不碰模型训练算法，而是站在后端工程的角度，把 LLM、RAG、Agent 落地到真实业务系统里。整条路线围绕一个贯穿始终的项目展开：一个企业知识库 RAG 系统，学到的东西尽量拿它来改造，能量化的就用数据说话，而不是堆砌名词。
 
 ## 为什么要有一条主线项目
 
@@ -15,10 +15,12 @@ seriesLabel: "大模型应用岗学习"
 
 这条路线刻意反过来：**先有一个能跑的 RAG 系统，再用每个新知识点去改造它**。这样带来两个好处：
 
-- 每个技术点都对应一次真实的代码改动和一组对比数据，知道它「有没有用、什么时候有用」。
+- 技术点尽量对应一次真实的代码改动，能量化的再配一组对比数据，知道它「有没有用、什么时候有用」。
 - 学到的不是孤立概念，而是「在这个系统里，这一层解决什么问题、代价是什么」。
 
-主线项目是一个基于 Java + Spring Boot 的企业知识库问答系统：文档上传、chunk 切分、embedding、向量检索、RAG 问答、Tool Calling、受控 Agent Loop。下面每一阶段都在它身上动刀。
+主线项目是一个基于 Java + Spring Boot 的企业知识库问答系统：文档上传、chunk 切分、embedding、向量检索、RAG 问答、Tool Calling、受控 Agent Loop。项目本身的复盘见 [企业知识库 RAG + Agent 助手项目复盘](/blog/rag-agent-backend/)。
+
+实话说，不是每个阶段都做到了「改造 + 数据」。检索、评估、Query 改写有对比数据；Agent、可观测性有代码改动、没有对比数据；基础直觉、微调与本地部署两块是概念梳理，没有在项目里动刀。下面每个阶段都标了对应的实战篇，没有的也写明了。
 
 ## 学习路线分阶段
 
@@ -36,36 +38,46 @@ seriesLabel: "大模型应用岗学习"
 
 ### Phase 0 · 大模型基础直觉
 
-Transformer 为什么能做大、Attention 的 QKV 到底在算什么、temperature/top-p 怎么影响输出、token 与上下文窗口、幻觉的成因与缓解全景。这一层不要求会推导，但要能脱稿讲清「为什么」。
+Transformer 为什么能做大、Attention 的 QKV 到底在算什么、temperature/top-p 怎么影响输出、token 与上下文窗口、幻觉的成因与缓解全景。这一层不要求会推导，但要能脱稿讲清「为什么」。没有单独的实战篇；token 计费和 KV Cache 复用的实测见 [给 RAG Agent 接 Prompt Caching](/blog/rag-prompt-caching/)。
 
 ### Phase 1 · RAG 检索质量
 
-把「纯向量检索」升级为**混合检索（BM25 + 向量，RRF 融合）+ Cross-Encoder 重排**。核心是理解「召回」和「精排」两段式，以及为什么纯向量在编号、专名、缩写上会翻车。
+把「纯向量检索」升级为**混合检索（BM25 + 向量，RRF 融合）+ Cross-Encoder 重排**。核心是理解「召回」和「精排」两段式，以及为什么纯向量在编号、专名、缩写上会翻车。实战篇：[把内存里的向量库换成 pgvector](/blog/rag-pgvector-migration/)、[可插拔分块、独立父块、Contextual Retrieval](/blog/rag-chunking-parent-contextual/)。
 
 ### Phase 2 · RAG 评估体系
 
-没有评估的 RAG 就是玄学。用 RAGAS 的四个指标（faithfulness / answer relevancy / context precision / context recall）给 Phase 1 的几种方案打分，得出「哪一层优化真正有用」的量化结论。
+没有评估的 RAG 就是玄学。用 RAGAS 的四个指标（faithfulness / answer relevancy / context precision / context recall）给 Phase 1 的几种方案打分，得出「哪一层优化真正有用」的量化结论。实战篇：[给 RAG 搭一套评估](/blog/rag-evaluation/)。
 
 ### Phase 3 · Prompt 工程与 Agent 原理
 
-CoT 为什么能提升推理、ReAct 范式（Thought → Action → Observation）如何用外部事实治幻觉、Tool Calling 的底层机制，以及一个受控 Agent Loop 需要哪些工程护栏。
+CoT 为什么能提升推理、ReAct 范式（Thought → Action → Observation）如何用外部事实治幻觉、Tool Calling 的底层机制，以及一个受控 Agent Loop 需要哪些工程护栏。实战篇：[企业知识库 RAG + Agent 助手项目复盘](/blog/rag-agent-backend/)、[录屏前的彩排](/blog/rag-demo-rehearsal-bugs/)。
 
 ### Phase 4 · 进阶 RAG 范式
 
-Query 改写、Multi-Query、HyDE、父子检索、上下文压缩、Self-RAG、GraphRAG——把它们组织成一个「检索侧 / Query 侧 / 文档与生成侧」的三层优化框架。
+Query 改写、Multi-Query、HyDE、父子检索、上下文压缩、Self-RAG、GraphRAG——把它们组织成一个「检索侧 / Query 侧 / 文档与生成侧」的三层优化框架。实战篇：[多轮会话 RAG](/blog/rag-conversational/)、[多模态 RAG 踩坑](/blog/rag-multimodal/)。
 
 ### Phase 5 · 微调与本地部署
 
-微调谱系（预训练 → SFT → RLHF/DPO）、LoRA/QLoRA 为什么能省显存、量化（INT8/INT4/GPTQ/AWQ）、vLLM 的 PagedAttention 与 Ollama 本地部署，以及「什么时候该微调、什么时候该用 RAG」。
+微调谱系（预训练 → SFT → RLHF/DPO）、LoRA/QLoRA 为什么能省显存、量化（INT8/INT4/GPTQ/AWQ）、vLLM 的 PagedAttention 与 Ollama 本地部署，以及「什么时候该微调、什么时候该用 RAG」。这一阶段没有对应的实战篇，项目里没有做微调。
 
 ### Phase 6 · 工程化与生态
 
-LangChain/LlamaIndex 解决了什么、为什么有时主动选择不用、MCP 协议的意义，以及用 Langfuse 给 RAG 链路接入可观测性，和后端的链路追踪经验直接对应。
+LangChain/LlamaIndex 解决了什么、为什么有时主动选择不用、MCP 协议的意义，以及用 Langfuse 给 RAG 链路接入可观测性，和后端的链路追踪经验直接对应。实战篇：[自建 Langfuse 反代到公网](/blog/rag-langfuse-selfhost/)、[把 usage 用量从内存搬进 PostgreSQL](/blog/rag-usage-persistence/)、[把 RAG 项目部署上云的那天](/blog/rag-deploy-compose-pitfalls/)、[演示环境的三层加固](/blog/rag-demo-hardening/)。
+
+## 后端视角：模型是一个外部服务
+
+站在后端的角度，先把模型当成一个外部服务来对待，而不是万能的逻辑层。Prompt 只能提高模型守规矩的概率，替代不了后端校验。各阶段之外，后端要一直接住这几类工程问题：
+
+- **调用模型**：API Key、Base URL、model 的配置管理；超时、重试、错误分类和降级；输入长度和输出 token 上限；流式输出；JSON 等结构化输出的解析；日志、requestId 和用量统计。
+- **RAG 链路**：sources 由后端按检索结果生成，避免模型编造引用；文档更新后旧版本 chunk 怎么下线；用户权限在检索阶段就过滤，越权内容不进 prompt；用评估集持续跟踪召回和回答质量。
+- **上线之后**：requestId 串起整条链路；token 用量和成本统计；LLM 错误率、RAG 无答案率、工具失败率；限流和额度控制；灰度发布和 Shadow Mode（新版本旁路跑真实流量、只记录不返回）；安全回归测试。
+
+Tool Calling 和 Agent 的后端检查清单在 [Prompt 工程与 Agent 原理](/blog/llm-learn/04-prompt-agent-react/) 里。
 
 ## 三条贯穿全程的原则
 
-1. **不脱离项目空学**：每个知识点都要落到主线项目的一次改造上。
-2. **有量化才有结论**：优化前后必须有对比数据，避免盲目堆技术。
+1. **不脱离项目空学**：知识点尽量落到主线项目的一次改造上，落不了的写明。
+2. **有量化才有结论**：优化前后要有对比数据，避免盲目堆技术。第一次评估的结论后来被推翻，见 [RAG 评估体系](/blog/llm-learn/03-rag-evaluation-ragas/) 的更正，可复现也是量化的一部分。
 3. **每阶段输出一篇**：输出倒逼输入——这个系列本身就是路线的产物。
 
 后面每一篇对应一个 Phase，按顺序展开。

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 4438d87fa5a00e43fec4e02e5a69948fd9486051e187fdd749225d8eb85e23ef
+# import-articles-sha256: eb9755403080c4da27a345bdf9e4a7331f6b48b4b226ed36a12caf10d07f0a13
 # Imported by scripts/import-articles.mjs from posts/frontend/visible-page-interaction-contract.md
 # Source date: 2026-11-01
 title: "页面已经显示：还要验证动作真正生效"
@@ -38,19 +38,37 @@ seriesLabel: "前端实践"
 
 这不是浏览器语言被改回去了。浏览器语言一直没变，丢的是「这一次访问来自用户主动选择」的信息。
 
-React 官方说明，水合会把组件逻辑接到已经存在的服务端 HTML 上。因此 HTML 呈现与完整交互之间存在需要考虑的阶段。[`hydrateRoot` 官方说明](https://react.dev/reference/react-dom/client/hydrateRoot)。
+React 的 [`hydrateRoot` 说明](https://react.dev/reference/react-dom/client/hydrateRoot)写到，水合是把组件逻辑接到已有的服务端 HTML 上。所以页面先显示，交互后接入，中间有一段窗口。
 
-同时也不能把所有水合期间点击一概描述成必丢。框架版本、加载阶段和事件处理方式都会影响结果。这次缺陷的依据，是特定实现与原生链接路径的受控对照。
+这段窗口里的点击会不会丢，取决于框架版本、加载阶段和事件处理方式。这次缺陷的依据，是特定实现和原生链接路径的受控对照。
 
 ## 2. 把手动意图带过这次导航
 
-修复要解决的契约是：当用户已经能够发出明确选择时，接收这次导航的一方也能够识别它。并非只要求某个回调在页面完全加载以后能写入。
+修复要守住一条契约：用户能点到语言链接的那一刻起，下一页就能认出这次选择。只在页面完全加载后能写入，是不够的。
 
-可选择的实现取决于项目：让一个很小的早期处理在链接出现前准备好；通过专门的选择入口由服务器保存；或让目标地址携带经过校验的选择意图。这里没有唯一写法，但需要保留普通导航与可接受的无脚本行为。
+可选择的实现取决于项目：让一个很小的早期处理在链接出现前准备好；通过专门的选择入口由服务器保存；或让目标地址携带经过校验的选择意图。写法有多种，共同的要求是保留普通导航和合理的无脚本行为。
 
-当时采用的是早期捕获监听。它仅识别明确标注的语言链接、校验支持的语言值，同步保存已有偏好，然后保留浏览器默认导航。框架接管后，原有处理仍可共存。
+当时采用的是早期捕获监听。它只认明确标注的语言链接，校验语言值，同步保存选择，再让浏览器照常导航。框架接管后，原有处理照样工作。
 
-这种做法需要约束范围。不要把页面上的所有链接都当成语言选择，也不要为了等待大脚本而长时间拦住正常导航。对于内联脚本，还应沿用项目已有的内容安全策略和输出约定。
+下面是一段最小的内联脚本，放在 `<head>` 里，先于任何外部脚本执行：
+
+```html
+<script>
+  // 早期捕获：交互脚本还没接入时，也能记住手动选择的语言
+  document.addEventListener('click', (e) => {
+    const a = e.target instanceof Element ? e.target.closest('a[data-lang]') : null
+    if (!a) return                                       // 只管标了 data-lang 的链接
+    const lang = a.dataset.lang
+    if (!['en', 'fr'].includes(lang)) return             // 只认支持的语言
+    document.cookie = `lang=${lang}; path=/; max-age=31536000; samesite=lax`
+    // 不调用 preventDefault：浏览器照常按 href 导航
+  }, true)                                               // true：捕获阶段，先于框架的处理
+</script>
+```
+
+捕获阶段的监听挂在 `document` 上，所以链接出现之前就已经就位。`document.cookie` 是同步写入，导航开始前选择已经存好。
+
+这种做法要收窄范围。只处理标了 `data-lang` 的链接，其他链接交给浏览器。正常导航立即放行，不等大脚本。内联脚本沿用项目已有的内容安全策略和输出约定。
 
 存储属性也属于行为契约。路径、有效期和安全属性如果被另写一份，很容易出现早期与正常处理互相覆盖。能共享的规则应共享；无法直接共享运行代码时，至少用同一契约验证两条写入路径。
 
@@ -65,6 +83,40 @@ React 官方说明，水合会把组件逻辑接到已经存在的服务端 HTML
 3. 确认链接可见，框架点击处理尚未接入。
 4. 发出真实点击，记录导航链、最终语言与保存的选择。
 5. 释放资源，再验证交互就绪后的正常路径。
+
+前四步可以写成一个 Playwright 用例。`page.route` 只拦交互脚本，HTML 和自动识别逻辑照常运行：
+
+```ts
+// 演示：拦住交互脚本，在它接入前点「English」，断言最终 URL 和保存的选择
+import { test, expect } from '@playwright/test'
+
+test.use({ locale: 'fr-FR' })                        // 浏览器语言不是目标语言
+
+test('交互脚本未就绪时选择英文，下一页保持英文', async ({ page, context }) => {
+  let release!: () => void
+  const gate = new Promise<void>((r) => (release = r))
+  await page.route('**/app.js', async (route) => {   // 只延迟交互脚本，HTML 照常返回
+    await gate
+    await route.continue()
+  })
+
+  await page.goto('/fr/', { waitUntil: 'commit' })
+  const link = page.getByRole('link', { name: 'English' })
+  await expect(link).toBeVisible()
+  expect(await page.evaluate(() => (window as any).__appReady)).toBeUndefined() // 确认还没接入
+
+  await link.click()
+  release()                                          // 放行脚本，让目标页正常跑完
+  await page.waitForLoadState('load')
+  await page.waitForTimeout(300)                      // 给自动识别的跳转留出时间
+
+  await expect(page).toHaveURL(/\/en\/$/)
+  const cookies = await context.cookies()
+  expect(cookies.find((c) => c.name === 'lang')?.value).toBe('en')
+})
+```
+
+这里假设交互脚本以 `async` 方式加载，所以拦住它不会挡住 HTML 解析。我用一个最小的双语言页面跑过这个用例（实测）：保留早期脚本时通过；删掉早期脚本、其他不动时，最终 URL 回到 `/fr/`，用例失败。
 
 最有区分度的负对照，是仅移除新增的早期处理，其他 HTML、链接和目标页逻辑不动。历史验证里，这样会重新出现往返跳转与选择缺失；保留处理时，刷新和新标签页能维持选择。
 

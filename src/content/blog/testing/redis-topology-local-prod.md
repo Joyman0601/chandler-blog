@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 0bcda58e57072901cdc916435c9561d6d9eece069ba1641693af5529fb3b6bb7
+# import-articles-sha256: 177a410fab18d026055e7d1c04245902f079b5c72ae040ef1cbcd34bd8d8ef91
 # Imported by scripts/import-articles.mjs from posts/testing/redis-topology-local-prod.md
 # Source date: 2026-10-29
 title: "本地全栈全绿：两台 Redis 暴露的读错库"
@@ -14,9 +14,9 @@ seriesLabel: "测试与验收"
 
 ## 0. 起因：任务完成了，调度却没有按预期工作
 
-我做过一次任务调度改动。网关在派发前检查候选渠道的剩余名额，任务执行器收到消息后再真正领取名额。希望减少明知没有容量还不断投递的情况。
+我做过一次任务调度改动。每个上游渠道同一时刻能跑的任务数有上限，上限里还空着的位置，下文叫「名额」。网关在派发前检查候选渠道的剩余名额，任务执行器收到消息后再真正领取名额。希望减少明知没有容量还不断投递的情况。
 
-本地有网关、执行器、数据库、Redis 和假上游。任务能创建、执行、回调、结算，相关用例也通过了。后来同事在线上发现，网关选出来的目标仍会频繁领取失败，应该发生的提前换档没有触发。
+本地有网关、执行器、数据库、Redis 和假上游。任务能创建、执行、回调、结算，相关用例也通过了。后来同事在线上发现，网关选出来的目标仍会频繁领取失败，应该发生的提前换档没有触发。渠道按优先级分成几档，「换档」指当前这一档的渠道名额都满了，网关直接把任务派给下一档，不再在满的那档上空等。
 
 线上现象来自同事的修复提交说明。本文直接核对的是代码差异，以及事后保存的本地复现记录。它们指向同一个原因：网关在业务 Redis 里检查名额，执行器把名额写在另一台任务流 Redis 里。
 
@@ -75,7 +75,38 @@ seriesLabel: "测试与验收"
 
 最有用的是第二组。即使已经拆开 Redis，原来的业务断言依旧全绿。说明只改变部署形状还不够，验收需要增加新的观测量。
 
-当时的做法是在本地两台 Redis 上分别记录命令，提取实际访问的键，再按准入状态的前缀归类。旧版中，同一类状态在两台上都有访问：一边是网关的只读探测，另一边是执行器领取名额。修复后，已覆盖的访问集中到了任务流实例。
+当时的做法是在本地两台 Redis 上分别记录命令，提取实际访问的键，再按准入状态的前缀归类。下面是一个最小的两台 Redis 环境，键名是示意：
+
+```yaml
+# compose.yaml：业务和任务流各一台，端口分开
+services:
+  redis-biz:      # 业务 Redis：网关自己的缓存和簿记
+    image: redis:7-alpine
+    ports: ["6390:6379"]
+  redis-stream:   # 任务流 Redis：网关和执行器共享的准入状态
+    image: redis:7-alpine
+    ports: ["6391:6379"]
+```
+
+`docker compose up -d` 之后，两个终端分别挂上 `MONITOR`，再让系统跑一轮：
+
+```bash
+redis-cli -p 6390 MONITOR > biz.log &
+redis-cli -p 6391 MONITOR > stream.log &
+# ……跑一轮业务用例……
+grep -o '"inflight:[^"]*"' biz.log    | sort -u   # 业务库上碰过哪些准入键
+grep -o '"inflight:[^"]*"' stream.log | sort -u   # 任务流库上碰过哪些
+```
+
+我用执行器写任务流库、网关错读业务库的组合试了一次，两份记录各有一行：
+
+```text
+biz:    "GET" "inflight:ch-a"
+stream: "INCR" "inflight:ch-a"
+```
+
+同一个前缀两台都出现，就是一边写、一边读在了另一台。`MONITOR` 每行还带客户端地址，可以用来分辨是哪个进程发的命令。它会拖慢 Redis，只在本地用。
+旧版中，同一类状态在两台上都有访问：一边是网关的只读探测，另一边是执行器领取名额。修复后，已覆盖的访问集中到了任务流实例。
 
 这里记录的是**访问**，不能只扫描测试结束后还存在的键。只读操作查询不存在的键，不会凭空留下一个键；如果只看最终键列表，就可能漏掉读错位置的那一侧。
 
@@ -85,18 +116,73 @@ seriesLabel: "测试与验收"
 
 「错误实例里没有相关访问」是一个否定断言。如果网关根本没执行准入逻辑，这句话同样成立。为避免这种空转，我会同时要求正向证据。
 
-最小夹具可以这样设计。下面是测试步骤，不依赖某个项目的函数名：
+先看这个 bug 本身。下面的 Go 示例把它缩到最小：没配任务流地址时，任务流连接静默回落到业务连接；网关读在跑数时用错了连接。测试用 [miniredis](https://github.com/alicebob/miniredis) 在进程内起 Redis，同一个用例分别跑单台和两台：
+
+```go
+type Clients struct{ Biz, Stream *redis.Client }
+
+// 没配任务流地址时，静默回落到业务连接。本地单台 Redis 就是这样
+func NewClients(bizAddr, streamAddr string) Clients {
+	biz := redis.NewClient(&redis.Options{Addr: bizAddr})
+	if streamAddr == "" {
+		return Clients{Biz: biz, Stream: biz}
+	}
+	return Clients{Biz: biz, Stream: redis.NewClient(&redis.Options{Addr: streamAddr})}
+}
+
+// 执行器：在任务流 Redis 里占一个名额
+func Acquire(ctx context.Context, c Clients, ch string) error {
+	return c.Stream.Incr(ctx, "inflight:"+ch).Err()
+}
+
+// 网关读在跑数。buggy 为 true 时模拟旧代码：顺手用了业务连接
+func Inflight(ctx context.Context, c Clients, ch string, buggy bool) int64 {
+	rdb := c.Stream
+	if buggy {
+		rdb = c.Biz
+	}
+	n, _ := rdb.Get(ctx, "inflight:"+ch).Int64() // 键不存在时得到 0，不报错
+	return n
+}
+```
+
+```go
+func TestInflightSeesWorkerWrite(t *testing.T) {
+	for _, tc := range []struct {
+		name                string
+		twoInstances, buggy bool
+	}{
+		{"单台，旧代码", false, true},
+		{"两台，旧代码", true, true},
+		{"两台，修复后", true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			biz, stream := miniredis.RunT(t), ""
+			if tc.twoInstances {
+				stream = miniredis.RunT(t).Addr()
+			}
+			c, ctx := NewClients(biz.Addr(), stream), context.Background()
+			if err := Acquire(ctx, c, "ch-a"); err != nil {
+				t.Fatal(err)
+			}
+			if got := Inflight(ctx, c, "ch-a", tc.buggy); got != 1 {
+				t.Errorf("网关读到在跑数 %d，期望 1", got)
+			}
+		})
+	}
+}
+```
+
+`go test -v` 的结果正是本文的情形：单台上旧代码通过，两台上旧代码读到 0，修复后通过。
 
 ```text
-准备：业务实例 A、任务实例 B，二者独立
-设置：目标只有一个可用名额
-动作：执行器通过 B 领取这个名额
-断言：网关读到占用数量为一
-断言：网关再次申请同一名额时不能立即成功
-断言：网关写入的共享放行记录出现在 B
-断言：A 没有本轮准入状态的访问
-对照：把网关访问切回 A，目标断言应失败
+--- PASS: TestInflightSeesWorkerWrite/单台，旧代码
+--- FAIL: TestInflightSeesWorkerWrite/两台，旧代码
+    admission_test.go:29: 网关读到在跑数 0，期望 1
+--- PASS: TestInflightSeesWorkerWrite/两台，修复后
 ```
+
+这个示例只断言了「读」。真实系统的夹具要准备业务实例 A、任务实例 B，目标只留一个名额，再补三条：网关再次申请同一名额时不能立即成功（竞争）；网关写入的共享放行记录出现在 B（写）；A 上没有本轮准入状态的访问。最后做一次对照：把网关访问切回 A，目标断言应当变红。
 
 这些断言分别证明了读、竞争和写的位置。它们比「两个客户端地址相等」更接近实际行为，也能防止代码绕过某个配置入口。
 

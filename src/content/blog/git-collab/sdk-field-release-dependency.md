@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: c483529feb1eb21dfdffdb1668238a5d54edbc658db9f8b9724d8c315ab47f9c
+# import-articles-sha256: 186e3dccf50e5c554fc179df97cbda9ecd01fa583af0b8dfeb2819d03a397465
 # Imported by scripts/import-articles.mjs from posts/git-collab/sdk-field-release-dependency.md
 # Source date: 2026-10-29
 title: "SDK 加了字段：本地通过还要核发版依赖"
@@ -116,6 +116,30 @@ HTTP（超文本传输协议）接口只是其中一种传输方式。JSON 还�
 
 这次下游修复在配置响应夹具里加入新字段，并直接断言解码后的值。引用该字段的测试在旧类型下会编译失败，也就不会再默默忽略这次依赖升级。
 
+下面这个表驱动测试演示第一层：同一个解码函数，喂新消息和旧消息，各自给出独立写下的期望值。结构体字面量里直接写了 `SeparatePools`，SDK 版本旧了就编译不过：
+
+```go
+func TestDecodeConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name, wire string
+		want       sdk.Config
+	}{
+		{"新消息", `{"limit":4,"separate_pools":true}`, sdk.Config{Limit: 4, SeparatePools: true}},
+		{"旧消息", `{"limit":4}`, sdk.Config{Limit: 4}}, // 约定：缺省时不隔离，沿用旧行为
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got sdk.Config
+			if err := json.Unmarshal([]byte(tc.wire), &got); err != nil {
+				t.Fatal(err)
+			}
+			if got != tc.want {
+				t.Errorf("解码得到 %+v，期望 %+v", got, tc.want)
+			}
+		})
+	}
+}
+```
+
 我更倾向于保留两层验证：第一层断言新字段确实解出来，第二层验证它驱动的行为。例如，在本文的虚构例子里，不能只看 `SeparatePools` 为真，还要检查两个资源池是否按新规则隔离。
 
 旧消息也需要独立预期。字段缺省时继续沿用旧行为，还是拒绝执行，应由兼容要求决定。测试不要从当前实现里读取默认值再当答案，否则实现和测试可能一起错。
@@ -142,6 +166,31 @@ HTTP（超文本传输协议）接口只是其中一种传输方式。JSON 还�
 | 清单和依赖更新到兼容版本 | 预检与构建通过 | 这组本地发布输入可构建 |
 
 这三行比一句「构建失败」清楚。第一种要处理依赖来源不一致，第二种要升级必需版本，第三种仍不能直接证明线上部署完成。
+
+没有现成的发版脚本时，可以自己做一次最小预检：在干净的 worktree 里去掉本地替换，让 Go 按已发布的版本取依赖，再编译和跑测试。
+
+```bash
+git worktree add --detach /tmp/precheck HEAD
+cd /tmp/precheck
+go mod edit -dropreplace=example.org/task-sdk   # 只在这份副本里去掉 replace
+go mod tidy
+go list -m example.org/task-sdk                 # 看实际选中的版本
+go build ./... && go test ./...                 # 只跑 build 不够：测试文件不参与 build
+cd - && git worktree remove --force /tmp/precheck
+```
+
+我用一个本地文件代理（`GOPROXY=file://...`）模拟了发版：代理上只有不带新字段的 `v1.2.0`，兄弟目录里已经加了字段。结果如下：
+
+```text
+本地（带 replace）  go test ./...  → ok
+预检（去掉 replace）go list -m      → example.org/task-sdk v1.2.0
+                    go build ./... → 通过（新字段只在测试里引用）
+                    go test ./...  → unknown field SeparatePools in struct literal
+                                     of type sdk.Config  [build failed]
+发布 v1.3.0，go get 后再跑     → 新消息、旧消息两个子测试都 PASS
+```
+
+中间那行值得注意：消费方的业务代码不直接引用新字段时（本文的情形就是只经 JSON 接收），`go build` 是绿的，只有引用了字段的测试会挡住旧版本。所以预检里要跑 `go test`，测试里要有第 4 节那种直接断言新字段的用例。
 
 如果项目使用 `vendor`，还要核生成步骤。它是依赖源码的一份快照，旧快照不会因为兄弟仓改了就自动更新。Go 会检查部分清单一致性，但不能替代对实际构建过程的核对，见[官方 vendoring 说明](https://go.dev/ref/mod#vendoring)。
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: ebe88756128d14ca515e7acbad5f3ec3a137d696ceb015285913dc68ef494c56
+# import-articles-sha256: 6fb3bcef39396b60983f2fbd19c76cf9154dafc11ef173f2dd4ff680f39fc239
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/async-task-local-full-stack.md
 # Source date: 2026-10-09
 title: "异步任务链路：从建任务到结算，在本地起全栈怎么测"
@@ -149,13 +149,26 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 GATEWAY = ("localhost", 3000)
 DROP = {"on": True, "event": "upstream_created", "task": None}  # 运行中改它来开关
 
+def read_body(h):  # Go 客户端常用分块编码发回调，不带 Content-Length
+    if "chunked" in h.headers.get("Transfer-Encoding", "").lower():
+        chunks = []
+        while True:
+            size = int(h.rfile.readline().split(b";")[0], 16)  # 块大小行可带 ;扩展
+            if size == 0:
+                break
+            chunks.append(h.rfile.read(size))
+            h.rfile.readline()                       # 每块后面的 CRLF
+        while h.rfile.readline() not in (b"\r\n", b"\n", b""):
+            pass                                     # trailer：读掉丢弃
+        return b"".join(chunks)
+    return h.rfile.read(int(h.headers.get("Content-Length") or 0))
+
 class Proxy(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
     def forward(self):
-        n = int(self.headers.get("Content-Length") or 0)
-        body = self.rfile.read(n) if n else None
+        body = read_body(self) or None
         if DROP["on"] and body and self.path.startswith("/callback"):
             evt = json.loads(body)
             if evt.get("event") == DROP["event"] and DROP["task"] in (None, evt.get("task_id")):
@@ -163,7 +176,7 @@ class Proxy(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
         conn = HTTPConnection(*GATEWAY, timeout=120)
-        skip = {"host", "content-length", "connection"}
+        skip = {"host", "content-length", "transfer-encoding", "connection"}  # 按实际长度重发
         conn.request(self.command, self.path, body=body,
                      headers={k: v for k, v in self.headers.items() if k.lower() not in skip})
         resp = conn.getresponse()
@@ -184,6 +197,7 @@ if __name__ == "__main__":
 
 几个要点：
 
+- **两种请求体都要读**。只按 `Content-Length` 读的话，分块发来的回调读到的是空 body：既判断不了要不要拦，转发时还带着原来的 `Transfer-Encoding` 头却没有内容。转发前把这个头去掉，由 `http.client` 按实际长度重新填。分块格式的细节见[网关改写请求的漏洞](/blog/model-onboarding/gateway-outbound-body-pitfalls/)第 7 节。
 - **只拦一类、只拦一单**，其余回调和查询都放行，链路其余部分保持真实。worker 对回调失败一般会带退避重试几次（实测 4 次、约 15 秒），以日志里「回调失败」那一行为信号关掉拦截，不按固定秒数，否则续轮回来时也会被拦。
 - **重投有两个入口，先到的那个赢**：worker 自己的待确认消息回收（Redis Streams 的 `XAUTOCLAIM`，实测是 5 分钟一次的定时器，启动时不扫），和网关的失联续派（任务约 2 分钟没有新事件就重新排进流，worker 收到的是一条新消息）。端到端多半走到的是网关续派。两个入口最后进同一段「已有上游任务号就跳过创建、转去轮询」的代码，报告里要写明实际走到的是哪个，没走到的那个靠单测覆盖。
 - **断言四件事**：上游只被创建一次（日志里有「跳过创建」那一行，创建日志只有一条）；任务终态和失败文案；预扣全额退回；这次失败没被记成渠道错误。只看终态会漏掉重复扣上游的钱和误熔断渠道这两类事故。

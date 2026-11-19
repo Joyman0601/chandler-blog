@@ -36,9 +36,19 @@ CREATE DATABASE `biz-db` CHARACTER SET utf8mb4;
 
 ### 坑 2.1：配置导错了命名空间，服务死活拉不到
 
-Nacos 用**命名空间**隔离环境。配置必须导进 `dev` 命名空间（对应 `spring.profiles.active=dev`）。我一开始导进了 `public`，服务启动时按 `dev` 去拉，自然一片空白。
+Nacos 用**命名空间**隔离环境。这套脚手架在各服务的 `application.yml` 里写的是：
 
-> **经验：** 配置一定要进**和 profile 同名的命名空间**。启动拉不到配置，先确认命名空间对不对。
+```yaml
+spring:
+  cloud:
+    nacos:
+      config:
+        namespace: ${spring.profiles.active}   # 拿 profile 名当命名空间 ID
+```
+
+所以 profile 是 `dev`，服务就去 ID 为 `dev` 的命名空间拉配置。我一开始导进了 `public`，服务按 `dev` 去拉，自然一片空白。
+
+> **经验：** 「命名空间和 profile 同名」是这套脚手架的约定，不是 Nacos 的规则。Nacos 只认服务配置里写的命名空间 ID。启动拉不到配置，先看 `application.yml` 里 `namespace` 指向哪个 ID，再确认配置导进了那个命名空间。
 
 ### 坑 2.2：中文注释把配置写进库时炸了
 
@@ -97,18 +107,6 @@ Nacos 必须第一个（大家都要从它拿配置/注册）；`ruoyi-system` �
 > **经验（最实用的一条）：** 开发期验业务逻辑，优先用**超管账号**（可绕过 `@SaCheckPermission`），或临时摘掉 Controller 上的权限注解直打服务端口，验完再加回来。别在权限配置上和框架死磕，那是上线前才需要补的事。
 >
 > 另外注意：加密开关 `api-decrypt.enabled`、`check-same-token` 这类是**全局开关，改了要重启**，不是热更新配置。
-
-## 坑 6：最诡异的一个——所有命令突然 `command not found`
-
-这个和框架无关，但太典型了，单独记一笔。
-
-**现象：** 终端会话进行到一半，`mvn`、`mysql`、连 `ls`/`cat` 都突然 `command not found`，可前半段同一个终端明明好好的。
-
-**根因：** 会话用的是 Unix 风格的 bash，但它拿到的 `PATH` 不知怎么变成了 **Windows 格式**——用 `;` 分隔、带 `C:\` 盘符、反斜杠。bash 期望的是 `:` 分隔的 `/c/` 路径，于是把整串 `PATH` 当成「一个不存在的目录」，所有程序都找不到了。程序本身没丢，只是「找路的规则」坏了。
-
-**解决：** **重启终端会话**即可——`PATH` 在启动时重新初始化。代码改动早落盘了，重启不丢。
-
-> **经验：** 一旦「所有命令包括手动敲的都 `command not found`」，先 `echo $PATH` 看是不是 `;`+`C:\` 的 Windows 格式；是就直接重启会话，别浪费时间找绝对路径或修 `.bashrc`。
 
 ## 小结
 

@@ -1,22 +1,22 @@
 ---
 title: "多模态 RAG 踩坑：4096 维的「VL embedding」其实分不清红图和蓝图"
-description: "想让图片和 PDF 里的图也能被文本 query 召回，于是给 RAG 接 VL embedding。结果发现一个挺反直觉的坑：同样叫『Qwen3-VL-Embedding』，走 OpenAI 兼容的 /v1/embeddings 端点是伪多模态——它把图片当成 base64 字符串 embedding，连红图蓝图都分不开；走 DashScope 原生多模态端点才是真的。记录这个区别，以及真多模态向量空间怎么落地。"
+description: "想让图片和 PDF 里的图也能被文本 query 召回，于是给 RAG 接 VL embedding。结果发现一个挺反直觉的坑：同样叫『Qwen3-VL-Embedding』，走 OpenAI 兼容的 /v1/embeddings 端点是伪多模态——连红图蓝图都分不开，推断是把图片当成 base64 字符串 embedding 了；走 DashScope 原生多模态端点才是真的。记录这个区别，以及真多模态向量空间怎么落地。"
 pubDate: 2026-06-26
 tags: ["Java", "Spring Boot", "RAG", "多模态", "Embedding", "Qwen-VL", "PDFBox"]
 series: "rag"
 seriesLabel: "RAG 项目"
 ---
 
-> 一句话总结：想让图片和 PDF 里的图也能被文本 query 召回，给 RAG 接了 VL embedding。本来以为是「换个模型」的小事，结果踩到一个挺典型的坑——**同样是 Qwen3-VL-Embedding，走 OpenAI 兼容的 `/v1/embeddings` 是伪多模态**（把图片当 base64 字符串 embed，红图蓝图都分不开），**走 DashScope 原生多模态端点才是真的**。这篇记录这个区别，以及真·多模态向量空间是怎么落地的。开关默认关，纯文本路径零回归。
+> 一句话总结：想让图片和 PDF 里的图也能被文本 query 召回，给 RAG 接了 VL embedding。本来以为是「换个模型」的小事，结果踩到一个挺典型的坑——**同样是 Qwen3-VL-Embedding，走 OpenAI 兼容的 `/v1/embeddings` 是伪多模态**（红图蓝图都分不开，推断是把图片当 base64 字符串 embed 了），**走 DashScope 原生多模态端点才是真的**。这篇记录这个区别，以及真·多模态向量空间是怎么落地的。开关默认关，纯文本路径零回归。
 
-## 0. 真多模态 vs 伪多模态
+## 0. 两条路：图转文 vs 同一向量空间
 
 把图片接进 RAG，有两条路，差别很大：
 
-1. **图转文再 embedding**（伪多模态）：先用一个 caption / OCR 模型把图描述成文字，再对那段文字做普通文本 embedding。检索时其实是「文字 query × 文字描述」——图片信息在「描述」那一步就被有损压扁了，描述里没提到的视觉细节，永远召不回。
+1. **图转文再 embedding**：先用一个 caption / OCR 模型把图描述成文字，再对那段文字做普通文本 embedding。检索时其实是「文字 query × 文字描述」——图片信息在「描述」那一步就被有损压扁了，描述里没提到的视觉细节，永远召不回。
 2. **真·多模态向量空间**（我想做的）：用 VL embedding 模型直接对**图像本身**打向量，让它落在和文本 embedding **同一个**向量空间里。文本 query 的向量和图像向量直接算 cosine，「文字找图」就是一次普通的同空间近邻检索。
 
-我想走第 2 条。前提是有一个能**同时**吃文本和图片、输出同维向量的 VL embedding 端点。我简历技术栈里写的是 `Qwen3-VL-Embedding-8B`，4096 维——听起来正合适。结果一上手就翻车了。
+我想走第 2 条。前提是有一个能**同时**吃文本和图片、输出同维向量的 VL embedding 端点。下文说的「伪多模态」专指另一种情况：端点看着是多模态，图片其实没被当成图片处理。我简历技术栈里写的是 `Qwen3-VL-Embedding-8B`，4096 维——听起来正合适。结果一上手就翻车了。
 
 ## 1. 坑：4096 维的向量，连红图和蓝图都分不开
 
@@ -35,7 +35,7 @@ embedImage(bytes, mime) -> POST /v1/embeddings { "input": "data:image/png;base64
 | --- | --- | --- |
 | SiliconFlow `/v1/embeddings` | 0.302 | **0.354** ← 反而离蓝图更近 |
 
-红色文本居然离蓝图更近。原因想通之后挺哭笑不得：**OpenAI 的 `/v1/embeddings` 的 `input` 只认字符串**。我传进去的 data URL，它根本没当图片解码，而是把那一长串 base64 文本当普通字符串 embed 了。返回的 4096 维向量编码的是「base64 字符串的文本特征」，跟图像内容毫无关系——颜色当然分不开。
+红色文本居然离蓝图更近。我的推断是：**OpenAI 格式的 `/v1/embeddings` 的 `input` 按字符串处理**，传进去的 data URL 没被当图片解码，而是把那一长串 base64 文本当普通字符串 embed 了。这样返回的 4096 维向量编码的是「base64 字符串的文本特征」，跟图像内容无关，颜色当然分不开。这个根因是从红蓝实验的结果倒推的，我没在该端点的文档里找到明确说明。
 
 这就是**伪多模态**：模型名字带 VL、维度也对、调用也成功，但这个 API 形状根本喂不进图像。
 
@@ -58,6 +58,8 @@ embedImage(bytes,mime) -> { "input": { "contents": [ { "image": "data:...;base64
 | 蓝色文本 · 图 | **0.683**（蓝图） | 0.443（红图） |
 
 颜色匹配的「文本 × 图片」相似度，明显高于不匹配的。**纯文本 query 召回正确图片**，这才是真多模态。
+
+要说明一点：这组红蓝对照里变量不止一个。两边不只 API 形状不同，服务商、模型版本、向量维度（4096 对 2560）也都不同。它能说明 SiliconFlow 这条路分不开颜色、DashScope 这条路分得开，但不能单独证明差别全来自 API 形状。
 
 所以我在 `EmbeddingClient` 里加了一个 `llm.embedding-style` 开关：
 

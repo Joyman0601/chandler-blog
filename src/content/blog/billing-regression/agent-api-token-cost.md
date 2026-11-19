@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 1c4073bd15c0446fbae6dc77a0b5d0adfe72ca077561daf13090e6a9ebf7b463
+# import-articles-sha256: 4904206a7d79b7508c39114fa924b9b1dc57d4b83227f3a291ec0850b3fee4ff
 # Imported by scripts/import-articles.mjs from posts/billing-regression/agent-api-token-cost.md
 # Source date: 2026-10-15
 title: "估 agent 类接口的花费：缓存读才是大头"
@@ -35,6 +35,8 @@ seriesLabel: "计费与上线回归"
 | 缓存读 | 命中缓存、直接读出的前缀 | 0.1 倍 |
 
 单价关系取自一家云厂商公开价格页上的一个模型，缓存写取较长的那一档留存。再加上输出，一共四类 token。
+
+更正：按 Anthropic 式定价，缓存写 1.25 倍对应的是 5 分钟那档留存（较短的一档），1 小时那档是 2 倍；第 6 节推断 36 分钟后缓存已过期，也和短档对得上。这里写的「较长」和表里的 1.25 倍、和后文的过期推断不一致，以哪个为准，我要回头核对原价格页再定。
 
 ### 占比一变，总价变很多
 

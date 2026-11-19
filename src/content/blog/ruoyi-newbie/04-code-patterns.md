@@ -14,7 +14,7 @@ seriesLabel: "微服务新人踩坑实录"
 RuoYi 是强约定的框架，每个业务实体一套固定分层。我直接参照系统模块的样板：
 
 ```
-domain/XxxEntity.java          # 实体，继承 TenantEntity（带 update_*/remark 审计列 + tenant_id）
+domain/XxxEntity.java          # 实体，继承 TenantEntity（带 create_*/update_* 审计列 + tenant_id）
 domain/bo/XxxBo.java           # 入参对象，@AutoMapper 映射到实体，带 Jakarta 校验注解
 domain/bo/XxxQueryBo.java      # 列表查询入参，extends PageQuery（自带分页字段）
 domain/vo/XxxVo.java           # 出参对象，带翻译注解
@@ -40,14 +40,32 @@ resources/mapper/XxxMapper.xml
 
 新手直觉是 JOIN + 集合映射一把梭，但这在分页场景下会出大问题：**JOIN 出来的多行会让分页的 `count` 算错**（一个区域关联 3 个网点就变 3 行）。
 
-正确做法是「分页查主表 + 批量查关联 + 内存组装」：
+正确做法是「分页查主表 + 批量查关联 + 内存组装」。下面这段演示四步各写在哪，为了短只回填网点 id：
 
+```java
+public TableDataInfo<BizAreaVo> queryPageList(PageQuery pageQuery) {
+    // 1. 只分页查区域主表，count 不受关联表影响
+    Page<BizAreaVo> page = areaMapper.selectVoPage(pageQuery.build(),
+        Wrappers.<BizArea>lambdaQuery());
+    List<BizAreaVo> areas = page.getRecords();
+    if (areas.isEmpty()) {
+        return TableDataInfo.build(page);
+    }
+    // 2. 收集本页所有区域 id
+    List<Long> areaIds = areas.stream().map(BizAreaVo::getId).toList();
+    // 3. 一条 IN 查询批量取关联，不在循环里查 N 次
+    List<BizAreaSite> links = areaSiteMapper.selectList(
+        Wrappers.<BizAreaSite>lambdaQuery().in(BizAreaSite::getAreaId, areaIds));
+    // 4. 内存里按 areaId 分组，填回每个区域
+    Map<Long, List<Long>> siteIdsByArea = links.stream().collect(
+        Collectors.groupingBy(BizAreaSite::getAreaId,
+            Collectors.mapping(BizAreaSite::getSiteId, Collectors.toList())));
+    areas.forEach(a -> a.setSiteIds(siteIdsByArea.getOrDefault(a.getId(), List.of())));
+    return TableDataInfo.build(page);
+}
 ```
-1. 分页查区域主表（干净的分页，count 正确）
-2. 收集本页所有区域 id
-3. 用这批 id 一次性批量查关联表（一条 IN 查询，不是循环里查 N 次）
-4. 在内存里 groupingBy(areaId) 把网点填回每个区域
-```
+
+要网点名称这类详情，再拿全部 `siteId` 批量查一次网点表，同样是一条 `IN`。
 
 > **经验：** **「分页主表」和「补充关联数据」要分开做**。JOIN 适合「一对一打平」，不适合「一对多还要分页」。批量查 + 内存组装，既绕开分页 count 问题，又避免了在循环里查库的 N+1。
 
@@ -82,7 +100,7 @@ public boolean relateSites(Long areaId, List<Long> siteIds) {
 
 ## 模式三：关联表不要无脑继承 `TenantEntity`
 
-`biz_area_site` 这种**只增删、不修改**的关联表，我一开始也让它继承 `TenantEntity`，结果写库报错——因为 `TenantEntity` 带了 `update_by/update_time/remark` 这些列，而我的关联表压根没建这些列。
+`biz_area_site` 这种**只增删、不修改**的关联表，我一开始也让它继承 `TenantEntity`，结果写库报错——因为 `TenantEntity` 带了 `update_by/update_time` 这些列，而我的关联表压根没建这些列。
 
 **解决：** 关联表只实现 `Serializable`，按需手动加 `create_*` 审计列和 `tenant_id`，**不继承带 `update_*` 的基类**。
 
@@ -110,13 +128,13 @@ if (exists) {
 跨模块取数据要 `@DubboReference`。但有个坑：
 
 ```java
-// ❌ 这样不行：@RequiredArgsConstructor 走构造器注入，Dubbo 引用不支持
+// 错误写法：@RequiredArgsConstructor 走构造器注入，Dubbo 引用不支持
 @RequiredArgsConstructor
 public class BizAreaServiceImpl {
     @DubboReference private final RemoteUserService remoteUserService;
 }
 
-// ✅ Dubbo 引用必须用字段注入
+// 正确写法：Dubbo 引用用字段注入
 public class BizAreaServiceImpl {
     @DubboReference
     private RemoteUserService remoteUserService;

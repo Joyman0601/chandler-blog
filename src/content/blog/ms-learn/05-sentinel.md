@@ -152,6 +152,37 @@ public Map<String, Object> unstableBlocked(BlockException ex) {
 
 **关键收获**：熔断让调用方**快速失败、自我保护**，并周期性探测、自动恢复——不需要人工干预。这正是注册发现给不了的能力。
 
+### 补充：下游「慢」而不是「错」时怎么配
+
+开头讲的雪崩，起因是下游变慢、线程被占满；上面的实验演示的却是异常比例。下游只是慢、不报错时，异常比例熔断永远不会跳闸，要换成慢调用比例。下面是补充示例（不是这套 demo 里跑过的代码），资源名 `order-call-slow` 是示意：
+
+```java
+// 慢调用比例熔断: RT 超过 500 ms 记为慢调用, 1 秒内慢调用占比超过 50% 就跳闸
+DegradeRule slow = new DegradeRule();
+slow.setResource("order-call-slow");
+slow.setGrade(RuleConstant.DEGRADE_GRADE_RT);  // 慢调用比例策略
+slow.setCount(500);                 // 最大允许 RT(ms), 超过记为慢调用
+slow.setSlowRatioThreshold(0.5);    // 慢调用比例阈值(1.8.0 起)
+slow.setMinRequestAmount(5);
+slow.setStatIntervalMs(1000);
+slow.setTimeWindow(5);              // 跳闸后保持 5 秒
+```
+
+光有熔断还不够。熔断只统计已经结束的调用，跳闸之前，每个慢请求仍会一直占着线程。所以调用方还要给 HTTP 客户端设超时，让单次调用最多占线程这么久：
+
+```java
+@Bean
+@LoadBalanced
+public RestTemplate restTemplate() {
+    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    factory.setConnectTimeout(1000);   // 建连超时 1 秒
+    factory.setReadTimeout(2000);      // 等响应超时 2 秒, 超时抛异常
+    return new RestTemplate(factory);
+}
+```
+
+两者分工：超时管「一次调用最多等多久」，慢调用比例熔断管「大多数调用都慢时干脆别调了」。读超时要设得比慢调用阈值大，不然慢请求还没被记成慢调用，就先超时变成了异常，这时起作用的是异常比例规则。
+
 ## 最值得讲的坑：熔断没触发，其实是请求密度不够
 
 这个坑我排查了很久，一度以为代码写错了。
@@ -188,5 +219,6 @@ for i in $(seq 20); do curl -s --noproxy '*' http://127.0.0.1:9002/order/unstabl
 | fallback | 下游真报错（CLOSED 阶段） | 真调了，失败兜底 |
 | blockHandler | 被 Sentinel 拦截（OPEN 阶段） | 没调下游，直接拒 |
 | 熔断三状态 | CLOSED → OPEN → HALF-OPEN | 自动跳闸、自动试探恢复 |
+| 慢调用比例 + 超时 | 下游变慢不报错时用 | 超时限住单次占用，熔断挡住后续调用 |
 
 服务现在能扛住下游故障了。但还有一类问题没碰过：**跨服务的写操作**。下单要扣库存（ms-stock）+ 建订单（ms-order），这是两个库的两次写。如果扣完库存、建单失败，库存就白扣了。下一篇：分布式事务，怎么保证「要么全成、要么全滚」。

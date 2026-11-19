@@ -56,7 +56,7 @@ seriesLabel: "大模型应用岗学习"
 
 **问题**：传统推理框架按**最大序列长度提前分配一整块连续显存**。比如按 2048 token 分配，实际只用了 200 token，剩下 1800 token 的显存被占着却给不了别人——这叫内存碎片化。
 
-**PagedAttention**：把 KV Cache 切成小页按需分配，用多少要多少，消灭碎片。显存利用率从约 20~30% 提升到接近 90%，同样的显存下吞吐量提升 10 倍以上。
+**PagedAttention**：把 KV Cache 切成小页按需分配，用多少要多少，消灭碎片。按 vLLM 团队的数据，已有系统因碎片和预留浪费 60%–80% 的 KV Cache 显存，PagedAttention 把浪费压到 4% 以下。吞吐量的提升要看和谁比：vLLM 论文里，和 FasterTransformer、Orca 这类当时最好的推理系统比，同等延迟下吞吐提升 2–4 倍；发布博客里和 Hugging Face Transformers 原生推理比，是 14–24 倍（单条输出）。「10 倍以上」只在后一种对照下成立。
 
 > 一句话：PagedAttention = 给 KV Cache 做操作系统式的分页管理，消灭显存碎片。
 
@@ -66,11 +66,13 @@ seriesLabel: "大模型应用岗学习"
 ollama run qwen2.5:7b
 ```
 
-自动下载 + 量化 + 启动，并暴露一个 OpenAI 兼容 API（`http://localhost:11434/v1`）。把应用的 base URL、model、api key 三个配置一改就能接进来。
+自动下载 + 启动，并暴露一个 OpenAI 兼容 API（`http://localhost:11434/v1`）。注意 Ollama 拉下来的是模型库里已经量化好的权重，比如 `qwen2.5:7b` 默认就是 `q4_K_M` 版本，Ollama 本身不做量化；想要别的精度，就拉带精度后缀的标签（如 `qwen2.5:7b-instruct-q8_0`）。把应用的 base URL、model、api key 三个配置一改就能接进来。
 
 - **vs vLLM**：Ollama 面向个人 / 开发者，简单、单用户；vLLM 面向生产，高并发高吞吐，但部署复杂。
 - **vs 调云端 API**：本地部署数据不出机（合规、隐私）、无网络延迟、无调用费用；代价是受限于本机显存，只能跑小模型。
-- **一个落地坑**：有些应用用的是 Responses API（`/v1/responses`），而 Ollama 只支持 chat/completions，接入时还得改客户端适配。
+- **一个落地坑**：有些应用用的是 Responses API（`/v1/responses`），接 Ollama 前要先确认它支持哪些端点。
+
+  > 更正：这里原来写「Ollama 只支持 chat/completions」。按 Ollama 当前的 OpenAI 兼容文档，它从 v0.13.3 起也提供 `/v1/responses`，但只支持无状态的用法，`previous_response_id` 这类依赖服务端会话的参数不能用。我当时用的版本支不支持，没有留下记录。
 
 ## RAG vs 微调：什么时候选哪个
 
@@ -78,12 +80,14 @@ ollama run qwen2.5:7b
 
 | 场景 | 选 RAG | 选微调 |
 |---|---|---|
-| 知识动态 / 频繁更新 | ✅ | ❌ 微调后知识固化 |
-| 知识库很大 | ✅ | ❌ 装不进参数 |
-| 需要引用来源 | ✅ 天然有 sources | ❌ 参数知识无法溯源 |
-| 改变输出风格 / 格式 | ❌ Prompt 治标 | ✅ SFT/DPO 改模型行为 |
-| 领域专有术语深度理解 | 🔶 | ✅ |
-| 安全 / 合规约束 | ❌ Prompt 可被绕过 | ✅ RLHF/DPO 对齐更可靠 |
+| 知识动态 / 频繁更新 | 适合 | 不适合：微调后知识固化 |
+| 知识库很大 | 适合 | 不适合：装不进参数 |
+| 需要引用来源 | 适合：天然有 sources | 不适合：参数知识无法溯源 |
+| 改变输出风格 / 格式 | 不适合：Prompt 治标 | 适合：SFT/DPO 改模型行为 |
+| 领域专有术语深度理解 | 部分适合 | 适合 |
+| 拒答、语气这类软性安全要求 | 不够：Prompt 可被绕过 | 适合：RLHF/DPO 让模型更倾向守规矩，但同样可能被绕过 |
+
+最后一行只管「模型更倾向怎么说」。权限、身份、数据范围这类硬性安全边界，不靠 Prompt 也不靠微调，要落在后端代码里，见 [Prompt 工程与 Agent 原理](/blog/llm-learn/04-prompt-agent-react/) 的「安全边界在代码层」一节。
 
 > 一句话判断：**知识问题用 RAG**（快、可更新、可溯源）；**行为 / 风格 / 深度理解问题用微调**。两者也可以叠加——微调改行为，RAG 补知识。
 

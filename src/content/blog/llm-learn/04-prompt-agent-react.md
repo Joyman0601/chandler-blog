@@ -30,13 +30,12 @@ seriesLabel: "大模型应用岗学习"
 
 ## ReAct 范式
 
-Agent 的核心就是 ReAct，公式是：
+Agent 的核心就是 ReAct，一轮循环是这样的：
 
-```text
-Thought → Action → Observation → Thought → … → Final Answer
-```
-
-模型先 **Thought**（推理出还缺什么信息），然后 **Action**（调一个工具），拿到 **Observation**（工具返回的真实结果）追加进上下文，再进入下一轮推理，直到能给出 **Final Answer**。
+1. **Thought**：推理还缺什么信息；
+2. **Action**：提议调一个工具；
+3. **Observation**：拿到工具返回的真实结果，追加进上下文；
+4. 回到第 1 步，直到能给出 **Final Answer**。
 
 ### 为什么 ReAct 能治幻觉
 
@@ -71,11 +70,56 @@ Thought → Action → Observation → Thought → … → Final Answer
 
 > 注意：Human-in-the-Loop 是「存档-重启」的异步模式，不是同步挂起等待。这样 HTTP 请求能正常结束，不需要维持长连接。
 
+这三层之外，还要把每一步的状态和停止原因记下来，出问题时能回放；硬上限里也可以加上 token 用量，把成本一起管住。
+
+### 一个最小的 Agent Loop
+
+下面用一个假模型演示上面的循环和其中两道护栏（步数上限、白名单 + 去重）。模型只返回「提议」，工具由循环代码执行，结果作为 Observation 追加回 messages：
+
+```python
+TOOLS = {"get_weather": lambda city: f"{city}：晴，12°C"}  # 工具白名单
+def fake_llm(messages):  # 假模型：还没拿到工具结果就提议调用，拿到了就作答
+    if messages[-1]["role"] == "tool":
+        return {"answer": "查到了：" + messages[-1]["content"]}
+    return {"tool": "get_weather", "args": {"city": "北京"}}
+def agent_loop(question, max_steps=5):
+    messages, seen = [{"role": "user", "content": question}], set()
+    for _ in range(max_steps):                           # 护栏：步数上限
+        reply = fake_llm(messages)                       # Thought + Action（只是提议）
+        if "answer" in reply:
+            return reply["answer"]                       # Final Answer
+        sig = (reply["tool"], tuple(sorted(reply["args"].items())))
+        if reply["tool"] not in TOOLS or sig in seen:    # 护栏：白名单 + 去重
+            return "停止：未知或重复的工具调用"
+        seen.add(sig)
+        result = TOOLS[reply["tool"]](**reply["args"])   # 后端执行工具
+        messages.append({"role": "tool", "content": result})  # Observation
+    return "停止：超过最大步数"
+print(agent_loop("北京今天天气怎么样？"))
+```
+
+运行输出：
+
+```text
+查到了：北京：晴，12°C
+```
+
+把 `fake_llm` 换成总是提议同一个调用的版本，第二轮就会停在「未知或重复的工具调用」。真实项目里把它换成带 `tools` 参数的模型 API 调用即可，完整的后端实现见 [企业知识库 RAG + Agent 助手项目复盘](/blog/rag-agent-backend/)。
+
 ## 安全边界在代码层，不信任模型输入
 
 一个容易被忽视但很关键的点：**用户真实身份（userId / tenantId）绝不能让模型来填**。
 
 应该在 prompt 里明确禁止模型输出这些字段，真实身份只在后端的执行上下文里注入。这样即使有人通过 Prompt Injection 诱导模型硬写一个别人的 userId，后端也会忽略模型给的值——**安全边界落在代码层，永远不信任模型输入**。
+
+Prompt 只能提高模型守规矩的概率，替代不了后端校验。后端执行一个工具前，至少过一遍这张清单：
+
+- 工具在白名单里；
+- 参数按 schema 校验，必填项齐全；
+- 当前用户有这个工具对应的权限；
+- 按风险等级分流，高风险操作走二次确认；
+- 单次请求内的工具调用次数和单个工具的超时有上限；
+- 每次调用写审计日志：谁、调了什么、参数、结果。
 
 ## 小结
 

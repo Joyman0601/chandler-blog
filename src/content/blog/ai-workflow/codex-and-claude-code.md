@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: d9df631474d25614f91c124996e1d95c8cfd2103870241697b6b0a466ec26989
+# import-articles-sha256: 039d8b2638e7d8221ad490888c670e2cd4e1c6f88c1954c6fe10f76803fd0cc3
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/codex-and-claude-code.md
 # Source date: 2026-10-15
 title: "同一套流程搬到 Codex：skill、hook 和子代理的对应"
@@ -14,7 +14,7 @@ seriesLabel: "AI 辅助开发"
 
 ## 0. 起因
 
-我平时主要用 Claude Code，三周左右用顺了一套东西：全局的 CLAUDE.md 写工作约定；几个常用的 skill，其中代码审视是团队的，每日汇总和多窗口拆任务是我自己写的；还有一组 hook（读取守卫、审视闸、按关键词提示经验库条目）。10 月 11 日开始在同一个工作区里也用 Codex，我希望它照同一套流程干活，而不是另起一套规矩。
+我平时主要用 Claude Code，三周左右用顺了一套东西：全局的 CLAUDE.md 写工作约定；几个常用的 skill，其中代码审视是团队的，每日汇总和多窗口拆任务是我自己写的；还有一组 hook（读取守卫、审视闸、按关键词提示经验库条目）。文中的「闸」指会拦人的 hook：在某个时刻检查一个条件，不满足就拦下这次操作。10 月 11 日开始在同一个工作区里也用 Codex，我希望它照同一套流程干活，而不是另起一套规矩。
 
 这篇按时间讲搬的过程：先对一遍概念，再搬两个 skill，再接 hook，最后让 Codex 自己复述一遍流程，用来查漏。文中「实测」指我在本机跑出来的，「文档」指两边官方文档的说法。
 
@@ -189,4 +189,4 @@ for name, n in docs.most_common(5):
 - [ ] 读文件的规则写进全局指令：分段读，每段给够输出上限，看到截断标记就重读。
 - [ ] 让目标代理读完说明先复述四行，第 4 行专门问「和你的环境对不上的地方」。
 
-搬家本身不难，概念几乎能一一对上。难的是对上之后，有几处看起来对、其实没生效，而且不报错。读取守卫和 hook 的写法见[用 hook 往对话里注入上下文](/blog/ai-workflow/claude-code-hooks-inject-context/)，长文件被截断的问题见[长规范只读了一部分](/blog/ai-workflow/long-rulebook-partial-read/)。
+搬家本身不难，概念几乎能一一对上。难的是对上之后，有几处看起来对、其实没生效，而且不报错。读取守卫和 hook 的写法见[Claude Code hooks：提示拦不住命令，要拒绝一次](/blog/ai-workflow/claude-code-hooks-inject-context/)，长文件被截断的问题见[长规范只读了不到三分之一就开工：规则清单、检查卡和读取守卫](/blog/ai-workflow/long-rulebook-partial-read/)。

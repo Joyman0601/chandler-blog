@@ -15,8 +15,8 @@ seriesLabel: "微服务新人踩坑实录"
 
 | 机制 | 怎么写 | 依赖数据库字典表? |
 |---|---|---|
-| **内联表达式** | `@ExcelDictFormat(readConverterExp = "1=类型A,2=类型B")` | ❌ 映射写死在注解里，自包含 |
-| **DB 字典** | `@ExcelDictFormat(dictType="biz_asset_type")` / 前端 `<dict-tag>` / 后端 `@Translation(type=DICT)` | ✅ 库里必须有对应的 `sys_dict_data` |
+| **内联表达式** | `@ExcelDictFormat(readConverterExp = "1=类型A,2=类型B")` | 不依赖：映射写死在注解里，自包含 |
+| **DB 字典** | `@ExcelDictFormat(dictType="biz_asset_type")` / 前端 `<dict-tag>` / 后端 `@Translation(type=DICT)` | 依赖：库里必须有对应的 `sys_dict_data` |
 
 这两套最大的区别是**对数据库的依赖**：
 
@@ -84,11 +84,11 @@ private String normalizeEnum(String input, Map<String,String> label2code) {
 
 ### 它怎么坑我的
 
-导入 VO 里有个 `gasUserId`（`Long` 类型）+ 表头「客户ID」。可这一版业务**根本不关联客户表，压根不该让用户填这列**，但字段留着了。于是 Excel 那列只要有人填了非数字，整批导入瞬间 500。
+导入 VO 里有个 `customerId`（`Long` 类型）+ 表头「客户ID」。可这一版业务**根本不关联客户表，压根不该让用户填这列**，但字段留着了。于是 Excel 那列只要有人填了非数字，整批导入瞬间 500。
 
 **解决：**
 - 把这个不该让用户填的字段**从导入 VO 里直接删掉**；
-- 在 Service 层给它**赋固定占位值**（如 `setGasUserId(0L)`），不从 Excel 行里读。
+- 在 Service 层给它**赋固定占位值**（如 `setCustomerId(0L)`），不从 Excel 行里读。
 
 > **经验（两条）：**
 > 1. 导入 VO **能不放强类型字段就不放**，尤其是「不该让用户填的 id / 占位字段」——直接从 VO 删、在 Service 层赋固定值。
@@ -98,11 +98,11 @@ private String normalizeEnum(String input, Map<String,String> label2code) {
 
 ## 五、一个相关的「占位 0」设计
 
-承接上面：那个 `gasUserId` 字段，全表现在都是 `0`。**这不是 bug，是故意的占位设计**——这一版资产表不与客户表关联，采用冗余存储（客户编号/名称等直接按 Excel 值存进资产表自己的列，不反查客户表）。导入时没人填客户 ID，代码兜底存 0。
+承接上面：那个 `customerId` 字段，全表现在都是 `0`。**这不是 bug，是故意的占位设计**——这一版资产表不与客户表关联，采用冗余存储（客户编号/名称等直接按 Excel 值存进资产表自己的列，不反查客户表）。导入时没人填客户 ID，代码兜底存 0。
 
 相应地，导出 VO 用 `@ExcelIgnoreUnannotated` 把这个全 0 的列从导出里剔除了（导出一列全是 0 没意义）。
 
-等将来「资产关联客户」功能上线，再按户号反查客户表回填真实 ID 和冗余字段、把这列加回模板。
+等将来「资产关联客户」功能上线，再按业务编号反查客户表回填真实 ID 和冗余字段、把这列加回模板。
 
 > **经验：** 「占位设计」一定要**留下记录**（注释 + 文档 + 团队记忆），否则后来人看到「整列都是 0 / 导出怎么没这列」会当成 bug 去查。把「现在为什么这样、将来怎么补」写清楚，比代码本身更重要。
 

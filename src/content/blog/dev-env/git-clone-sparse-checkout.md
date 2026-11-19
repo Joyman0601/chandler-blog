@@ -13,7 +13,7 @@ seriesLabel: "开发环境与排错"
 
 克隆大型仓库（如 Gitee 上的 RuoYi-Vue-Plus）时常见报错：
 
-```
+```text
 error: RPC failed; curl 56 Failure when receiving data from the peer
 error: 2241 bytes of body are still expected
 fetch-pack: unexpected disconnect while reading sideband packet
@@ -21,7 +21,7 @@ fatal: early EOF
 fatal: fetch-pack: invalid index-pack output
 ```
 
-**根因**：网络传输中断，或 Git 的 HTTP 缓冲区不够大。在网络不稳定 + 仓库体积大时尤其常见。
+**根因**：网络传输中途断开。在网络不稳定 + 仓库体积大时尤其常见。
 
 ### 解决方案（按推荐顺序）
 
@@ -43,12 +43,15 @@ git fetch --unshallow
 > 注意：在仓库外层目录执行 `git fetch --unshallow` 会报
 > `fatal: not a git repository`，因为当前目录不是 git 仓库。
 
-**2. 增大 Git 缓冲区**
+**2. 部分克隆，先不下载文件内容**
+
+`--filter=blob:none` 让 Git 先只拉提交和目录结构，文件内容等检出时才按需下载。一次要传的数据变少，断线的机会也跟着变少：
 
 ```bash
-git config --global http.postBuffer 524288000
-git config --global http.maxRequestBuffer 100M
+git clone --filter=blob:none https://gitee.com/dromara/RuoYi-Vue-Plus.git
 ```
+
+> 更正：这一步原来写的是调大 `http.postBuffer` 和 `http.maxRequestBuffer`，两条都不管用。`http.postBuffer` 只管 Git 向服务器 POST 的数据，克隆时大块数据是服务器回的响应，调它没用；`http.maxRequestBuffer` 不是 Git 的配置项。
 
 **3. 换用 SSH 或镜像**
 
@@ -67,11 +70,12 @@ git clone git@gitee.com:dromara/RuoYi-Vue-Plus.git
 浅克隆 + 稀疏检出可以只检出需要的子模块，速度快、占用小：
 
 ```bash
-git clone --depth 1 --filter=blob:none https://gitee.com/dromara/RuoYi-Vue-Plus.git
+git clone --depth 1 --filter=blob:none --sparse https://gitee.com/dromara/RuoYi-Vue-Plus.git
 cd RuoYi-Vue-Plus
-git sparse-checkout init --cone
-git sparse-checkout set ruoyi-admin ruoyi-framework
+git sparse-checkout set --cone ruoyi-admin ruoyi-framework
 ```
+
+`--sparse` 让克隆完只检出根目录的文件，`set` 再指定要哪些目录。旧写法 `git sparse-checkout init --cone` 已被官方文档标为弃用，现在一条 `set --cone` 就够了。
 
 进入稀疏模式后，命令行分支提示会变成 `(5.X|SPARSE)`。
 
@@ -79,14 +83,16 @@ git sparse-checkout set ruoyi-admin ruoyi-framework
 
 例如运行时提示 `ruoyi-common/extend/modules` 模块找不到。
 
-**原因**：稀疏检出只下载了 `set` 指定的目录，其它目录仍在远程但未检出到本地。
+**原因**：稀疏检出只检出了 `set` 指定的目录，其它目录仍在远程但未检出到本地。
 
 **解决方法**：
 
 ```bash
-# 方法 1：追加需要的目录（可写完整深层路径）
+# 方法 1：追加需要的目录（可写完整深层路径），add 在现有列表上追加
+git sparse-checkout add ruoyi-common/extend/modules
+
+# 也可以用 set 重列一遍，set 会整体替换列表，原来的目录要一起写上
 git sparse-checkout set ruoyi-admin ruoyi-framework ruoyi-common
-git sparse-checkout set ruoyi-admin ruoyi-framework ruoyi-common/extend/modules
 
 # 方法 2：彻底关闭稀疏检出，检出全部文件
 git sparse-checkout disable
@@ -101,7 +107,7 @@ git ls-tree -r origin/5.X --name-only | grep "ruoyi-common/extend/modules"
 
 ## 三、Git 推送时的本地代理报错
 
-```
+```text
 fatal: unable to access 'https://github.com/.../xxx.git/':
 Failed to connect to 127.0.0.1 port 7890 after 2092 ms: Couldn't connect to server
 ```
@@ -143,6 +149,7 @@ echo %https_proxy%
 |------|---------|
 | 大仓库克隆失败 | `git clone --depth 1` |
 | 补全历史 | `cd 仓库 && git fetch --unshallow` |
-| 只要部分模块 | `git sparse-checkout set 模块...` |
+| 只要部分模块 | `git sparse-checkout set --cone 模块...` |
+| 追加模块 | `git sparse-checkout add 模块...` |
 | 恢复全部文件 | `git sparse-checkout disable` |
 | 取消 Git 代理 | `git config --global --unset http.proxy` |

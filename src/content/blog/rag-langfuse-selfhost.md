@@ -1,6 +1,6 @@
 ---
 title: "自建 Langfuse 反代到公网：六个非踩不可的坑"
-description: "给 RAG 项目自建 Langfuse 观测栈，独立 compose stack 通过 external network 复用主 stack 内网。踩了六个坑：NEXTAUTH_URL 精确匹配、Postgres 数据卷不能挂父目录、Next.js 反代必带 Upgrade 头、web 镜像必须 rebuild 才吃 nginx.conf、Langfuse UI trace input/output 独立于 generation、input 必须是 JSON message 数组。这篇原样复盘，希望能省别人几小时。"
+description: "基于 Langfuse v2 自托管，独立 compose 栈接入 RAG、反代到公网。六个坑：NEXTAUTH_URL、数据卷路径、反代头、改 nginx.conf 要重建镜像、trace 的 input/output、对话气泡格式。"
 pubDate: 2026-07-31
 tags: ["Langfuse", "可观测性", "Docker Compose", "Nginx", "反向代理", "RAG"]
 series: "rag"
@@ -8,6 +8,8 @@ seriesLabel: "RAG 项目"
 ---
 
 > 一句话总结：给 RAG 项目做观测层，选了自建 Langfuse 而不是 Cloud——数据不出内网、面试可以给面试官 read-only 链接看真实 trace。整个过程从「拷官方 compose」到「面试官能匿名点开 trace 详情」花了 3 小时，其中至少 2 小时在排坑。这篇按踩到的顺序把 6 个坑复盘出来：观测栈解耦、NEXTAUTH_URL、Postgres 数据卷路径、Next.js 反代 WS 头、`web` 镜像必须 rebuild、以及最耗时的一个——Langfuse UI 里 trace input/output 显示为 null 的排查。
+
+> 版本说明：本文基于 Langfuse v2 自托管，架构是一个 server 容器加一个 Postgres，trace 和 observation 都存在 Postgres 里，所以第 6 节能直接查 `observations` 表。v3 起架构变了：trace、observation 迁到 ClickHouse，另外要 Redis（或 Valkey）、S3 类对象存储和一个 worker 容器（见 Langfuse 官方的 v2 → v3 升级指南）。照本文的配置部署 v3 会缺组件，直接查 Postgres 的写法也不适用。
 
 ## 0. 起因：为什么不用 Langfuse Cloud
 
@@ -114,7 +116,7 @@ initdb: directory "/var/lib/postgresql/data" exists but is not empty
 FATAL: database directory appears to contain a database, but is missing files
 ```
 
-**根因**：官方 `postgres` 镜像的**数据目录是 `/var/lib/postgresql/data`**（子目录），初始化脚本、配置文件、辅助文件散在 `/var/lib/postgresql` 下其他地方。**如果把 volume 挂到父目录 `/var/lib/postgresql`，会把那些辅助文件顶掉**——启动脚本找不到就报错。
+**根因**：我当时写的解释是「挂父目录会把散在 `/var/lib/postgresql` 下的辅助文件顶掉」，这一点我核不实，算推测。能从官方文档确认的是：postgres 17 及以下的镜像在 `/var/lib/postgresql/data` 声明了数据卷，文档要求把数据卷挂在这个子目录；挂在父目录 `/var/lib/postgresql`，**容器重建后数据不会保留**。上面那条报错具体怎么来的，待我回头核对。postgres 18 起默认路径改了，数据卷要挂 `/var/lib/postgresql`，用新版本时以镜像文档为准。
 
 **修复**：挂到子目录：
 
@@ -123,11 +125,11 @@ volumes:
   - langfuse_pg_data:/var/lib/postgresql/data
 ```
 
-**面试口径**：容器数据卷挂载粒度要贴合镜像官方约定的 `PGDATA` 路径，不能拍脑袋挂父目录图省事。同类问题在 Redis (`/data`)、MySQL (`/var/lib/mysql`) 都要遵守各自镜像的约定。
+**怎么判断**：挂数据卷前，先查镜像文档写的数据目录（postgres 是 `PGDATA`），不凭印象挂父目录。Redis（`/data`）、MySQL（`/var/lib/mysql`）也一样，照各自镜像的约定。
 
-## 4. Next.js 反代必须带 Upgrade / Connection 头
+## 4. 反代 Next.js 应用：带上 Upgrade / Connection 头
 
-Langfuse 有 WebSocket 和 SSE 通路——live trace 尾追、实时 dashboard 都靠它。Nginx 反代如果不带 WS 升级头，面板加载后大部分**静态渲染 OK**（迷惑性极强），但**实时功能失效**、`useEffect` 里的实时订阅永远 pending。
+我当时的理解是：Langfuse 有 WebSocket 和 SSE 通路，live trace、实时 dashboard 靠它，反代不带升级头，页面能渲染但实时功能失效。这个说法我后来没在 Langfuse 文档里找到依据，只能算推测。反代 Next.js 这类应用时，带上 `Upgrade` / `Connection` 头是常见写法，对普通请求没有坏处，所以配置照留。
 
 正确的反代块长这样：
 
@@ -207,19 +209,16 @@ SELECT input, output FROM observations WHERE trace_id = '...' LIMIT 5;
 
 **根因（第一版）**：Langfuse UI 的 trace 概览**是从 trace 对象本身的 input/output 字段读的**——不是从子 generation 聚合上来。SDK 概念里，`trace` / `span` / `generation` 是三层独立的观察点，UI 每一层展示独立读取。我只在 generation 层塞了 input/output，trace 层为空。
 
-**第一版修复**：`LangfuseTracer.buildTraceEvent` 也塞 input/output：
+**第一版修复**：`LangfuseTracer.buildTraceEvent` 也塞 input/output。注意 `Map.of` 不接受 null，input 或 output 为空时会直接抛 `NullPointerException`，所以 body 改用 `HashMap`，有值才放：
 
 ```java
-private Map<String, Object> buildTraceEvent(TraceContext ctx, String input, String output) {
-  return Map.of(
-    "type", "trace-create",
-    "body", Map.of(
-      "id", ctx.traceId(),
-      "name", ctx.name(),
-      "input", input,       // ← 新加
-      "output", output      // ← 新加
-    )
-  );
+private Map<String, Object> buildTraceEvent(TraceContext ctx, Object input, Object output) {
+  Map<String, Object> body = new HashMap<>();
+  body.put("id", ctx.traceId());
+  body.put("name", ctx.name());
+  if (input != null)  body.put("input", input);    // ← 新加
+  if (output != null) body.put("output", output);  // ← 新加
+  return Map.of("type", "trace-create", "body", body);
 }
 ```
 
@@ -227,12 +226,12 @@ Rebuild、部署、跑问答、看 UI……**还是 null**。
 
 进 DB 查 traces 表：`traces.input` 是我传的字符串 `"[system] xxx\n[user] xxx"`，UI 上还是显示 null 或者显示成不像话的样子。
 
-**根因（第二版）**：Langfuse UI 用 **chat/message 结构化视图**渲染 input/output，期望的是：
+**根因（第二版）**：input/output 本身可以是任意 JSON，字符串也能存、也能以纯文本显示。但 Langfuse UI 要把它渲染成 **chat 气泡**，需要的是 role / content 结构：
 
 - `input`: `List<Map<String,String>>`，形如 `[{"role":"system","content":"..."}, {"role":"user","content":"..."}]`
 - `output`: `Map<String,String>`，形如 `{"role":"assistant","content":"..."}`
 
-我传的是拼接字符串，字段类型不对——DB 存下来了但 UI 渲染不出气泡。
+我传的是拼接字符串，DB 存下来了，UI 却渲染不出气泡。当时页面上看到的是 null 还是一段纯文本，我没留截图，上面只能写成「null 或者不像话的样子」。
 
 **第二版修复**：
 
@@ -254,20 +253,20 @@ langfuseTracer.recordGeneration(ctx, messages, output, latencyMs, usage);
 
 Rebuild、部署、跑问答……**这次终于看到 chat 气泡了**：system 消息、user 消息、assistant 回复分块渲染。
 
-**面试口径**：可观测性上报的字段格式**不是「能传就行」**，UI 层往往有隐式契约（比如 chat message 数组）。埋点前先看官方 SDK 示例的结构，别直觉写。
+**怎么判断**：可观测性上报的字段格式**不是「能传就行」**，UI 层往往有隐式契约（比如 chat message 数组）。埋点前先看官方 SDK 示例的结构，别直觉写。
 
 ## 收尾
 
 回头看这 6 个坑：
 
 1. **NEXTAUTH_URL 精确匹配** — 抄示例翻车，env 强校验挡住
-2. **Postgres 数据卷** — 挂父目录顶掉辅助文件，挂子目录 `/data`
-3. **Next.js 反代 Upgrade 头** — 缺 WS 升级头，静态渲染 OK 实时功能挂
+2. **Postgres 数据卷** — 17 及以下挂子目录 `/data`，挂父目录重建后数据不保留
+3. **反代 Upgrade 头** — Next.js 应用反代的常见写法，「缺了实时功能会挂」是推测
 4. **web 镜像必须 rebuild** — build-time 资产改了要 `--build`，`restart` 白改
 5. **trace input/output 独立于 generation** — 三层观察点独立读取
-6. **input 必须是 JSON message 数组** — UI 隐式契约，字符串上报显示空
+6. **想要对话气泡就传 message 数组** — 字符串也能存，但 UI 不会渲染成气泡
 
-其中 5 和 6 是可观测性 SDK 的**「UI 隐式契约」**这类问题，最难排——因为数据在 DB 里、SDK 也没报错、只是 UI 展示空。教训是：**遇到这种情况先看 UI 源码或者官方 example 而不是猜**。我最后是翻了 Langfuse 的 GitHub examples 才发现 message 数组结构的。
+其中 5 和 6 是可观测性 SDK 的**「UI 隐式契约」**这类问题，最难排——因为数据在 DB 里、SDK 也没报错、只是 UI 展示不对。教训是：**遇到这种情况先看 UI 源码或者官方 example 而不是猜**。我最后是翻了 Langfuse 的 GitHub examples 才发现 message 数组结构的。
 
 其他 4 个（1、2、3、4）都是**「Docker Compose + 反向代理」**的通用陷阱，跟自建任何 Next.js 应用都会踩到，不局限于 Langfuse。如果你在自建 Metabase、Grafana、Sentry 之类，这几个坑照样适用。
 

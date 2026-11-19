@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 4201b2ab35b57132f5b5722ba7b7599424579cdf27c87f33553192933dbe7877
+# import-articles-sha256: ad21def8eaf3fbe2f70c9be6d0e3b2a705582efe652892f1494075b6694d74fb
 # Imported by scripts/import-articles.mjs from posts/testing/acceptance-as-reviewer.md
 # Source date: 2026-09-29
 title: "当验收者而不是开发者：每条结论自己跑出来"
@@ -185,8 +185,9 @@ HTTPServer(("127.0.0.1", 18080), Handler).serve_forever()
 # 开工时记下每个仓库的 HEAD 和状态
 for r in gateway console docs; do git -C "$r" rev-parse HEAD; git -C "$r" status --porcelain; done > /tmp/start.txt
 
-# 结束时：按端口停自己起的进程（不要 pkill -f 宽匹配）
-for port in 18080 3001 3002; do lsof -ti "tcp:$port" | xargs -r kill; done
+# 结束时：按端口停自己起的监听进程（不要 pkill -f 宽匹配）
+# 只取 LISTEN 状态：lsof -ti "tcp:$port" 会把连着这个端口的客户端（浏览器、测试脚本）也列出来
+for port in 18080 3001 3002; do lsof -tiTCP:"$port" -sTCP:LISTEN | xargs -r kill; done
 docker rm -f accept-mysql 2>/dev/null
 git -C gateway worktree list        # 子代理建的基线检出必须已删
 

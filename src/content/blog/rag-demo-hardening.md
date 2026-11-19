@@ -1,13 +1,13 @@
 ---
-title: "演示环境的三层加固：Token 门 + LLM 配额 + Nginx 限流"
-description: "面试演示项目挂公网，最怕的就是被扫接口把 LLM 额度刷爆。给项目做了三层加固：DemoTokenFilter（前置鉴权，可选严格模式）+ LlmQuotaService（日切配额，只计 chat 不计 embed）+ Nginx limit_req_zone（IP 粒度限流）+ UploadEndpointGuard（关闭上传接口）。这篇讲每层挡什么、为什么这么切、以及一个改 env 后 restart 白改的小坑。"
+title: "演示环境的四道防线：限流、Token、关上传、LLM 配额"
+description: "演示项目挂到公网，最怕被扫接口刷爆 LLM 额度。做了四道防线：Nginx 按 IP 限流、Token 过滤器、关闭上传接口、按天重置的 LLM 调用配额。这篇讲每道挡什么、为什么这样分层，以及按配置推算的限流结果。"
 pubDate: 2026-07-30
 tags: ["Spring Boot", "安全", "限流", "Filter", "Nginx", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"
 ---
 
-> 一句话总结：把 RAG 演示项目挂到公网上，一开始最不放心的事情就是：万一被扫接口的脚本盯上，一晚上就能把我 100 块 LLM 预充值全刷完。这次做了四道防线——DemoTokenFilter 挡请求、UploadEndpointGuard 关上传、LlmQuotaService 日切配额、Nginx limit_req_zone 单 IP 限流。每一道都能单独扛一段时间，配合起来面试演示够用了。这篇复盘每道防线挡什么、为什么这样切分、以及踩过的两个 env 相关的坑。
+> 一句话总结：把 RAG 演示项目挂到公网上，一开始最不放心的事情就是：万一被扫接口的脚本盯上，一晚上就能把我 100 块 LLM 预充值全刷完。这次做了四道防线——Nginx 单 IP 限流、DemoTokenFilter 挡请求、UploadEndpointGuard 关上传、LlmQuotaService 日切配额。每一道都能单独扛一段时间，配合起来面试演示够用了。这篇复盘每道防线挡什么、为什么这样切分、以及一个 env 改了不生效的坑。
 
 ## 0. 起因：演示环境的威胁模型
 
@@ -62,10 +62,10 @@ http {
 几个参数解释一下：
 
 - `rate=30r/m`：每个 IP 每分钟 30 个请求。折算 2 秒一个，面试官正常操作完全够。
-- `burst=20`：允许瞬时突发 20 个（比如打开页面同时并发几个静态资源+API 请求）。
+- `burst=20`：在速率之外，允许瞬时多出 20 个（比如打开页面时并发的几个 API 请求；静态资源不在 `/api/` 下，不受这条限制）。
 - `nodelay`：突发请求立刻处理，不排队。排队反而会拖高延迟。
-- `limit_conn rag_conn 10`：单 IP 并发连接不超过 10 个。防止长连接被恶意占用。
-- `limit_req_status 429`：返 HTTP 429 而不是默认的 503，让客户端知道是限流不是服务挂了。
+- `limit_conn rag_conn 10`：单 IP 同时在处理的请求不超过 10 个。防止长连接被恶意占用。
+- `limit_req_status 429`：返 HTTP 429 而不是默认的 503，让客户端知道是限流不是服务挂了。注意它只管 `limit_req`；`limit_conn` 拒绝时的状态码由 `limit_conn_status` 决定，我没配，所以还是默认的 503。
 
 **为什么不用 Spring Boot 层的 Bucket4j？** 主要是**分层原则**：Nginx 挡得住的就在 Nginx 挡，别让请求进 Java 应用层。Bucket4j 是应用内的更精细控制（比如按 userId 限流），演示项目用不到。
 
@@ -238,25 +238,7 @@ public class LlmQuotaExceptionHandler {
 
 ## 5. 一个 `restart` 白改的踩坑
 
-代码写完部署上去，测限流。改 `.env.prod` 里的 `DEMO_MAX_DAILY_LLM_CALLS=500`（原来是 100），然后：
-
-```bash
-dcp restart app
-```
-
-再跑 40 次请求，第 41 次应该被拒。结果……**第 101 次就被拒了**。
-
-进容器 `printenv | grep DEMO`，发现 `DEMO_MAX_DAILY_LLM_CALLS=100`——就是没生效。
-
-根因：`docker compose restart` **不会重读 env**。env 是容器**创建时**注入的，`restart` 只是给旧容器发 SIGTERM 让进程重启，是同一个容器实例。想让 env 变化生效，必须让 compose **recreate 容器**：
-
-```bash
-dcp up -d --force-recreate app
-```
-
-或者不带 `--force-recreate`，compose 检测到 env 有变化也会自动 recreate。
-
-这个坑我在 Docker Compose 部署那篇里也提过，因为它同一天踩了两次——第一次是 Token 配置没生效，第二次是配额没生效，都是同一个原因。
+部署后我把 `.env.prod` 里的日配额 `DEMO_MAX_DAILY_LLM_CALLS` 从 100 改成 500，然后 `dcp restart app`。按新配置要到第 501 次调用才该被拒，实际第 101 次就被拒了，进容器 `printenv` 一看还是 100。原因是 `restart` 不重建容器、不会重读 env，要用 `dcp up -d --force-recreate app`，细节见[部署那篇的番外](/blog/rag-deploy-compose-pitfalls/)。Token 配置也因为同一个原因白改过一次。
 
 ## 6. 验收：40 连击真的会被拒
 
@@ -279,10 +261,17 @@ for i in {1..40}; do
   curl -X POST https://rag.chandlerblog.com/api/rag/ask ... &
 done
 wait
-# → 前 30 个 200, 后 10 个 429 (Nginx limit_req_zone)
 ```
 
-四道防线都工作。这个验收清单我后来放在项目 README 里，谁 clone 下来都能跑。
+更正：这里原来写的是「前 30 个 200，后 10 个 429」，按上面的配置算不出这个结果。下面是**按配置推算**的，不是实测：
+
+- `limit_req`：同一 IP 瞬间来 40 个，按速率放行 1 个，再加 `burst=20` 立刻放行 20 个，共约 21 个；其余约 19 个返回 429。
+- `limit_conn`：放行的这些请求要等 LLM 返回好几秒，同一时刻在处理的超过 10 个时，多出来的被拒绝，默认状态码 503。
+- 所以真正拿到 200 的可能只有 10 个左右，确切数字取决于请求到达和处理的时序。
+
+想让验收结果好读，可以给 `limit_conn` 也配 `limit_conn_status 429`，再按状态码数一遍：`curl -s -o /dev/null -w '%{http_code}\n'`，最后 `sort | uniq -c`。
+
+几道防线各自生效。这个验收清单我后来放在项目 README 里，谁 clone 下来都能跑。
 
 ## 收尾
 

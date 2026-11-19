@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 8676b3d2e4c79a6b3f6308136b68d357a1131f7e206ef74362adf214bc5a2921
+# import-articles-sha256: b844dcf9460ec19aad2bf1fd8dc60f550c19693f88750cac118524f2f8610340
 # Imported by scripts/import-articles.mjs from posts/frontend/first-load-bundle-lighthouse.md
 # Source date: 2026-09-29
 title: "首屏包体与 Lighthouse：共享注册表把全量文案打进首屏"
@@ -37,6 +37,8 @@ seriesLabel: "前端实践"
 
 ```tsx
 // PricingSection.tsx：调用方不再静态引入估算器
+'use client' // ← 前提：ssr: false 只能写在 Client Component 里
+
 import dynamic from 'next/dynamic'
 
 const SharedEstimator = dynamic(() => import('./SharedEstimator.client'), {
@@ -56,6 +58,7 @@ export function PricingSection() {
 
 几个细节：
 
+- **调用方要是 Client Component**。官方文档写明，`ssr: false` 只能在 Client Component 里用；Next.js 15 起，在 Server Component 里这样写会直接报错（文档）。调用方本来是服务端组件的，就把这一小段包进一个带 `'use client'` 的文件。
 - **为什么要 `ssr: false`**。当时的分析结论是：App Router 下默认的 `ssr: true` 仍会在 HTML 里预载这个 chunk，只有关掉服务端渲染才能真正移出首屏。这一条没有单独做对照实验验证，是读文档和产物得出的。
 - **占位高度要实测**。各个断点都量一遍估算器加载后的真实高度，`loading` 占位设成同样的高度，否则加载完成时页面会跳，CLS（累计布局偏移）变差。改完 CLS 是 0（实测）。
 - **测试要改成异步等待**。组件变成异步挂载以后，原来的 `getBy…` 会在它出现之前就找，要改成 `await findBy…`。
@@ -96,7 +99,7 @@ test('价格区首屏不加载全量注册表和多语言文案', async () => {
 10 + 20 + 21 = 51 段 × 1460 B = 74,460 B   ← 一个轮次边界
 ```
 
-HTML 文档的传输大小（压缩后）一旦超过这个边界，哪怕只多一个字节，也要整整多等一个 RTT。这 150ms 会把 FCP、LCP 和后面依赖它的所有请求一起往后推，分数阶梯式下降。
+HTML 文档的传输大小（压缩后）一旦超过这个边界，哪怕只多一个字节，也要整整多等一个 RTT。这 150ms 会把 FCP、LCP（最大内容绘制） 和后面依赖它的所有请求一起往后推，分数阶梯式下降。
 
 那个页面正好踩在这里（实测）：
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: cf84cc83229e4f446d6fd48245b1b6004d173d99eef8dfbdabd4c66703f8f314
+# import-articles-sha256: b8c2dba548f8ab6fba5a499bdee0c810f644ae8a98590f793f2ed7ff8b7de82b
 # Imported by scripts/import-articles.mjs from posts/git-collab/secret-history-pull-refs.md
 # Source date: 2026-11-03
 title: "密钥从主分支消失后：旧 PR 仍可能公开"
@@ -56,9 +56,41 @@ git rev-list --all --objects
 
 我这次遇到的关键现象，就是主分支祖先检查与引用包含检查给出不同答案。两者没有矛盾，它们问的是不同范围。
 
+在 GitHub 上，PR 的提交挂在 `refs/pull/<编号>/head` 下，普通 `git clone` 和 `git fetch` 都不取。要先显式取回，再按内容搜历史、问哪些引用包含它：
+
+```bash
+git fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*'
+git log --all --format='%h %s' -S '<敏感片段>'    # 只用片段，别把完整值写进命令历史
+git branch -r --contains <上一步找到的提交>
+git merge-base --is-ancestor <上一步找到的提交> origin/main; echo $?
+```
+
+我在本地造了一个假仓库复现这种状态：带假凭据的提交进过主分支，之后主分支重写了历史，只有一个 PR 引用还指着它。结果如下：
+
+```text
+普通克隆，git log --all -S 命中：0
+取回 PR 引用后，git log --all -S 命中：add deploy
+git branch -r --contains：origin/pr/7
+merge-base --is-ancestor origin/main 退出码：1
+```
+
+普通克隆上搜不到，不说明历史里没有。`git clone --mirror` 会把 `refs/pull/*` 一起取下来，也可以用它建核查副本。
+
 ## 3. 验公开可读性：验证文件，不动用凭据
 
 为了确认公开暴露，我只需要证明无认证请求能拿到相同文件。检查应保存状态码、内容长度和文件摘要，敏感值按字段遮掩，不打印到终端或报告里。
+
+`curl` 可以只记状态码和长度，内容直接丢掉，不进终端：
+
+```bash
+# 不带任何认证头；<raw URL> 是按旧提交访问那个文件的静态地址
+curl -sS -o /dev/null -w '%{http_code} %{size_download}\n' '<raw URL>'
+# 要和本地对象比内容，就算摘要，同样不回显内容
+curl -sS '<raw URL>' | shasum -a 256
+git cat-file -p <旧提交>:<文件路径> | shasum -a 256
+```
+
+在本地起一个静态服务试过，输出就是一行 `200 18` 这样的状态码加字节数；文件不存在时是 `404`。
 
 **文件可读与凭据可用，需要分别取证。** 静态文件返回 200，说明当次能取到文件；它不说明 API 服务会接受里面的值。拿旧值发真实业务请求，还会引入权限、费用和访问日志，不能顺手当成核查步骤。
 
@@ -70,21 +102,38 @@ git rev-list --all --objects
 
 发现疑似真实凭据后，先由有权限的人确认撤销或轮换，再评估历史清理。GitHub 也把撤销或轮换列为处理密钥暴露的第一步；仅重写历史并不能收回外部副本。[官方处理说明](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)
 
+本地清理用 [git filter-repo](https://github.com/newren/git-filter-repo)（需要单独安装），在一份新的镜像克隆里做，清完再复核：
+
+```bash
+git clone --mirror <仓库地址> repo-clean.git && cd repo-clean.git
+git filter-repo --invert-paths --path <敏感文件路径>
+
+# 复核：内容、路径都不应再出现；保留的文件逐个看一眼
+git log --all --oneline -S '<敏感片段>' | wc -l          # 期望 0
+git rev-list --all --objects | grep -c '<敏感文件名>$'    # 期望 0
+git ls-tree -r --name-only main
+```
+
+在前面那个假仓库上实跑，两条计数都是 0，主分支的文件不变。镜像里那个 PR 引用也被改写成了不含该文件的新提交，但这只是本地副本。
+
 我的本地清理验证只说明：在选定副本的可达对象里，已知敏感脚本与目标值不再出现，原本应保留的主分支内容没有改变。这没有修改远端状态。
 
-平台的 PR 引用有自己的权限边界。GitHub 将 `refs/pull/` 标为只读，无法通过普通推送直接覆盖；涉及残留引用和缓存的处理，要遵循平台现行流程，是否受理由平台判断。[GitHub 的清理边界](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)
+平台的 PR 引用有自己的权限边界。GitHub 将 `refs/pull/` 标为只读，强推镜像时这些引用会被拒绝，无法通过普通推送直接覆盖；文档给的做法是在推送分支和标签之后，联系 GitHub Support，请他们清除 PR 里对敏感数据的引用和缓存视图，是否受理由平台判断。[GitHub 的清理边界](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)
 
 因此，记录应分开写「本地验证通过」「远端分支已更新」「平台已处理残留」「匿名链接复核结果」。哪一步没有证据，就保留未知。
 
-## 5. 平台回复：材料完整不等于工单已提交
+## 5. 平台处理：按步骤走，每步留证据
 
-这次还有一处助手执行错误。平台的提交前助手给出了材料建议，助手一度把下一步入口说得不够清楚，随后又按模糊的「删除」分类引导，进入了整个仓库删除表单。
+我现在把远端和平台这一段固定成下面几步。每一步做完都记下证据，没有证据的一步保持「未知」。
 
-我把实际表单选项反馈后，助手纠正了方向。这里需要核的是具体操作对象：保留仓库、清理敏感历史引用，与删除整个仓库有不同结果。不能因为两个入口都有「删除」二字，就认为它们等价。
+1. **确认凭据已撤销或轮换**。证据是账户持有人或管理后台的记录，和后面几步无关，最先做。
+2. **在镜像克隆里清理并复核**。用第 4 节的 `filter-repo` 命令，两条计数都要是 0，保留的文件要对得上。
+3. **推回自己能改的引用**。GitHub 文档给的命令是在清理过的镜像里 `git push --force --mirror origin`；其中 `refs/pull/` 开头的引用会推送失败，这是预期，分支和标签照常更新。推完用 `git ls-remote origin` 核远端各分支的头是不是清理后的提交。
+4. **联系平台处理 PR 引用和缓存**。入口要选「清理仓库里的敏感数据」这一类，操作对象是「保留仓库、清理敏感历史引用」，不是删除整个仓库。这次助手按模糊的「删除」分类引导，进了整个仓库删除表单；我把实际表单选项反馈后，助手才纠正方向。两个入口都有「删除」二字，结果完全不同。
+5. **分清「材料准备好」和「工单已受理」**。平台的提交前助手给出材料建议，只说明材料准备到了哪一步。要看的是：有没有产生正式工单记录，平台有没有明确给出处理结果。
+6. **处理完成后重新访问旧路径**。用第 3 节的 `curl` 再请求一次旧的静态地址，记下状态码、长度和时间。
 
-我把后续状态检查改成了三个问题：是否产生正式工单记录，平台是否明确给出处理结果，处理后是否重新核过旧访问路径。提交前建议只能说明材料准备到了哪一步，不能升级成正式受理，更不能升级成残留已清除。
-
-界面名称会变化，文章不固定某一屏的按钮顺序。实际操作时，应以官方说明、当前页面的问题和最终确认对象为准。
+界面名称会变化，这里不固定某一屏的按钮顺序。实际操作时，以官方说明、当前页面的问题和最终确认的操作对象为准。
 
 ## 6. 复查清单：每一行都能对应证据
 

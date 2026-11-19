@@ -1,74 +1,47 @@
 ---
-title: "Java 与 Spring 学习笔记"
-description: "整理 Java 后端学习中需要长期复盘的 Spring Boot、接口设计、数据访问、异常处理和工程化主题。"
+title: "Java 与 Spring 文章索引"
+description: "本站 Java / Spring 方向文章的入口：从单体到微服务的电商 demo 系列、接手一个 RuoYi 微服务业务模块的踩坑实录，以及 JeecgBoot 源码阅读，每篇一句话说明讲什么。"
 pubDate: 2026-02-23
-tags: ["Java", "Spring", "后端"]
+tags: ["Java", "Spring", "后端", "索引"]
 ---
 
-## 为什么要整理 Java 和 Spring
+> 这一页是 Java / Spring 方向文章的目录。三个系列从不同角度切入：自己从零搭一套微服务、接手别人的微服务项目、读一个开源框架的源码。不知道从哪开始，可以先读各系列的第一篇总览。
 
-Java 和 Spring 的学习很容易停留在“看过很多 API”和“能跑通一个 Demo”。但真正进入项目后，更重要的是理解工程结构、依赖关系、配置方式、异常定位和长期维护成本。
+## 1. 从单体到微服务（自己搭一套电商 demo）
 
-这篇文章先作为我的 Java / Spring 学习目录，用来记录后续会持续补充的主题。
+用一套「用户 / 订单 / 库存」的极简电商 demo，从零把微服务的核心模式逐个跑一遍。
 
-## Spring Boot 项目结构
+- [从单体到微服务：我用一套极简电商 demo 学了什么](/blog/ms-learn/00-overview/)：系列总览和收尾复盘，列出每一步要解决的问题和整体踩过的坑。
+- [注册发现与配置中心：服务靠「名字」找到彼此](/blog/ms-learn/01-nacos-discovery-config/)：用 Nacos 做服务注册发现和动态配置，以及服务发现是最终一致这个坑。
+- [API 网关与统一鉴权：把横切关注点提到入口](/blog/ms-learn/02-gateway-auth/)：用 Spring Cloud Gateway 统一做路由和鉴权，以及 WebFlux 不能引 servlet 依赖的坑。
+- [服务间通信：Feign 与 Dubbo 两种姿势对比](/blog/ms-learn/03-feign-vs-dubbo/)：同一个跨服务调用分别用 RestTemplate、Feign、Dubbo 实现，对比声明式 HTTP 和 RPC。
+- [分布式会话：登录态凭什么跨进程共享](/blog/ms-learn/04-distributed-session/)：用 Sa-Token + Redis 把登录态放到进程外，让签发和校验两端共享。
+- [限流与熔断：下游病了，怎么不被拖死](/blog/ms-learn/05-sentinel/)：用 Sentinel 给入口限流、给下游熔断，以及熔断没触发其实是请求密度不够。
+- [分布式事务：跨服务写操作怎么「要么全成要么全滚」](/blog/ms-learn/06-seata-at/)：用 Seata AT 模式做全局事务，讲 TC / TM / RM 三个角色和 undo_log 回滚。
+- [事件驱动与可靠消息：异步解耦后冒出的新问题](/blog/ms-learn/07-rabbitmq/)：用 RabbitMQ 做异步事件，以及随之而来的幂等、重试和死信队列。
+- [可观测性：微服务出了问题怎么定位](/blog/ms-learn/08-observability/)：指标、日志、链路追踪三件套落地，以及 traceId 在 Feign 调用中断开的排查。
 
-我希望后续每个 Spring Boot 项目都能讲清楚这些问题：
+## 2. 微服务新人踩坑实录（接手一个 RuoYi 业务模块）
 
-- Controller、Service、Repository 的职责边界是什么。
-- DTO、VO、Entity 是否应该混用。
-- 配置项应该如何组织和校验。
-- 业务异常和系统异常如何区分。
-- 日志应该记录哪些字段，哪些内容不能随便记录。
+在一套 RuoYi-Cloud-Plus 微服务后端里，从搭环境到独立交付一个业务模块的过程。
 
-项目结构不是形式问题。结构清晰，后续排查问题、写测试、接入新功能都会更稳定。
+- [从零接手一个微服务业务模块：一个新人的踩坑实录](/blog/ruoyi-newbie/00-overview/)：系列总览。
+- [01 架构全景与项目背景](/blog/ruoyi-newbie/01-architecture/)：模块怎么切分、一个请求怎么从网关流到业务模块。
+- [02 环境搭建踩坑实录](/blog/ruoyi-newbie/02-environment-setup/)：数据库初始化、Nacos 命名空间、启动顺序、网关路由这些第一周的坑。
+- [03 联合开发与远程环境](/blog/ruoyi-newbie/03-remote-collaboration/)：接远程共享环境，以及 Dubbo provider / consumer 的部署约束。
+- [04 代码分层与实现模式](/blog/ruoyi-newbie/04-code-patterns/)：分层、分页避免 N+1、租户内唯一校验等反复用到的写法。
+- [05 字典枚举与 Excel 导入导出的坑](/blog/ruoyi-newbie/05-dict-and-excel/)：两套字典机制和 Excel 导入导出里的类型陷阱。
+- [06 雪花 ID 在前端精度丢失](/blog/ruoyi-newbie/06-snowflake-id-precision/)：19 位 ID 超过 JavaScript 的安全整数范围，前端拿到的值被改写。
+- [07 同步主分支后的连锁故障：重新构建暴露的旧问题](/blog/ruoyi-newbie/07-dependency-avalanche/)：同步主分支后编译、启动、联调接连出错，逐层拆开。
+- [08 协作规范与经验总结](/blog/ruoyi-newbie/08-collaboration-and-summary/)：接口文档口径、权限命名、协作边界，以及整个过程的复盘。
 
-## 接口设计
+## 3. JeecgBoot 源码阅读
 
-接口设计会长期关注这些点：
+基于 JeecgBoot 3.9.2 源码的逐层阅读。
 
-- 请求参数如何校验。
-- 响应结构是否统一。
-- 错误码是否可读、可排查。
-- 分页、排序、筛选参数如何保持一致。
-- 是否需要幂等处理。
+- [JeecgBoot 微服务实现深度解析](/blog/jeecgboot/microservice-analysis/)：微服务架构设计和认证链路的完整流程。
+- [深入 JeecgBoot 3.9.2 源码：多租户 & 低代码平台原理解析](/blog/jeecgboot/multitenancy-lowcode/)：多租户行级隔离的实现链路，以及低代码平台怎么靠元数据解释执行。
 
-对后端来说，一个接口不仅要“能返回结果”，还要让调用方知道失败原因，让日志能定位问题，让后续维护者能理解边界。
+## 收尾
 
-## 数据访问
-
-数据访问层会重点整理：
-
-- MyBatis / MyBatis-Plus 的常见用法。
-- 查询条件如何组织。
-- 事务边界如何设计。
-- 批量操作如何处理性能和一致性。
-- 数据库字段、实体类和接口返回之间如何映射。
-
-这部分以后会结合具体项目继续补充，比如 RAG 项目接入真实数据库后，就可以把文档、chunk、任务状态和审计日志的表结构设计整理出来。
-
-## 异常、日志和测试
-
-后端项目稳定性很大一部分来自异常处理、日志和测试。
-
-我会持续整理这些实践：
-
-- 全局异常处理如何返回统一错误结构。
-- 外部服务调用失败如何分类。
-- requestId 如何贯穿一次请求。
-- 日志如何兼顾排查和隐私保护。
-- 单元测试和集成测试分别覆盖什么。
-
-尤其在大模型应用里，LLM、embedding、向量库、工具调用都可能失败。把失败模式分清楚，比只写一个通用异常更重要。
-
-## 和 AI 应用开发的关系
-
-我现在的学习方向是 Java 后端 + AI 大模型应用。这个方向并不是放弃后端基础，而是要求后端能力更扎实。
-
-RAG、Tool Calling 和 Agent 都需要后端系统来承接：
-
-- RAG 需要文档管理、权限过滤、检索和引用来源。
-- Tool Calling 需要工具注册、参数校验、权限控制和审计日志。
-- Agent 需要状态管理、步骤限制、错误处理和成本控制。
-
-所以 Java 和 Spring 仍然是我的主线，AI 能力会作为应用层能力接入到后端工程里。
+三个系列的关系：电商 demo 是自己从零搭，最容易看清每个组件为什么存在；RuoYi 实录是在别人的项目里落地，坑多在环境和协作；JeecgBoot 是读源码，看一个成熟框架怎么取舍。大模型应用方向的文章在 [大模型应用岗学习路线](/blog/llm-learn/00-overview/) 里。

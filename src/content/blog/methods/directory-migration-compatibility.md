@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: f29671b351bfe58a191b643e2eaa13892878380187b5b157de2f1b9344b4b677
+# import-articles-sha256: 266304fec78b4269cea868fe95c008f7dcb7156c5aa8d7010f924224b9dca563
 # Imported by scripts/import-articles.mjs from posts/methods/directory-migration-compatibility.md
 # Source date: 2026-11-02
 title: "整理项目目录：迁移后仍要按旧入口验证"
@@ -20,7 +20,7 @@ seriesLabel: "工作方法"
 
 我最后保留日期分组，为独立项目建立集中入口，把适合移动的静态维护材料归类；含复杂相对链接的文档留在原位，通过索引组织。已有 Git 跟踪内容也不在这次整理中顺手改写。
 
-下面是从这次文件系统整理提炼的方法。它不涉及业务功能回归，也不能把导航检查通过当成项目本身运行正常。
+下面是这次整理提炼的方法，只管文件系统这一层，项目本身能不能跑要另外验。
 
 ## 1. 分类之前：先分清对象与依赖
 
@@ -38,6 +38,41 @@ seriesLabel: "工作方法"
 
 我还区分「内容分类」和「物理搬迁」。读者需要按用途找到材料，不一定要求每个文件都换位置。索引、说明页和链接已经能解决一部分查找问题，成本更低。
 
+分类要靠盘点结果，不靠看文件名。下面三条命令分别回答：哪些文件写死了旧的绝对路径，目录里有哪些符号链接、指向哪里，此刻有没有进程开着这个目录下的文件。
+
+```zsh
+OLD=/path/to/old-root          # 迁移前的绝对路径（占位）
+ROOT=${1:-/path/to/project}    # 要整理的目录
+
+print '== 写死旧绝对路径的文本文件'
+grep -rIl -- "${OLD}" "${ROOT}"            # -I 跳过二进制，-l 只列文件名
+
+print '== 符号链接和它们的目标（断链标 BROKEN）'
+find "${ROOT}" -type l | while IFS= read -r l; do
+  if [[ -e "$l" ]]; then print -r -- "$l -> $(readlink "$l")"
+  else print -r -- "$l -> $(readlink "$l")  BROKEN"; fi
+done
+
+print '== 此刻开着这个目录下文件的进程'
+lsof +D "${ROOT}"   # 只看得到此刻开着的；间歇写入的进程要多看几次
+```
+
+在一个假目录上跑的结果（一个后台进程开着 `state/run.log`，用户名换成了 `me`）：
+
+```text
+== 写死旧绝对路径的文本文件
+/tmp/blogfix-aw/inv/root/scripts/run.sh
+/tmp/blogfix-aw/inv/root/reports/index.md
+== 符号链接和它们的目标（断链标 BROKEN）
+/tmp/blogfix-aw/inv/root/scripts/broken.md -> ../missing.md  BROKEN
+/tmp/blogfix-aw/inv/root/scripts/index-link.md -> ../reports/index.md
+== 此刻开着这个目录下文件的进程
+COMMAND   PID USER FD   TYPE DEVICE SIZE/OFF     NODE NAME
+sleep   19363 me     3w   REG   1,17        0 54914390 /private/tmp/blogfix-aw/inv/root/state/run.log
+```
+
+`lsof +D` 会递归扫整棵树，大目录要等一会儿；macOS 上它有输出时退出码也可能是 1，看输出，不看退出码。它只能看到这一刻开着的文件，每隔几分钟写一次、写完就关的任务，要靠所有者确认。
+
 ## 2. 旧路径：把它看成已经发布的入口
 
 一个路径被脚本、报告或他人保存后，就形成了使用约定。迁移前，我会为每个计划移动的对象记录：旧路径、新路径、对象类型、是否留兼容入口、由谁使用。
@@ -46,7 +81,7 @@ seriesLabel: "工作方法"
 
 例如，本地符号链接可以帮助旧绝对路径继续工作，但将目录打包、复制到不支持相同链接语义的环境后，情况可能不同。如果交付目标是离线 HTML，就应按解压后的入口验证，不能只看开发机上的链接。
 
-我这次的兼容范围是本机研究目录。没有由此推断跨平台打包也已经通过。适用范围写清，才不会让一次局部检查变成过度承诺。
+我这次只验了本机目录，跨平台打包没验，报告里也照这个范围写。
 
 ## 3. 相对链接：同一文件也可能走向不同目标
 
@@ -58,6 +93,33 @@ seriesLabel: "工作方法"
 
 即使保留指向报告的旧符号链接，也应分别用旧入口和新入口打开。不同使用工具可能按访问 URL、物理路径或解析后的路径处理相对引用；只验证「链接指向同一 inode」不足以回答最终页面引用。
 
+下面这段可以直接复现。它把报告搬进 `archive/draft/`，旧位置留一个符号链接，再用无头浏览器分别打开两个入口；图片加载成功或失败时，页面会改自己的标题：
+
+```zsh
+mkdir -p notes/{draft,assets,archive/draft}
+print '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>' > notes/assets/diagram.svg
+cat > notes/archive/draft/report.html <<'HTML'
+<img src="../assets/diagram.svg"
+     onload="document.title='图片已加载'" onerror="document.title='图片加载失败'">
+HTML
+ln -s ../archive/draft/report.html notes/draft/report.html   # 旧入口留兼容链接
+
+for p in draft archive/draft; do   # CHROME 指向本机的 Chrome 或 chrome-headless-shell
+  print -n "${p}: "
+  "$CHROME" --headless --virtual-time-budget=2000 --dump-dom "file://$PWD/notes/${p}/report.html" 2>/dev/null |
+    grep -o '<title>[^<]*</title>'
+done
+```
+
+我用 Chromium 的无头版跑的结果：
+
+```text
+draft: <title>图片已加载</title>
+archive/draft: <title>图片加载失败</title>
+```
+
+同一个文件，从旧入口打开，`../assets/` 按地址栏的 URL 算成 `notes/assets/`，图片在；从新入口打开，算成 `notes/archive/assets/`，图片不在。浏览器按 URL 解析相对路径，不会先把符号链接换成物理路径。反过来，先取 `realpath` 再拼路径的脚本，从两个入口得到的都是 `notes/archive/assets/`。所以旧入口通过，不代表新入口也通过；检查器和浏览器的结论也可能相反。
+
 这次迁移还发现报告向目录树之外引用资料。处理时需要核具体目标，再决定保留原位、调整结构或加兼容桥。不能为了让检查器显示目标存在，随意创建一个同名文件。
 
 **链接有效的预期是找到原目标内容。** 一个路径从不存在变为存在，只是最低一层检查；如果它误指到另一份同名报告，使用者仍会拿到错误材料。
@@ -67,13 +129,16 @@ seriesLabel: "工作方法"
 真正移动前，我先形成机器可读的清单，再核冲突。下面是通用示意，不是原任务的数据。
 
 ```json
-{
-  "operation": "move-file",
-  "source": "notes/draft/context.md",
-  "destination": "notes/_maintenance/context.md",
-  "compatibility": "symlink",
-  "expected_type": "regular-file"
-}
+[
+  {
+    "operation": "move-file",
+    "source": "notes/draft/context.md",
+    "destination": "notes/_maintenance/context.md",
+    "compatibility": "symlink",
+    "expected_type": "regular-file",
+    "sha256": "<盘点时算出的摘要>"
+  }
+]
 ```
 
 清单应在写入前检查目标是否已有内容、旧路径是否已经是链接、源是否仍与盘点时相同。执行后再记录实际结果，计划与执行日志分开保存。
@@ -81,6 +146,62 @@ seriesLabel: "工作方法"
 我不会用执行日志里的一条「成功」替代现场核对。进程可能在移动后、写记录前中断，也可能只完成一半操作。恢复时要对照源、目标和兼容入口的实际状态。
 
 回滚也不是简单反向遍历。如果迁移后已有新文件写入目标目录，直接移回可能覆盖内容。回滚预检应核目标身份、占位冲突和新增写入，满足条件才执行。我这次保存了回滚清单并完成预检，没有为了展示可逆而再把全部目录搬一遍。
+
+下面是一个只处理「移动文件 + 旧路径留符号链接」的最小脚本，读上面那种清单。不加参数只预检、打印要做什么；加 `--apply` 才动手；`--rollback` 换成反向，预检核的是「旧路径还是本次留的链接」「目标从迁移后没被改过」。任何一项不过，整批都不动：
+
+```python
+#!/usr/bin/env python3
+"""按清单移动文件、在旧路径留符号链接。默认只预检和打印；加 --apply 才动手；--rollback 换成反向。"""
+import hashlib, json, os, sys
+from pathlib import Path
+
+def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+def link_text(src, dst): return os.path.relpath(dst, src.parent)
+
+def precheck(op, rollback):
+    src, dst = Path(op["source"]), Path(op["destination"])
+    if not rollback:
+        if src.is_symlink() or not src.is_file(): return "源不是普通文件（已经迁过？）"
+        if dst.exists() or dst.is_symlink(): return "目标已存在"
+        if sha(src) != op["sha256"]: return "源在盘点之后被改过"
+    else:
+        if not src.is_symlink() or os.readlink(src) != link_text(src, dst): return "旧路径不是本次留的链接"
+        if not dst.is_file() or sha(dst) != op["sha256"]: return "目标在迁移之后被改过"
+
+def main(plan, apply, rollback):
+    ops = json.load(open(plan))
+    bad = [(op["source"], e) for op in ops if (e := precheck(op, rollback))]
+    for s, e in bad: print("拒绝", s, "：", e)
+    if bad: return 1                                  # 有一项不过，整批都不动
+    for op in ops:
+        src, dst = Path(op["source"]), Path(op["destination"])
+        print("执行" if apply else "预演", "回滚" if rollback else "移动", src, dst)
+        if apply and not rollback:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            src.rename(dst); src.symlink_to(link_text(src, dst))   # 旧路径留兼容链接
+        elif apply:
+            src.unlink(); dst.rename(src)
+    return 0
+
+sys.exit(main(sys.argv[1], "--apply" in sys.argv, "--rollback" in sys.argv))
+```
+
+在假目录上依次跑预演、执行、重复执行、目标被改后回滚、恢复内容后回滚：
+
+```text
+$ python3 migrate.py plan.json
+预演 移动 notes/draft/context.md notes/_maintenance/context.md
+$ python3 migrate.py plan.json --apply
+执行 移动 notes/draft/context.md notes/_maintenance/context.md
+$ python3 migrate.py plan.json --apply            # 第二次：源已经是链接
+拒绝 notes/draft/context.md ： 源不是普通文件（已经迁过？）
+$ python3 migrate.py plan.json --rollback         # 目标在迁移后被追加了一行
+拒绝 notes/draft/context.md ： 目标在迁移之后被改过
+$ python3 migrate.py plan.json --rollback --apply # 内容恢复后
+执行 回滚 notes/draft/context.md notes/_maintenance/context.md
+```
+
+摘要比对是最严的条件：迁移后正常写入的文件也会被拒绝回滚。这正是想要的结果，有新写入就该人来决定怎么合，不该被脚本覆盖。
 
 ## 5. 四层验证：完整性、入口、仓库与运行状态
 
@@ -94,7 +215,7 @@ seriesLabel: "工作方法"
 
 第四层是运行状态。仍在运行的任务是否使用旧目录、是否持续写入，需要所有者和进程证据。一个静态扫描器看不到所有打开的文件句柄，也不能自动判断服务已经闲置。
 
-本轮采用的历史验证记录中，文件摘要、兼容入口、导航目标和原 Git 状态均有核对结果。它们支持文件系统整理完成，没有证明每个项目的服务或业务功能重新验收过。
+这次文件摘要、兼容入口、导航目标和原 Git 状态都核过，说明文件系统整理做完了；每个项目的服务和功能能不能用，要各自另验。
 
 ## 6. 导航与维护：迁移后只保留一个内容维护点
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: d539195a8f39f8a1a76f473e9628cad9044ddb1a41885bab50912e341775f9d0
+# import-articles-sha256: 5110972d79559aaeb452b91a905383ea233f111a05a1e9b4cca55ad97f62fc29
 # Imported by scripts/import-articles.mjs from posts/frontend/bounded-navigation-browser-focus.md
 # Source date: 2026-11-02
 title: "长报告导航：控制可见位移，也尊重浏览器边界"
@@ -28,6 +28,40 @@ seriesLabel: "前端实践"
 
 我采用的处理是区分近跳与远跳。近处保留短距离移动，帮助读者理解章节位置；远处先做短暂淡化，在不可见阶段完成主要定位，再在目标附近做少量移动。
 
+下面是一个最小写法。它按距离分近跳和远跳，并先读减少动态效果的偏好：
+
+```js
+// 演示：近跳直接平滑滚；远跳先淡出，看不见时瞬间定位，再在目标附近小幅平滑滚动
+const HEADER = 64                       // 固定顶栏高度
+const FAR = () => innerHeight * 2       // 超过两屏算远跳
+const reduce = matchMedia('(prefers-reduced-motion: reduce)')
+
+const wait = (ms, signal) => new Promise((resolve, reject) => {
+  const t = setTimeout(resolve, ms)
+  signal.addEventListener('abort', () => { clearTimeout(t); reject(signal.reason) }, { once: true })
+})
+
+async function jumpTo(el, signal) {
+  const y = el.getBoundingClientRect().top + scrollY - HEADER
+  if (reduce.matches) return scrollTo({ top: y, behavior: 'instant' })   // 减少动态效果：直接定位
+  if (Math.abs(y - scrollY) < FAR()) return scrollTo({ top: y, behavior: 'smooth' })
+
+  const main = document.querySelector('main')
+  main.style.transition = 'opacity 120ms'
+  main.style.opacity = '0'
+  try {
+    await wait(120, signal)                                  // 等淡出完成
+    scrollTo({ top: y - 80, behavior: 'instant' })           // 不可见阶段完成主要定位
+    main.style.opacity = '1'
+    scrollTo({ top: y, behavior: 'smooth' })                 // 可见阶段只移动 80px
+  } finally {
+    main.style.opacity = '1'                                 // 被取消也要恢复可见
+  }
+}
+```
+
+`behavior: 'instant'` 让这一次滚动跳过页面上的 `scroll-behavior: smooth`。远跳时读者只看到淡出、淡入和最后 80px 的移动。120ms、80px 和两屏都是示意值，按页面实测再定。
+
 这里需要分清三种量：
 
 | 观察量 | 回答的问题 |
@@ -53,6 +87,31 @@ seriesLabel: "前端实践"
 ![一次返回依次是：接收返回动作，结束尚未完成的导航，恢复这一条历史对应的折叠状态，等待需要的布局变化完成，定位到原阅读位置，再使用与正向一致的显示策略](figures/bounded-navigation-browser-focus-back-restore.svg)
 
 浏览器前进、后退与页面自己的返回按钮，都应进入相同的状态恢复约定。快速连续点击时，还要防止旧动画结束回调覆盖新一条历史。这里检查的是最终稳定状态，不能只看一次慢速操作成功。
+
+做法是给每次导航发一个 `AbortController`。新导航先取消旧的那个，旧过渡等待中的步骤随之作废。滚轮和触摸也走同一个取消口：
+
+```js
+// 演示：新导航、滚轮、触摸都会取消上一段过渡，旧过渡的后续步骤不再执行
+let current = null
+
+function navigate(el) {
+  current?.abort()                                   // 新的意图优先
+  const ctrl = new AbortController()
+  current = ctrl
+  const opts = { once: true, passive: true, signal: ctrl.signal }
+  addEventListener('wheel', () => ctrl.abort(), opts)
+  addEventListener('touchstart', () => ctrl.abort(), opts)
+
+  jumpTo(el, ctrl.signal)
+    .catch((e) => { if (e.name !== 'AbortError') throw e })
+    .finally(() => {
+      if (current === ctrl) current = null           // 只清理自己这一次
+      ctrl.abort()                                   // 顺带移除上面两个监听
+    })
+}
+```
+
+上一段的 `wait` 在取消时直接 reject，后面的定位不再执行。淡出途中被打断，`finally` 会把页面恢复可见。
 
 ## 3. 中断与减少动态效果：操作优先于动画
 
@@ -101,6 +160,44 @@ html {
 这轮验证里还有一处值得保留的反例：早期探测得到父页和子页都报告聚焦，不能据此判断哪个标签真的在前台。焦点仿真会使自动化观察失真。
 
 后续检查在有界面的独立 Chrome 中关闭焦点仿真，使用普通单击作对照，再执行真实 Meta 修饰键单击。前者切走前台，后者保留原页的焦点和滚动位置，才有区分行为的证据。
+
+下面的脚本复现这组对照。页面里放一个带 `target="_blank"` 的链接，Chrome 用独立的临时配置启动：
+
+```js
+// 演示：独立启动的有界面 Chrome，关掉焦点仿真，对照普通单击和 Meta+单击后谁在前台
+// 先启动：<Chrome 可执行文件> --remote-debugging-port=9347 --user-data-dir=<临时目录>
+const { chromium } = require('playwright')
+
+async function probe(modifiers) {
+  const browser = await chromium.connectOverCDP('http://127.0.0.1:9347')
+  const context = browser.contexts()[0]
+  const page = await context.newPage()
+  const noEmu = async (p) =>
+    (await context.newCDPSession(p)).send('Emulation.setFocusEmulationEnabled', { enabled: false })
+  await page.goto(process.env.PAGE_URL)            // 页面里有 <a id="ext" target="_blank">
+  await noEmu(page)
+  await page.bringToFront()
+  await page.evaluate(() => scrollTo(0, 1200))
+
+  const opened = context.waitForEvent('page')
+  await page.click('#ext', { modifiers })          // 真实输入，不是合成事件
+  const child = await opened
+  await noEmu(child)
+  await page.waitForTimeout(500)
+
+  const parent = await page.evaluate(() => [document.hasFocus(), scrollY])
+  const kid = await child.evaluate(() => document.hasFocus())
+  console.log(modifiers[0] ?? '普通单击', { parent, kid })
+  await child.close(); await page.close()
+}
+
+;(async () => {
+  await probe([])          // 对照：新标签到前台，父页应失焦
+  await probe(['Meta'])    // macOS：Meta+单击，父页应保留焦点和滚动位置
+})()
+```
+
+我在 macOS 上重跑了一遍（实测）：普通单击后父页 `hasFocus()` 为 false、子页为 true；Meta+单击后父页为 true、子页为 false，父页滚动位置不变。
 
 这里的有效范围是当时的 macOS Chrome。其他平台的 Ctrl、鼠标中键或浏览器偏好，需要各自验证。通过脚本构造一个带修饰键字段的事件，也不能直接当成真实输入的等价证据。
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 25cc120c5dd98ced8d776ee2fb3a13f4d21d40bff4251a0e4dc93eb5c470d9ee
+# import-articles-sha256: f98336657dc521d9c4f4d9ba2dcfee596810de4f6b4f22b09a3a07459c0e8c70
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/context-compaction-cost.md
 # Source date: 2026-10-10
 title: "上下文花费的大头是重读前缀：用历史会话定压缩阈值"
@@ -275,7 +275,7 @@ dest.write_text(
 2. 必须读全的长资料：第一次照旧由主模型自己分段读全，同时落盘一份要点清单，每条照原文摘、标出原文行号，由机器核行号是否盖全了原文。压缩后只要求重读这份清单，用到哪一节再回原文读那一节。交付前派一个新上下文的子代理拿原文核交付物，抓清单漏掉的。
 3. skill 附带的参考文件，改成到了用它的那一步才要求读。
 
-这几项刚改完，效果要再跑一段时间才知道。必读核对的设计见[长规范只读了三分之一就开工](/blog/ai-workflow/long-rulebook-partial-read/)，hook 本身怎么写见[用 Claude Code hooks 注入上下文、拦命令](/blog/ai-workflow/claude-code-hooks-inject-context/)。
+这几项刚改完，效果要再跑一段时间才知道。必读核对的设计见[长规范只读了不到三分之一就开工：规则清单、检查卡和读取守卫](/blog/ai-workflow/long-rulebook-partial-read/)，hook 本身怎么写见[Claude Code hooks：提示拦不住命令，要拒绝一次](/blog/ai-workflow/claude-code-hooks-inject-context/)。
 
 ## 收尾
 

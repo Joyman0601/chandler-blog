@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 4f43cb765a93a89eadaabf92fdec7abe503463c530ef79197b4be976302c4add
+# import-articles-sha256: bc3afadb7845ebff71ef2ed315ae0ffe32a4d533ef807def89659646d7dae64f
 # Imported by scripts/import-articles.mjs from posts/testing/prove-target-assertion-goes-red.md
 # Source date: 2026-11-04
 title: "测试全绿之前：先证明目标断言真的会红"
@@ -168,11 +168,13 @@ def test_default_client_untouched():
 
 新上下文复核从路由往下追：任务查询接口实际走的是服务层的另一个响应构造函数。测试用的那个函数，除了测试没有调用方。两份判断条件逐行相同，真实 HTTP 的端到端也拿到了链接，所以代码没错。但以后有人只改服务层那份，这条测试照样是绿的。
 
-**修复**：补一个只加测试的提交，读回走服务层那条路，3 个变异都红在目标断言上。确认读回函数有没有生产调用方，最快的办法是排除测试文件再搜：
+**修复**：补一个只加测试的提交，读回走服务层那条路，3 个变异都红在目标断言上。确认读回函数有没有生产调用方，最快的办法是排除测试文件再搜。函数定义那一行也会被搜到，所以判据是「除定义外为空」：
 
 ```bash
-# 列出非测试代码里对这个函数的调用；为空就说明测试守的是一份副本
-git grep -n 'buildTaskView(' -- '*.go' ':!*_test.go'
+# 列出非测试代码里对这个函数的调用，去掉定义行（含方法接收者的写法）
+git grep -n 'buildTaskView(' -- '*.go' ':!*_test.go' \
+  | grep -vE 'func (\([^)]*\) )?buildTaskView\(' \
+  || echo '除定义外为空：测试守的是一份副本'
 ```
 
 两个例子合起来是一条规则：「用户能看到 X」的测试，要从生产的构造入口进，从生产的读取出口出。中间每一跳都用真实代码，只在最外层替换外部依赖（价格 hook、上游 HTTP）。这和前一篇「输入形状取自被测出口」是一对：那篇管进去的数据，这里管走的路。
@@ -185,13 +187,18 @@ git grep -n 'buildTaskView(' -- '*.go' ':!*_test.go'
 
 Go 的 panic 会打断整个包，前一篇第 4 节讲过。这次补一个机械的检查：先列出应有的用例，再数开始了多少、结束了多少。
 
+`go test -list` 只列顶层测试，`go test -json` 的 `run` 事件却把 `TestX/case` 这样的子测试也算进去。有子测试时两边口径不同，三个数永远对不上，所以 `jq` 这一侧也只数顶层：
+
 ```bash
 go test -list '.*' ./pkg/tasks/ | grep -c '^Test'      # 应有的顶层用例数
 go test -json ./pkg/tasks/ > run.json || true
-jq -r 'select(.Test and .Action=="run") | .Test' run.json | sort -u | wc -l                  # 开始的
-jq -r 'select(.Test and (.Action|test("^(pass|fail|skip)$"))) | .Test' run.json | sort -u | wc -l  # 结束的
-grep -c '"Output":"panic:' run.json                                                          # 应为 0
+top='select((.Test // "") | test("^Test[^/]*$"))'      # 只要顶层：名字里没有 /
+jq -r "$top | select(.Action==\"run\") | .Test" run.json | sort -u | wc -l                       # 开始的
+jq -r "$top | select(.Action|test(\"^(pass|fail|skip)$\")) | .Test" run.json | sort -u | wc -l   # 结束的
+grep -c '"Output":"panic:' run.json                                                              # 应为 0
 ```
+
+更正：这段原先的两条 `jq` 没有排除子测试。我在一个有 2 个顶层测试、其中一个带 3 个子测试的临时包上实测：`-list` 数出 2，原写法数出开始 5、结束 5；改成只数顶层后是 2、2。
 
 三个数对不上，或者 panic 不为 0，这次运行就不能拿来比失败集合。超时也一样：两份日志都超时，先核双方完成的是不是同一批用例。
 

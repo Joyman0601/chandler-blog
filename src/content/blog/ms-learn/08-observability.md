@@ -146,17 +146,19 @@ ms-order  SERVER  http post /order/buy    起+0ms     耗时~108ms  ← 最外�
 
 **修复**：ms-stock 补上 actuator。
 
-### 坑 D：brave-propagation-aws 顶替了默认传播格式
+### 坑 D：排除 brave-propagation-aws（是否必要待验证）
 
-还有一个隐蔽的依赖污染：`micrometer-tracing-bridge-brave` 会**间接引入** `io.zipkin.aws:brave-propagation-aws`，它把默认的 **B3 传播格式**换成了 AWS X-Ray 格式，加剧了跨服务 traceId 不互认。
+`micrometer-tracing-bridge-brave` 会**间接引入** `io.zipkin.aws:brave-propagation-aws`。我当时认为它把默认传播格式换成了 AWS X-Ray 格式，造成跨服务 traceId 不互认，于是把它排除了。
 
-**修复**：在 `micrometer-tracing-bridge-brave` 上 `<exclusion>` 掉 `io.zipkin.aws:brave-propagation-aws`。
+**当时的做法**：在 `micrometer-tracing-bridge-brave` 上 `<exclusion>` 掉 `io.zipkin.aws:brave-propagation-aws`。
+
+更正：这里原先写的是「把默认的 B3 传播格式换成了 AWS X-Ray 格式」，有两处不对。第一，Spring Boot 3 默认的传播格式是 W3C（`traceparent` 请求头），不是 B3：按 Spring Boot 3.2 的配置项文档，`management.tracing.propagation.produce` 默认是 `W3C`，`consume` 默认是 `W3C, B3, B3_MULTI`。第二，这个包进了 classpath 是否就会替换格式，我在 Spring Boot 文档里没找到依据，它的可选传播类型里也没有 AWS。坑 B、C 修好之后链路已经能串起来，排除这个包是不是必要的，还要单独验证。
 
 ### 坑 E：WebFlux（网关）的追踪没攻克
 
 最后一个坑没解决，作为已知遗留。Spring Cloud Gateway（WebFlux）的追踪埋点 + 传播，在这个版本组合下**没生效**（没有 Brave 初始化日志），而且 `zipkin-sender-okhttp3` 从镜像源拉到了 0 字节的坏包。
 
-**决策**：跳过网关，只修 Feign 段（ms-order → ms-stock），**直打 9002 即可看到完整的跨服务瀑布**。9-3 的核心概念（跨服务 trace 串联）已经达成，网关段留作已知坑。
+**决策**：跳过网关，只修 Feign 段（ms-order → ms-stock），**直打 9002 即可看到完整的跨服务瀑布**。这一步的核心目标（跨服务 trace 串联）已经达成，网关段留作已知坑。
 
 > 这也是一条经验：学习时不必为每个坑死磕到底。核心目标（看懂跨服务瀑布）达成后，把边角的 WebFlux 追踪问题标记为「已知遗留」，继续前进，比卡在那里耗光精力更明智。
 
@@ -166,9 +168,9 @@ ms-order  SERVER  http post /order/buy    起+0ms     耗时~108ms  ← 最外�
 
 1. **B**：traceId 得先能**传过去**（Feign 埋点）。
 2. **C**：被调方得**愿意建 span**（actuator）。
-3. **D**：两边的**传播格式得一致**（排除 AWS 格式，统一用 B3）。
+3. **D**：两边的**传播格式得一致**。两端都是 Spring Boot 3 的默认配置时，发的是 W3C、收的认 W3C 和 B3，天然一致；坑 D 的排除是否必要还待验证。
 
-三者缺一，跨服务追踪就断。理解了这条链，再遇到「trace 断在某个调用处」就知道往这三个方向查。
+前两关缺一，跨服务追踪就断；第三关在两端版本、配置不一致时要查。理解了这条链，再遇到「trace 断在某个调用处」就知道往这三个方向查。
 
 ## 小结
 
@@ -182,15 +184,9 @@ ms-order  SERVER  http post /order/buy    起+0ms     耗时~108ms  ← 最外�
 - **A**：排查用后端 API，别靠 UI 列表肉眼翻（被 GET span 淹没）。
 - **B**：Feign 要加 `feign-micrometer` 才传播 traceId。
 - **C**：被调方要有 actuator 才生成 span。
-- **D**：排除 `brave-propagation-aws`，统一用 B3 传播格式。
+- **D**：两端传播格式要一致（Spring Boot 3 默认发 W3C）；排除 `brave-propagation-aws` 是否必要待验证。
 - **E**：WebFlux（网关）追踪是已知遗留坑，直打后端服务即可。
 
 ## 系列收尾
 
-到这里，《从单体到微服务》系列就走完了。回头看这条路：
-
-服务靠名字找到彼此（注册发现）→ 配置集中管理（配置中心）→ 统一入口收口横切逻辑（网关）→ 优雅地跨进程通信（Feign/Dubbo）→ 登录态跨进程共享（分布式会话）→ 扛住下游故障（限流熔断）→ 跨服务写操作保持一致（分布式事务）→ 异步解耦提升吞吐（消息队列）→ 最后让整个系统**可观测**。
-
-每一步都不是凭空加组件，而是在为前一步暴露出的某个问题兜底。如果说有一个贯穿始终的认知，那就是：**分布式系统里，很多单体中理所当然的「确定性」都不再成立——服务发现是最终一致的、消息是至少投递一次的、异步换来速度的代价是不再强一致。** 学会和这种「不确定」共处，比记住任何一个 API 都重要。
-
-希望这套从踩坑中长出来的系列，能帮你少走一些弯路。
+到这里，八篇走完了。全系列的地图、贯穿始终的那条暗线、项目的不足和后续计划，都放在[系列总览](/blog/ms-learn/00-overview/)里。

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 797735f6a81d71978b4019ca517fc2f0e1627c18b0ea54169b1cc9dc22bda0eb
+# import-articles-sha256: a49b2ea2c7062fdad4bc561ef93b2f8382f6135f5f5d484e96c5380c887475f6
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/admission-readonly-race-budget.md
 # Source date: 2026-10-27
 title: "只读准入探测：余量、竞争和总超时"
@@ -63,6 +63,29 @@ seriesLabel: "模型接入"
 这与执行器的最终占位有不同职责。放行记录控制一小段时间内送过去多少任务，执行器控制实际能开始多少任务。两层都要说明失败后怎么处理，不能把放行成功写成执行必定成功。
 
 窗口从什么时候开始也有影响。这个案例使用首个放行开始计时、到期整体清零的窗口。若每来一单就刷新过期时间，持续请求可能一直延长窗口，空出的资源迟迟不能重新参与选择。
+
+放行记录本身也会碰到第 1 节的竞争：先 `GET` 看还剩几个名额，再 `INCR` 占一个，两步之间别的网关也在读。下面这段 Lua 把「查余量」和「占位」放进同一次脚本执行。Redis 执行脚本时不穿插别的命令，读到的余量就是占位时的余量：
+
+```go
+// KEYS[1] 目标的放行计数；ARGV[1] 本窗口最多放行几单；ARGV[2] 窗口毫秒数
+var admit = redis.NewScript(`
+local n = tonumber(redis.call("GET", KEYS[1]) or "0")
+if n >= tonumber(ARGV[1]) then
+  return 0
+end
+if redis.call("INCR", KEYS[1]) == 1 then
+  redis.call("PEXPIRE", KEYS[1], ARGV[2])
+end
+return 1
+`)
+
+// 用法：返回 1 才把任务送过去，返回 0 就试下一个候选
+// ok, err := admit.Run(ctx, rdb, []string{"admit:" + target}, limit, windowMs).Int()
+```
+
+只在计数从 0 变成 1 时设过期时间，窗口就从首个放行开始计时，到期整体清零，后来的请求不会把它往后推。`limit` 填的是这次探测观测到的可放行数量。
+
+我用 miniredis 起了一个内存版 Redis，让 20 个决策同时申请上限为 3 的名额：走这段脚本，放行 3 单；把它拆成先 `GET` 后 `INCR`，并让所有决策都先读完再占位，20 单全部放行。窗口时间快进过期以后，再申请又能拿到名额。这个对照证明的是放行记录不越限；任务能不能真正开始，仍由执行器的占位决定。
 
 窗口长度需要结合实际派发延迟设定。太短，执行器尚未占位记录就消失；太长，任务早已结束仍被旧记录挡住。文章不保留当时的业务秒数，因为可以复用的是量延迟和验证边界的方法。
 

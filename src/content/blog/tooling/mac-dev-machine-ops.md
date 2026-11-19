@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 00d8ac28ac1c49eb1b2177c688a9c42700d7703f3b0a92d959c6ca30d4564197
+# import-articles-sha256: d150dceff48b0663bc736212b7eb05855c8b0458fc0dbaa384503d4895fd5881
 # Imported by scripts/import-articles.mjs from posts/tooling/mac-dev-machine-ops.md
 # Source date: 2026-10-22
 title: "Mac 开发机的日常排障：代理、磁盘、负载和后台进程"
@@ -31,7 +31,7 @@ Retrying 1/3...
 
 同一时刻，用 curl 请求同一个字体地址，返回 200。
 
-**根因**：构建时 `next/font/google` 会并发下载字体。本机代理跑在 fake-IP 加 TUN 模式下：DNS 返回 198.18 开头的假地址（这一段是 RFC 2544 保留给基准测试的地址，fake-IP 常用它），流量再由 TUN 虚拟网卡接管、转发。Node 的 TLS 连接走这条路径时，会间歇性地被断开（实测）。一开始怀疑是 IPv6 优先的问题，改了 DNS 顺序，没用：解析结果本来就是 IPv4 的假地址。
+**根因**：构建时 `next/font/google` 会并发下载字体。本机代理跑在 fake-IP 加 TUN 模式下。fake-IP 是代理接管 DNS 的一种方式：查询不发到外面，直接回一个假地址，代理记下假地址和域名的对应关系；TUN 是代理建的一块虚拟网卡，系统里所有发往这些地址的流量都先进这块网卡，再由代理转发。这里 DNS 返回的是 198.18 开头的假地址（这一段是 RFC 2544 保留给基准测试的地址，fake-IP 常用它）。Node 的 TLS 连接走这条路径时，会间歇性地被断开（实测）。一开始怀疑是 IPv6 优先的问题，改了 DNS 顺序，没用：解析结果本来就是 IPv4 的假地址。
 
 判断是不是这种情况，看一眼域名解析到哪：
 
@@ -90,7 +90,7 @@ Host some-host-behind-proxy
 
 | 对象 | 实测情况 | 怎么清 |
 |---|---|---|
-| Docker 匿名卷 | 用 `--rm` 起的临时数据库容器每次留下一个，一天多攒了 115 个、17.6 GB | 先确认里面没有命名卷，再 `docker volume prune` |
+| Docker 匿名卷 | 用 `--rm` 起的临时数据库容器每次留下一个，一天多攒了 115 个、17.6 GB | 先确认里面没有要留的命名卷，再 `docker volume prune` |
 | Go 编译缓存 | 并行编多个分支，一天长到 16 GB，修剪后约 6 小时又到 20 GB | 按 mtime 删 3 小时以上没用过的 |
 | `.next` 构建产物 | 每个检出一份，是真占用 | 先停同目录的 dev server 再删 |
 | Jest 缓存 | 在系统临时目录里，每个检出路径各一套，攒到 3.75 GB | 删一天以上没动过的文件 |
@@ -98,6 +98,7 @@ Host some-host-behind-proxy
 
 几条要单独说的：
 
+- **`docker volume prune` 删什么看版本**。Docker 23 起默认只删没被容器用着的匿名卷，要连命名卷一起删得加 `-a`；更早的版本默认就把没被用着的命名卷一起删了（文档：Docker 23.0 的发布说明）。先 `docker version` 看一眼服务端版本；
 - **Docker 虚拟盘看实占**。`Docker.raw` 是稀疏文件，`ls -l` 显示的是上限（两百多 GB），prune 之后也不变，要用 `du -sh` 看实占。prune 之后几十秒，实占从 17.7 GB 缩到 7.5 GB；
 - **Go 缓存为什么可以按 mtime 删**。Go 自带的修剪每天一次，只删 5 天没用过的条目，所以并行编译时会涨得很快。Go 读到一条缓存时，如果它的 mtime 超过 1 小时就刷新一次（文档：Go 标准库缓存实现里的 `mtimeInterval`）。所以「3 小时以上没被读过」的条目，正在编译的进程不会用到。实测 16 GB 删到 7.5 GB，并行跑着的测试没受影响。`go clean -cache` 是全删，会拖慢别的窗口，还有读到一半被删的风险；
 - **pnpm 的 node_modules 量不准**。每个检出 `du` 出来约 0.8 GB，但 pnpm 在 APFS 上默认先用写时复制克隆，`du` 看不出它和全局仓库共用磁盘块。删它们大概省不出多少（推断，没有实测）；
@@ -114,7 +115,8 @@ C="$(go env GOCACHE)"
 find "${C}" -type f -mmin +180 -exec stat -f %z {} + | awk '{s+=$1} END {printf "%.1f GB\n", s/2^30}'
 find "${C}" -type f -mmin +180 ! -name trim.txt ! -name README -delete
 
-T="$(getconf DARWIN_USER_TEMP_DIR)jest_dx"
+# Jest 默认缓存目录 = 系统临时目录/jest_<uid 的 36 进制>，uid 501 就是 jest_dx；换账号要重算
+T="$(getconf DARWIN_USER_TEMP_DIR)jest_$(node -p 'process.getuid().toString(36)')"
 find "${T}" -type f -mmin +1440 -delete
 
 npm cache clean --force

@@ -7,7 +7,7 @@ series: "rag"
 seriesLabel: "RAG 项目"
 ---
 
-> 一句话总结：录屏前我信心满满对着脚本先做了一次彩排——毕竟功能都测过了、Langfuse 也接上了、Agent 三个工具场景也验证过。结果两个小时里连撞三个能毁掉整场演示的 bug：Langfuse UI 里 latency 显示 0 秒（讲「可观测性」时观众看到 0 秒会尴尬）、Agent 处理「公司请年假」稳定报 `TOOL_EXECUTION_FAILED`（讲 Agent 演示时正好翻车）、以及 `TOKEN_BUDGET_EXCEEDED`。这篇按修复顺序复盘，最后聊聊哪些 LLM 通路能加重试、哪些绝对不能。
+> 一句话总结：录屏前我信心满满对着脚本先做了一次彩排——毕竟功能都测过了、Langfuse 也接上了、Agent 三个工具场景也验证过。结果两个小时里连撞三个能毁掉整场演示的 bug：Langfuse UI 里 latency 显示 0 秒（讲「可观测性」时观众看到 0 秒会尴尬）、Agent 处理「公司请年假」稳定报 `TOOL_EXECUTION_FAILED`（讲 Agent 演示时正好翻车）、以及 `TOKEN_BUDGET_EXCEEDED`。这篇按修复顺序复盘，最后聊聊哪些 LLM 通路能直接加重试、哪些要加条件。
 
 ## 0. 起因：彩排的必要性
 
@@ -56,7 +56,9 @@ private Map<String, Object> buildGenerationEvent(
 }
 ```
 
-我在参数里传了 `latencyMs`——LLM 调用时用 `System.currentTimeMillis()` 记的起止时间差——但**根本没塞进事件体**。startTime 和 endTime 都取 `Instant.now()`，Langfuse UI 拿两者相减自然是 0。cost 也归零是因为 Langfuse 部分内部逻辑按 latency 比例呈现的。
+我在参数里传了 `latencyMs`——LLM 调用时用 `System.currentTimeMillis()` 记的起止时间差——但**根本没塞进事件体**。startTime 和 endTime 都取 `Instant.now()`，Langfuse UI 拿两者相减自然是 0。
+
+cost 为 0 是另一回事，我原来写的「cost 按 latency 比例呈现」不对。Langfuse 的成本是用量乘以模型价格表算出来的，和耗时无关。可能的原因（推测，当时没逐项核）有两个：一是 Langfuse 里没有给这个模型名配价格，匹配不上就算不出成本；二是上报的 usage 字段名没被它识别，用量没进计算。
 
 **修复**：从 endTime 倒推 startTime：
 
@@ -146,21 +148,21 @@ private boolean isRetriableIoError(IOException ex) {
 
 关键在于「**有选择**」——不是所有错误都重试：
 
-| 错误类型 | 重试? | 原因 |
+| 错误类型 | 这次重试吗 | 原因 |
 |---|---|---|
-| Connection reset / RST | ✅ | 瞬时网络抖动，重试通常能过 |
-| Broken pipe | ✅ | 类似瞬时 |
-| HttpTimeoutException | ❌ | 服务端已经在慢，重试只会让情况更糟 |
-| HTTP 4xx | ❌ | 业务错，重试没用 |
-| HTTP 5xx | ❌ | 服务端错，短时间重试大概率还错 |
-| LlmException（自己抛的） | ❌ | 业务层已经判定是错，重试放大成本 |
-| InterruptedException | ❌ | 上层要中断，别继续 |
+| Connection reset / RST | 重试一次 | 瞬时网络抖动，重试通常能过 |
+| Broken pipe | 重试一次 | 类似瞬时 |
+| HttpTimeoutException | 不重试 | 服务端已经在慢，立刻重试只会更糟 |
+| HTTP 4xx | 不重试 | 请求本身有错，重试没用 |
+| HTTP 5xx | 这次没加 | 502、503 这类多半是瞬时的，可以带退避重试一次；这次先只处理连接层错误 |
+| LlmException（自己抛的） | 不重试 | 业务层已经判定是错，重试放大成本 |
+| InterruptedException | 不重试 | 上层要中断，别继续 |
 
 `RerankClient` 用同一套 helper。
 
-## 3. 为什么 chat 通路**故意不加**重试
+## 3. chat 通路为什么没加同样的重试
 
-写完 embed 和 rerank 的重试，我特意确认了一下 `LlmClient.generateWithUsage` / `streamChat`——**这两个 chat 通路完全不加重试**。
+写完 embed 和 rerank 的重试，我特意确认了一下 `LlmClient.generateWithUsage` / `streamChat`——**这两个 chat 通路这次没加重试**。
 
 原因是 chat 调用**不是幂等**的：
 
@@ -170,7 +172,7 @@ private boolean isRetriableIoError(IOException ex) {
 
 Embedding 就没这些问题——同样的输入必然生成同样的向量，重试成本是「一次 embed 请求」（比 chat 便宜 100 倍），观测上重试也没什么可展示的（用户不关心 embedding 花了多久）。
 
-**面试口径**：这是**「什么时候能加重试」**的清晰边界。判断标准是三个：**幂等性、成本、可观测**。三个都过关（embed/rerank）才能加，任何一个不过关（chat）就绝对不加。这个判断标准我以前只在 REST API 层用过，这次在 LLM 通路里再验证了一遍。
+**怎么判断**：看三件事——**幂等性、成本、可观测**。embed / rerank 三条都过关，可以直接重试。chat 不是一律不能重试：连接在发请求阶段就断了、确认上游没有产出（流式还没收到任何字节）时，重试一次通常是安全的；重试要单独记一条日志或 span，用量和耗时才不会算错。已经开始输出的流式回答，就不要整段重来了。
 
 ## 4. Bug 3：TOKEN_BUDGET_EXCEEDED
 
@@ -180,7 +182,7 @@ Embedding 就没这些问题——同样的输入必然生成同样的向量，�
 1. 第 1 步：调 `search_knowledge_base` 检索「公司请年假」，返回 3 篇 chunk。
 2. 第 2 步：把 observation（3 篇 chunk 拼接）塞进 user message 生成最终答案，token 预算 checker 报 2650 tokens 超了 1500 的上限。
 
-**根因**：我把 chat/RAG/Agent 三条通路的 token 预算全部用同一个配置 `chatMaxInputTokens=1500`。这个 1500 是给 RAG 单轮 ask 设的——system + user question 一般 500 tokens 够了。**但 Agent 通路不一样**——它每一步都要把 tool observation 累积到上下文里，一个 3 chunk 的 observation 就 2000+ tokens 常态。
+**根因**：我把 chat/RAG/Agent 三条通路的 token 预算全部用同一个配置 `chatMaxInputTokens=1500`。这个 1500 是给 RAG 单轮 ask 设的。**Agent 通路不一样**——它每一步都要把 tool observation 累积到上下文里，这次年假那篇的 3 个 chunk 拼起来就超过了 2000 token。RAG ask 同样会把检索到的 chunk 放进 prompt，同一个问题走 RAG 为什么没撞上 1500，我当时没查，待核对。
 
 用一个预算兜三条通路，最短板决定天花板。
 
@@ -225,9 +227,7 @@ app:
     LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-2000}
 ```
 
-`.env.prod` 里 `LLM_MAX_INPUT_CHARS=8000` 早就设了，但**没在 compose.yml 的 environment 段显式列出，就不会透传进容器**——docker compose **不做隐式全量注入**，`.env` 只是 shell 变量的插值来源，不是自动 env 注入。
-
-这个坑我在部署那篇里已经吐槽过一次，这里再撞一次。教训是：`.env.prod` 里加了新变量，`compose.yml` 里也要跟着显式列一遍。
+`.env.prod` 里 `LLM_MAX_INPUT_CHARS=8000` 早就设了，但**没在 compose.yml 的 environment 段列出来，就不会进容器**。env 文件只用来替换 compose 文件里的 `${...}`，见[部署那篇的坑 2](/blog/rag-deploy-compose-pitfalls/)。教训是：`.env.prod` 里加了新变量，`compose.yml` 里也要跟着列一遍。
 
 **面试口径**：**双层预算是必要的**。token 预算限 LLM 侧成本，字符预算是 defensive coding 挡畸形输入。两道预算是独立护栏——token 是内容语义维度，字符是输入体积维度。Agent 循环的 observation 会累积长文本，两个维度都要给 Agent 单独放宽，不能和 chat/RAG 共用。
 
@@ -237,7 +237,7 @@ app:
 
 - 段 1-2：OK
 - 段 3 Agent「公司请年假」：**跑通了**，Agent 3 步返回完整流程答案，`stopReason: SUCCESS`
-- 段 5 Langfuse trace：**latency 显示 4.2s，cost 显示 $0.0012**（qwen-plus 定价）
+- 段 5 Langfuse trace：**latency 显示 4.2s，cost 显示 $0.0012**（qwen-plus 定价）。上面的修复只改了时间戳，cost 是哪一步之后显示出来的，我当时没记下来，待核对
 
 段 5 的 chat 气泡也正常显示（这个是[自建 Langfuse 那篇](/blog/rag-langfuse-selfhost/)里的第 6 个坑修的），Agent 那段的 sources 也命中了年假 md。
 

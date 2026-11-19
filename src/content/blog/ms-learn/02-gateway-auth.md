@@ -52,44 +52,56 @@ spring:
 
 ## 统一鉴权：在入口处短路，不进内网
 
-网关的第二职责是把鉴权这个横切关注点收到入口。Step3 先用一个「假鉴权」过滤器演示机制（真正的 token 校验留到第 4 篇 Sa-Token）：实现 `GlobalFilter + Ordered`，白名单放行，其余无 `Authorization` 头的请求直接 401。
+网关的第二职责是把鉴权这个横切关注点收到入口。这里先用一个「假鉴权」过滤器演示机制（真正的 token 校验留到第 4 篇 Sa-Token）：实现 `GlobalFilter + Ordered`，白名单放行，其余无 `Authorization` 头的请求直接 401。
 
 这里有个关键认知——**鉴权失败要在网关短路返回，不让请求进内网**。`getOrder()` 数值越小越先执行，所以鉴权过滤器设一个很靠前的 order（比如 -100），让它在路由之前就拦下非法请求。
 
-到了第 4 篇，这个假鉴权会被 Sa-Token 的真实校验替换掉，代码长这样（先剧透一下网关侧的形态）：
+下面是这个假鉴权过滤器的最小写法（补充示例，import 省略）。它只看请求有没有带 `Authorization` 头，不校验 token 内容；短路的方式是直接写响应、不再调用 `chain.filter`：
 
 ```java
-@Bean
-public SaReactorFilter getSaReactorFilter() {
-    return new SaReactorFilter()
-        // 拦截所有路径
-        .addInclude("/**")
-        // 放行白名单(登录、公开接口)
-        .addExclude("/user/login")
-        .addExclude("/user/greeting")
-        // 鉴权逻辑: 除白名单外都要求已登录
-        .setAuth(obj -> {
-            SaRouter.match("/**")
-                    .notMatch("/user/login", "/user/greeting")
-                    .check(r -> StpUtil.checkLogin());
-        })
-        // 校验失败的返回
-        .setError(e -> SaResult.error("blocked by gateway: " + e.getMessage()).setCode(401));
+@Component
+public class FakeAuthFilter implements GlobalFilter, Ordered {
+
+    private static final Set<String> WHITELIST = Set.of("/user/login", "/user/greeting");
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getURI().getPath();
+        String token = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (WHITELIST.contains(path) || (token != null && !token.isBlank())) {
+            return chain.filter(exchange);                  // 放行，继续走路由
+        }
+        ServerHttpResponse resp = exchange.getResponse();
+        resp.setStatusCode(HttpStatus.UNAUTHORIZED);        // HTTP 状态码就是 401
+        resp.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        byte[] body = "{\"code\":401,\"msg\":\"missing token, blocked by gateway\"}"
+                .getBytes(StandardCharsets.UTF_8);
+        return resp.writeWith(Mono.just(resp.bufferFactory().wrap(body)));  // 短路
+    }
+
+    @Override
+    public int getOrder() {
+        return -100;                                         // 越小越先执行
+    }
 }
 ```
 
-`addExclude` 配的就是白名单，`/user/login`（要先登录才能拿 token）和 `/user/greeting`（公开接口）放行，其余路径都要求 `StpUtil.checkLogin()` 通过。
+整个方法返回的是 `Mono<Void>`，放行和拦截都是「返回一条异步处理链」，没有阻塞调用。这正是下面要讲的 WebFlux 编程模型。
 
-## 核心坑：网关是 WebFlux 响应式，绝不能引 servlet
+到了第 4 篇，这个假鉴权会换成 Sa-Token 的 `SaReactorFilter`，白名单改用 `addExclude` 配置，真正去 Redis 校验登录态，代码见[第 4 篇](/blog/ms-learn/04-distributed-session/)。
+
+## 核心坑：WebFlux 版网关不能引 servlet
 
 这是接入网关时最容易栽的一个坑，必须单独拎出来讲。
 
-**Spring Cloud Gateway 基于 WebFlux 响应式模型**，依赖 `spring-cloud-starter-gateway`。它和前面那些基于 Servlet（`spring-boot-starter-web`）的服务**编程模型完全不同**：
+这套 demo 用的是 **基于 WebFlux 响应式模型的 Spring Cloud Gateway**，依赖 `spring-cloud-starter-gateway`。它和前面那些基于 Servlet（`spring-boot-starter-web`）的服务**编程模型完全不同**：
 
 - **绝对不能引 `spring-boot-starter-web`**。Servlet 容器和 WebFlux 的响应式容器会冲突，一起引入会导致**启动直接失败**。
 - 过滤器里**全程返回 `Mono`**（响应式的异步类型），不能写阻塞代码。和前面 Servlet 里「拿到请求、同步处理、返回结果」的直觉不一样，要切换到「声明一条异步处理链」的思维。
 
-如果你习惯了 Servlet 的写法，到网关这里第一反应往往是想引 web starter、想写同步逻辑——这都会出问题。记住：**网关是响应式的另一个世界**。
+如果你习惯了 Servlet 的写法，到网关这里第一反应往往是想引 web starter、想写同步逻辑——这都会出问题。记住：**WebFlux 版网关是响应式的另一个世界**。
+
+这条限制只针对 WebFlux 版。从 Spring Cloud 2023.0 起，官方另外提供了基于 Servlet / Spring MVC 的 Gateway Server MVC（依赖 `spring-cloud-starter-gateway-mvc`），它跑在 Servlet 容器上，写法也是同步的。两个版本的过滤器接口不一样，本文的 `GlobalFilter` 写法只适用于 WebFlux 版。
 
 校验通过后，网关还能把用户信息透传给下游：用 `request.mutate().header(...)` 往请求头里塞解析出的用户身份，下游服务直接读 header 即可，无需再次解析 token。
 
@@ -105,11 +117,11 @@ public SaReactorFilter getSaReactorFilter() {
 
 ## 踩坑：白名单路径必须和后端真实路由严格对齐
 
-这个坑上一篇提过，这里是它的「案发现场」。
+这个坑在[第 1 篇](/blog/ms-learn/01-nacos-discovery-config/)的配置中心一节露过面，这里是它的「案发现场」。系列里只在这里讲完整。
 
-最初 greeting 接口在 `/greeting`，但网关白名单写的是 `/user/greeting`。结果访问 `8888/user/greeting` 时，它命中了 `/user/{id}` 这条路由，网关把 `greeting` 这个字符串当成 `{id}`（Long 类型）传给后端 → 解析失败 → 400。
+最初 greeting 接口在 `/greeting`，但网关白名单写的是 `/user/greeting`。访问 `8888/user/greeting` 时，网关这一侧一切正常：白名单放行，`Path=/user/**` 这条路由把请求原样转给 ms-user。问题出在后端：ms-user 上没有 `/user/greeting` 这个接口，请求落到了它的 `/user/{id}` 接口映射上，Spring MVC 把 `greeting` 这个字符串当成 `{id}`（Long 类型）去转换 → 失败 → 400。
 
-> 教训：**网关白名单/路由的路径，必须和后端真实接口路径严格对齐。** 一旦对不上，请求可能被错误地匹配到别的路由，产生莫名其妙的报错。后来把接口挪到 `/user/greeting` 才修正。
+> 教训：**网关白名单/路由的路径，必须和后端真实接口路径严格对齐。** 一旦对不上，请求可能被后端错误地匹配到别的接口，产生莫名其妙的报错。后来把接口挪到 `/user/greeting` 才修正：后端同时有 `/user/greeting` 和 `/user/{id}` 时，Spring MVC 优先匹配写死的路径。
 
 ## 网关的代价：单点入口必须高可用
 
@@ -124,7 +136,7 @@ public SaReactorFilter getSaReactorFilter() {
 | 鉴权/路由要写 N 遍 | API 网关统一入口 | 横切关注点收口，内部服务不对外暴露 |
 | 怎么路由到对应服务 | `uri: lb://服务名` + `Path` 断言 | 仍靠服务名寻址，不写 IP |
 | 非法请求怎么挡 | 鉴权过滤器靠前执行 + 短路返回 401 | 在入口拦下，不进内网 |
-| 网关编程模型 | WebFlux 响应式 | **绝不能引 servlet web starter**，过滤器返回 Mono |
+| 网关编程模型 | WebFlux 响应式（本文用的版本） | **不能引 servlet web starter**，过滤器返回 Mono；要 Servlet 写法另有 Gateway Server MVC |
 | 新增的风险 | —— | 网关是单点入口，必须高可用 |
 
 入口立起来了，鉴权也收口了。但有个问题留着没解决：网关说「校验 token」，可 token 是 ms-user 签发的、由网关来验——**两个独立进程怎么共享同一个登录态？** 这正是第 4 篇分布式会话要解决的。不过在那之前，第 3 篇先把「服务间到底怎么通信」讲透：除了 RestTemplate，还有 Feign 和 Dubbo 两种姿势。

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 1f00b78f02930ec5767ccfe5a4c6e33156d53863738a2e279fe38c38bee2484c
+# import-articles-sha256: 0e6da50fb31b9f6d34c2488f9ae785988927af3c4af81d5b2b536de4ae46e118
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/result-retention-until-ack.md
 # Source date: 2026-10-25
 title: "结果已经存好：为何回报失败仍会丢掉任务"
@@ -18,7 +18,7 @@ seriesLabel: "模型接入"
 
 单看每个组件，似乎都有合理解释。上游确实成功；文件服务确实返回了存储地址；网关没有收到完成状态，只能继续按在途任务处理。问题藏在发送端：它只为「还没存完」的结果登记保留状态，存得太快的结果反而没有留下。
 
-这篇根据那几天连续的代码修订和相邻测试整理。我核对的是修复与断言的对应关系，没有在整理文章时重跑原业务栈，也不把仓库里其他人的提交说成自己的实现。
+这篇按当时的修订和相邻测试整理，文中的代码是我另写的最小示例。
 
 之前的[异步任务本地全栈](/blog/model-onboarding/async-task-local-full-stack/)讨论过转存这一跳怎么测通。这次关注的是转存之后：一个结果从「我拿到了」到「对方确认了」，中间还要维护什么状态。
 
@@ -30,20 +30,60 @@ seriesLabel: "模型接入"
 
 我把相关状态画成下面的简化图。它用于解释职责，不对应原项目的字段名。
 
-```mermaid
-stateDiagram-v2
-    [*] --> 等生成
-    等生成 --> 等存储: 取得结果并保留
-    等存储 --> 等确认: 已有可交付结果
-    等确认 --> 等确认: 回报失败或尚未确认
-    等确认 --> 已完成: 网关确认应用
-    等存储 --> 已失效: 当前投递被替换
-    等确认 --> 已失效: 当前投递被替换
-    已完成 --> [*]
-    已失效 --> [*]
-```
+![一份结果依次经过等生成、等存储、等确认、已完成四站：拿到结果先登记保留再转存，回报失败或没确认时留在等确认带同一个地址重报，网关确认应用后才释放保留；等存储、等确认时任务被改投则进入已失效，旧投递只清理自己的登记](figures/result-retention-until-ack-states.svg)
 
 关键变化是登记顺序：拿到结果时先把它纳入保留状态，再尝试存储和回报。这样，即使存储第一次查询就完成，回报失败后也有同一份结果可用，不需要重新依赖上游还能否查到它。
+
+下面是一个最小的 Go 对照。现象是「存得快的结果，回报失败后反而丢了」；根因在旧写法只给没存完的结果登记；修复是拿到结果就登记，存储和回报都从这份登记往下推，网关确认后才删：
+
+```go
+type held struct{ raw, url string }
+
+type worker struct {
+	held   map[string]*held // 已有结果、等网关确认
+	store  func(raw string) (url string, done bool)
+	report func(id, url string) error
+}
+
+// 旧写法：只给没存完的结果登记，第一次就存好的那份在回报失败后就没了
+func (w *worker) onResultOld(id, raw string) {
+	url, done := w.store(raw)
+	if !done {
+		w.held[id] = &held{raw: raw}
+		return
+	}
+	_ = w.report(id, url)
+}
+
+// 新写法：先登记，再存储和回报；每轮轮询对已登记的任务调 advance
+func (w *worker) onResult(id, raw string) {
+	w.held[id] = &held{raw: raw}
+	w.advance(id)
+}
+
+func (w *worker) advance(id string) {
+	h := w.held[id]
+	if h.url == "" {
+		url, done := w.store(h.raw)
+		if !done {
+			return
+		}
+		h.url = url
+	}
+	if w.report(id, h.url) == nil {
+		delete(w.held, id) // 网关确认了才删
+	}
+}
+```
+
+让存储第一次就完成、第一次回报失败，再跑一轮轮询，两种写法的结果是：
+
+```text
+先存再登记:
+  第一次回报失败后没有任何保留，下一轮只能再去查上游
+先登记再存储和回报:
+  回报成功: https://files.example/out.png
+```
 
 最初这组修订的保留状态只是进程内机制，修正了正常运行期间的状态推进，没有自动提供进程崩溃后的恢复能力。后续关停交接又补上了持久记录、接管和幂等应用，边界见本文第 7 节；两个阶段的证据不能混用。
 
@@ -84,6 +124,35 @@ stateDiagram-v2
 我把这个竞态写成一个顺序就很清楚：A 开始执行，随后任务改投给 B，B 更新登记，最后 A 收到迟到的结束信号。此时 A 有权清理的只有自己的那份登记，不能因为任务编号相同就删除 B。
 
 正确的检查对象是「任务编号加投递身份」。清理时比较当前记录是否仍属于本次投递，一致才删除。在实际并发实现里，比较与删除还必须具备原子性；先读再无条件删，仍然可能在两步之间被新登记插入。
+
+登记放在 Redis 时，可以把「值相同才删」写成一段 Lua 脚本。Redis 执行脚本期间不会插入别的命令，比较和删除之间就没有空档。下面用 go-redis 调用，登记是一个 hash，里面存着投递身份：
+
+```go
+// KEYS[1] 是这个任务的登记，ARGV[1] 是本次投递的身份
+var releaseIfOwner = redis.NewScript(`
+if redis.call("HGET", KEYS[1], "delivery") == ARGV[1] then
+  return redis.call("DEL", KEYS[1])
+end
+return 0
+`)
+
+func TestLateHolderKeepsNewRegistration(t *testing.T) {
+	ctx := context.Background()
+	rdb := redis.NewClient(&redis.Options{Addr: miniredis.RunT(t).Addr()})
+	key := "task:42:ctx"
+
+	rdb.HSet(ctx, key, "delivery", "A", "kind", "video") // A 开始执行
+	rdb.HSet(ctx, key, "delivery", "B", "kind", "video") // 任务改投给 B，B 覆盖登记
+
+	n, _ := releaseIfOwner.Run(ctx, rdb, []string{key}, "A").Int() // A 迟到的收尾
+	owner, _ := rdb.HGet(ctx, key, "delivery").Result()
+	if n != 0 || owner != "B" {
+		t.Fatalf("旧投递删掉了新登记")
+	}
+}
+```
+
+测试用内存版的 miniredis，不用起真 Redis。跑下来 A 的清理删了 0 条，登记仍属于 B；换成 B 自己收尾，删掉 1 条。
 
 登记时机也在修订范围内。若先登记，之后又改变执行绑定，收尾拿新的身份去删，就匹配不上先前那条记录。历史修复把登记放到绑定调整和去重之后，确保登记与清理使用同一份最终身份。
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 1bc3a442ff9e31bfdb715527b3b97a1a7dab1a8a9de0b55ae031e00fac2b18d8
+# import-articles-sha256: 01658934a4dc32d360c422033829b8b039c0c8f35ecfa94ae8ea2c3460b2752b
 # Imported by scripts/import-articles.mjs from posts/git-collab/worktree-multi-task.md
 # Source date: 2026-09-28
 title: "多任务并行的 git 用法：按任务隔离 worktree"
@@ -100,7 +100,21 @@ git -C "${WORK}/wt/task-a/worker" rev-parse --git-common-dir
 
 1. 拆仓期间新旧结构并存，分支名看不出一个工作区走的是哪种结构；
 2. 本地 `replace ../` 用的是磁盘上的兄弟仓库。跨仓接口只改了一侧，只要本地两个目录对得上，编译照样通过；合并以后各仓按发布版本取依赖，才会炸；
-3. 主仓的 `vendor/` 是依赖的快照，依赖改了但快照没重新生成，跑的还是旧代码，`go build` 会报 `inconsistent vendoring`。
+3. 主仓的 `vendor/` 是依赖的快照。只改了依赖的源码、没重新 vendor，构建照样通过，跑的却是快照里的旧代码，不报任何错；只有 `go.mod` 里的依赖条目（版本、`replace` 目标）改了而 `vendor/modules.txt` 没同步，`go build` 才会报 `inconsistent vendoring`。
+
+更正：这一条原先写成「跑的还是旧代码，`go build` 会报 `inconsistent vendoring`」，两半互相矛盾。我在一个临时模块里实测（Go 1.27，模块用 `replace` 指向本地目录，`vendor/` 存在时默认按 `-mod=vendor` 构建）：
+
+```text
+改依赖源码为 new，不重新 vendor
+  go build          → 退出码 0，运行输出 old
+  go run -mod=mod . → new
+改 go.mod 的 replace 目标，不重新 vendor
+  go build          → go: inconsistent vendoring ...
+                      is replaced by ../dep2 in go.mod, but marked as
+                      replaced by ../dep in vendor/modules.txt
+```
+
+前一种不报错，最容易漏。审带 vendor 的仓库时，先跑一次 `go mod vendor` 再构建和测试；`vendor/` 被忽略时，`git status` 看不出快照旧了。
 
 **修复**：审视范围按依赖清单定，不按分支名定。先判断结构：
 

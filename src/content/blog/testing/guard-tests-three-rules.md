@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 9d4e7d8c3363700c90c310a9079dccbd62c01e749d94f1ab792fb7f9f4b8b675
+# import-articles-sha256: 489af534db88b500a105291aba6790b7a20513786420ded5d29a3b1e3813dd74
 # Imported by scripts/import-articles.mjs from posts/testing/guard-tests-three-rules.md
 # Source date: 2026-10-09
 title: "守卫测试的三个要求：改动前会红、断言打在行为上、比对全部调用方"
@@ -177,9 +177,16 @@ diff /tmp/before.json /tmp/after.json
 
 最基本的证据是在不含自己改动的基线上复跑，按用例名做集合差，不看失败条数：条数相同也可能是一个修好、一个新坏。
 
+基线放在单独的 worktree 里跑，不动当前工作区：
+
 ```bash
 ./node_modules/.bin/jest --json --outputFile=/tmp/branch.json || true
-git stash -u && ./node_modules/.bin/jest --json --outputFile=/tmp/base.json || true; git stash pop
+
+base=$(git merge-base HEAD origin/main)
+git worktree add --detach /tmp/base-wt "$base"
+(cd /tmp/base-wt && pnpm install --frozen-lockfile >/dev/null \
+  && ./node_modules/.bin/jest --json --outputFile=/tmp/base.json) || true
+git worktree remove --force /tmp/base-wt
 
 python3 - <<'EOF'
 import json, os
@@ -192,6 +199,23 @@ print("本分支新增的失败：", sorted(branch - base) or "无")
 print("本分支修好的：", sorted(base - branch) or "无")
 EOF
 ```
+
+更正：这里原先用的是 `git stash -u` 跑基线、跑完 `git stash pop`。这个写法有两个坑。一是改动已经提交时，stash 收不走它们，跑的还是分支 HEAD，不是基线。二是工作区干净时，`git stash -u` 只打印「No local changes to save」，退出码照样是 0，接着的 `pop` 会把以前存的一个无关 stash 弹出来。我在一个假仓库里实测了第二个：
+
+```text
+$ git stash list
+stash@{0}: On main: 上周的旧实验
+$ git stash -u; echo $?
+No local changes to save
+0
+$ git stash pop; echo $?
+...
+	modified:   app.txt
+Dropped refs/stash@{0} (...)
+0
+```
+
+worktree 的做法两种情况都不受影响：基线检出在另一个目录，当前工作区和 stash 列表都不动。新 worktree 里没有 `node_modules`，要按锁文件装一次依赖。
 
 Go 的对应写法是 `go test -json ./...`，取 `Action == "fail"` 且带 `Test` 字段的行，按「包名加用例名」求差集。汇报写成「全量和主干按用例名比，存量失败集合相同，没有新增」，并附上复跑方法。
 

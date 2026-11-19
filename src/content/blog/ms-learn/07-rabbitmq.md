@@ -1,13 +1,13 @@
 ---
 title: "事件驱动与可靠消息：异步解耦后冒出的新问题"
-description: "把同步调用换成 MQ 异步事件，下单秒回不再等积分。但 MQ 带来同步 RPC 没有的新问题：消息重复要幂等、消费失败要重试+死信队列。用 RabbitMQ 把这三件配套讲透。"
+description: "把同步调用换成 MQ 异步事件，下单秒回不再等积分。但 MQ 带来同步 RPC 没有的新问题：消息重复要幂等、消费失败要重试+死信队列、生产端要确保消息真的发出去。用 RabbitMQ 把这几件配套讲透。"
 pubDate: 2026-02-05
 tags: ["微服务", "RabbitMQ", "事件驱动", "消息队列"]
 series: "ms-learn"
 seriesLabel: "从单体到微服务"
 ---
 
-> 系列第 7 篇。前面 Step4~7 都是同步调用——调用方必须等下游返回。这一篇换思路：把同步调用改成异步事件，用 RabbitMQ 解耦。但异步不是免费的，它带来一组同步 RPC 不会有的新问题。
+> 系列第 7 篇。前面几篇的调用都是同步的——调用方必须等下游返回。这一篇换思路：把同步调用改成异步事件，用 RabbitMQ 解耦。但异步不是免费的，它带来一组同步 RPC 不会有的新问题。
 
 ## 同步调用的隐藏成本
 
@@ -29,9 +29,20 @@ seriesLabel: "从单体到微服务"
 
 先建立心智模型：
 
+```text
+生产者
+  │ 发布到交换机，带 routing key
+  ▼
+Exchange（交换机）
+  │ 按 Binding 路由
+  ▼
+Queue（队列）
+  │ 推送消息
+  ▼
+消费者 ──ack──▶ broker
 ```
-生产者 ──发布──▶ [Exchange 交换机] ──按routing key路由──▶ [Queue 队列] ──ack──▶ 消费者
-```
+
+消息一路往下走，ack 是反方向的：消费者处理完，回头告诉 broker「这条可以删了」。
 
 - **Exchange（交换机）**：生产者只往它发，**不知道队列存在**——这是解耦的根本。类型有 direct（键完全匹配）、fanout（广播）、topic（通配）。
 - **Queue（队列）**：消息真正堆积的地方，**没有消费者也留着**——这是削峰/异步的根本。
@@ -136,7 +147,7 @@ public void onOrderCreated(OrderCreatedEvent event) {
 
 **验证异步解耦**：再下单，order **0.59s 秒回**（HTTP 200，库存已扣），ms-user **稍后**（隔几百毫秒）才追加「加积分」日志——下单线程根本没等积分处理。
 
-对比 Step4~7 的同步 Feign/Dubbo（调用方必须等下游返回），MQ 让 order 发完事件立即返回，积分处理在另一个进程异步发生。**好处**：order 响应快、不受积分服务慢/挂的影响（削峰 + 解耦）。**代价**：不再强一致，是最终一致（积分稍后才到），而且引入了新问题。
+对比第 3 篇的同步 Feign/Dubbo（调用方必须等下游返回），MQ 让 order 发完事件立即返回，积分处理在另一个进程异步发生。**好处**：order 响应快、不受积分服务慢/挂的影响（削峰 + 解耦）。**代价**：不再强一致，是最终一致（积分稍后才到），而且引入了新问题。
 
 ## 新问题之一：消息重复 → 幂等
 
@@ -145,7 +156,6 @@ public void onOrderCreated(OrderCreatedEvent event) {
 解法是**幂等**：用业务唯一键保证「同一个订单只加一次积分」。这里用 Redis SETNX：
 
 ```java
-// ── 8-4a: 幂等 ──
 String idempotentKey = "mq:consumed:order:" + event.getOrderId();
 Boolean first = redis.opsForValue().setIfAbsent(idempotentKey, "1", 24, TimeUnit.HOURS);
 if (Boolean.FALSE.equals(first)) {
@@ -162,6 +172,45 @@ if (Boolean.FALSE.equals(first)) {
 TTL 设 24h 是防止幂等 key 在 Redis 里无限堆积。
 
 **验证**：对同一个 orderId 连发两次事件 → 日志第一次「加积分」，第二次「重复消息已跳过」，队列 `ready=0`（两条都被 ack）。
+
+### 这段写法的漏洞：处理失败会丢消息
+
+上面的写法是「先占位、再处理」。占位成功之后，如果加积分这一步抛了异常，key 已经写进 Redis 了。接下来不管是本地重试还是 broker 重投，再进来时 `setIfAbsent` 都返回 `false`，消息被当成重复跳过、正常 ack。这条消息就丢了，也进不了死信队列。验证里只测了「成功后再来一次」，测不出这个问题。
+
+修法有两种，各有边界。下面两段都是补充示例，`addPoints` 代表加积分的业务处理。
+
+**做法一：处理成功后再记 key。** 先查、再处理、成功了才写 key：
+
+```java
+String key = "mq:consumed:order:" + event.getOrderId();
+if (Boolean.TRUE.equals(redis.hasKey(key))) {
+    return;                                       // 处理过了，跳过并正常 ack
+}
+addPoints(event);                                 // 抛异常 → 没记 key → 重投时还会处理
+redis.opsForValue().set(key, "1", 24, TimeUnit.HOURS);
+```
+
+边界：查和写不是原子的。两条重复消息同时被两个消费者拿到，会都通过检查、都加一次积分；加完积分、写 key 之前进程崩了，重投时也会再加一次。
+
+**做法二：先占位，失败时删 key。** 保留原子的 `setIfAbsent`，在异常路径上把占位撤掉：
+
+```java
+String key = "mq:consumed:order:" + event.getOrderId();
+Boolean first = redis.opsForValue().setIfAbsent(key, "1", 24, TimeUnit.HOURS);
+if (Boolean.FALSE.equals(first)) {
+    return;                                       // 重复消息，跳过并正常 ack
+}
+try {
+    addPoints(event);
+} catch (RuntimeException e) {
+    redis.delete(key);                            // 撤掉占位，让重试 / 重投还能处理
+    throw e;                                      // 继续抛，交给重试和死信
+}
+```
+
+边界：并发重复能挡住，但进程在 `setIfAbsent` 之后、处理完之前被直接杀掉时，`catch` 来不及执行，key 留在 Redis 里，重投的消息会被当成重复跳过。可以把占位的 TTL 设短一些（比如处理超时时间的几倍），处理成功后再把它改成长 TTL，缩小这个窗口。
+
+两种做法都只是缩小窗口。要彻底可靠，把「这个订单加过积分」记进和加积分同一个数据库事务里，比如积分流水表对 `order_id` 建唯一索引：重复插入直接失败，加积分和去重一起提交、一起回滚。Redis 这层留作挡掉大部分重复的快速检查。
 
 ## 新问题之二：消费失败 → 重试 + 死信队列
 
@@ -180,10 +229,12 @@ spring:
           enabled: true
           max-attempts: 3        # 最多试 3 次
           initial-interval: 1000ms
-        default-requeue-rejected: false   # 重试耗尽后 reject 不 requeue → 触发死信
+        default-requeue-rejected: false   # 只在关掉重试时起作用，见下文
 ```
 
-注意这是**消费端本地重试**——在同一个进程内重调 listener N 次，**不经过 broker**。所以日志里会看到连续 3 次异常、间隔极短。`default-requeue-rejected: false` 是关键：重试耗尽后，让消息被 reject 且**不**塞回队列，从而触发死信路由。
+注意这是**消费端本地重试**——在同一个进程内重调 listener N 次，**不经过 broker**。所以日志里会看到连续 3 次异常、间隔极短。
+
+重试耗尽后消息去哪，由 `MessageRecoverer` 决定。按 Spring Boot 文档，开了重试时默认用 `RejectAndDontRequeueRecoverer`：reject 且**不**塞回队列，消息从而进入死信路由。所以开了重试以后，`default-requeue-rejected: false` 这一行不是关键，删掉也一样进死信。它管的是另一种情况：关掉重试时，listener 一抛异常，消息默认会被重新入队、无限重投；设成 `false` 才会直接 reject 不重回队列。
 
 **第二步：死信队列（DLQ）**（代码声明）。在消费端声明一个死信交换机（DLX）+ 死信队列（DLQ），并给主队列挂上死信出口参数：
 
@@ -220,14 +271,96 @@ if (event.getProductId() != null && event.getProductId() == 6666L) {
 
 而且**生产者和消费者声明同一个队列时，参数必须完全一致**——两端的 `x-dead-letter-exchange` 配得不一样，任意一端启动都会 406。这就是为什么前面生产者和消费者的 `orderCreatedQueue()` 死信参数要对齐。
 
-## 三者配套，缺一不可
+## 生产端：消息真的发出去了吗
+
+前面讲的都是消费端。标题叫「可靠消息」，还有另一半：生产者 `convertAndSend` 返回了，不等于 broker 收下了；broker 收下了，也不等于它和数据库里的订单对得上。这一节是补充内容，demo 里没有做，示例是我另写的最小版本。
+
+### 1. publisher confirm：确认 broker 收下了
+
+打开 confirm 后，broker 对每条消息回 ack 或 nack；再打开 returns，交换机路由不到任何队列的消息会退回给生产者，而不是被悄悄丢掉：
+
+```yaml
+spring:
+  rabbitmq:
+    publisher-confirm-type: correlated   # broker 收下后异步回 ack / nack
+    publisher-returns: true              # 路由不到队列时退回
+    template:
+      mandatory: true                    # 配合 returns，不可路由的消息退回而不是丢弃
+```
+
+```java
+@Bean
+public RabbitTemplateCustomizer confirmCallbacks() {
+    return template -> {
+        template.setConfirmCallback((correlation, ack, cause) -> {
+            if (!ack) {   // broker 没收下：记下来，交给补发逻辑
+                log.error("消息未被 broker 接收: id={}, cause={}",
+                        correlation == null ? null : correlation.getId(), cause);
+            }
+        });
+        template.setReturnsCallback(returned ->
+                log.error("消息路由不到队列: routingKey={}", returned.getRoutingKey()));
+    };
+}
+```
+
+发送时带上 `CorrelationData`，回调里才知道是哪一条：`rabbitTemplate.convertAndSend(exchange, key, event, new CorrelationData(String.valueOf(orderId)))`。confirm 只说明 broker 收到了；broker 重启后消息还在不在，还要靠持久化的队列和持久化的消息（Spring AMQP 默认发的就是持久化消息）。
+
+### 2. 事务提交之后再发
+
+下单是「写订单表 + 发事件」两件事。如果在本地事务里直接发消息，事务后面回滚了，消息却已经发出去；消费者还可能在事务提交前就收到消息，回头查订单却查不到。Spring 的做法是事务里只发一个应用内事件，等提交后再真正发 MQ：
+
+```java
+@Transactional
+public long createOrder(Long userId, Long productId, int count) {
+    long orderId = orderRepository.create(userId, productId, count);
+    publisher.publishEvent(new OrderCreatedEvent(          // 只是应用内事件，还没发 MQ
+            orderId, userId, productId, count, System.currentTimeMillis()));
+    return orderId;
+}
+
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+public void sendAfterCommit(OrderCreatedEvent event) {    // 本地事务提交成功后才执行
+    rabbitTemplate.convertAndSend(MqConst.ORDER_EXCHANGE, MqConst.ORDER_CREATED_KEY, event);
+}
+```
+
+边界有两条。第一，提交之后、发送之前进程崩了，或者发送失败，消息就丢了。第二，`@TransactionalEventListener` 只认 Spring 的本地事务，不认 Seata 的全局事务。[第 6 篇](/blog/ms-learn/06-seata-at/)的下单是在 `@GlobalTransactional` 里发 MQ 的：方法后面抛异常，库存和订单被 Seata 回滚，消息却已经发出，积分照加。这种情况要等全局事务提交后再发，Seata 提供了全局事务钩子（`TransactionHookManager` 注册 `afterCommit`），或者用下面的本地消息表。
+
+### 3. 本地消息表：发送失败也能补
+
+把「要发的消息」当成业务数据，和订单写在同一个本地事务里。订单在，消息记录就在；再由一个定时任务把没发的消息发出去：
+
+```sql
+CREATE TABLE outbox (
+  id         BIGINT PRIMARY KEY AUTO_INCREMENT,
+  routing    VARCHAR(64) NOT NULL,
+  payload    JSON        NOT NULL,
+  sent       TINYINT     NOT NULL DEFAULT 0,       -- 0 待发 1 已发
+  created_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+```java
+@Scheduled(fixedDelay = 1000)                          // 需要 @EnableScheduling
+public void relayOutbox() {
+    for (OutboxRow row : outboxRepository.findUnsent(100)) {
+        rabbitTemplate.convertAndSend(MqConst.ORDER_EXCHANGE, row.routing(), row.toEvent());
+        outboxRepository.markSent(row.id());           // 发完再标记
+    }
+}
+```
+
+发完、标记之前崩了，这条会被再发一次。所以本地消息表给的是「至少发一次」，重复要靠消费端的幂等兜住，两头是配套的。更稳一点的做法是在 confirm 回调收到 ack 后再标记已发。
+
+## 配套着用，缺一不可
 
 最后强调：MQ 的好处和新问题是**配套**的，不能只享受好处不处理问题：
 
 - **好处**：异步解耦（order 秒回不等下游）、削峰（消费者按自己节奏消费）。
-- **新问题**（同步 RPC 不会有的）：① 消息重复 → 幂等；② 消费失败 → 重试 + DLQ。
+- **新问题**（同步 RPC 不会有的）：① 消息重复 → 幂等；② 消费失败 → 重试 + DLQ；③ 消息可能没发出去，或和数据库对不上 → confirm + 提交后再发 / 本地消息表。
 
-幂等、重试、死信队列三者一起，才构成一个生产可用的消息消费方案。少一个都不完整。
+消费端的幂等、重试、死信队列三者一起，加上生产端的确认和补发，才构成一套可靠的消息方案。少一个都不完整。
 
 ## 小结
 
@@ -236,8 +369,9 @@ if (event.getProductId() != null && event.getProductId() == 6666L) {
 | 为什么用 MQ | 异步解耦、削峰；下单不必等积分 |
 | AMQP 模型 | 生产者→Exchange→(Binding)→Queue→消费者 |
 | 解耦的体现 | 生产者只发给交换机，从不提队列名 |
-| 新问题1：重复 | Redis SETNX 幂等，重复时**静默跳过不抛异常** |
+| 新问题1：重复 | 幂等，重复时**静默跳过不抛异常**；处理失败要撤掉占位，最稳是数据库唯一键 |
 | 新问题2：失败 | 重试上限（本地重试）+ 死信队列隔离毒消息 |
+| 生产端 | publisher confirm；事务提交后再发；本地消息表补发 |
 | 易错坑 | 队列参数创建后不可改，两端必须完全一致 |
 
 服务能找到彼此、能通信、能扛故障、能保证事务、能异步解耦——一套完整的微服务雏形成型了。但最后还有一个绕不开的问题：**系统这么多服务、这么多异步链路，出了问题怎么定位？** 最后一篇讲可观测性。

@@ -1,13 +1,13 @@
 ---
-title: "给 RAG 搭一套评估：53 题标准答案集 + 检索/生成双侧 6 维 RAGAS"
-description: "前面几篇都在说『我觉得检索变好了』，但到底好多少得用数字说话。这篇扩评估集——从 26 题弱标注扩到 53 题带标准答案（覆盖口语化/多跳/无答案），补齐 context recall / answer correctness 两个需要标准答案的指标，凑成检索+生成双侧 6 维评估。实测混合检索相对纯向量 faithfulness 0.85→0.95、answer relevancy 0.37→0.53。"
+title: "给 RAG 搭评估：53 题答案集就绪，26 题跑通 3 个指标"
+description: "评估集从 26 题弱标注扩到 53 题带标准答案，搭好 5 个 RAGAS 指标加 Hit@K 的框架。实际跑出数字的是 26 题上的 3 个指标：混合检索让 faithfulness 从 0.85 升到 0.95，另外两个指标还没出数。"
 pubDate: 2026-06-26
 tags: ["Java", "Spring Boot", "RAG", "RAGAS", "评估", "LLM-as-Judge"]
 series: "rag"
 seriesLabel: "RAG 项目"
 ---
 
-> 一句话总结：前面几篇都在说「我觉得检索变好了」，但到底好多少，得用数字说话。这篇做两件事：把评估集**从 26 题弱标注扩到 53 题带标准答案**（覆盖规范 FAQ / 口语化 / 多跳 / 无答案四类），补齐 **context recall / answer correctness** 两个需要标准答案的指标，凑成**检索 + 生成双侧 6 维 RAGAS 评估**。实测混合检索相对纯向量 faithfulness 0.85→0.95、answer relevancy 0.37→0.53。
+> 一句话总结：前面几篇都在说「我觉得检索变好了」，但到底好多少，得用数字说话。这篇做两件事：把评估集**从 26 题弱标注扩到 53 题带标准答案**（覆盖规范 FAQ / 口语化 / 多跳 / 无答案四类），补上 **context recall / answer correctness** 两个需要标准答案的指标，凑成检索、生成双侧 5 个 RAGAS 指标，再加 Java 侧的 Hit@K。真正跑出数字的只有 26 题上的 3 个 reference-free 指标：混合检索相对纯向量 faithfulness 0.85→0.95、answer relevancy 0.37→0.53；53 题和另外两个指标还没跑。
 
 ## 0. 起因：「我觉得变好了」不算数
 
@@ -39,9 +39,9 @@ seriesLabel: "RAG 项目"
 
 这个 schema 测试是我事后觉得很值的一笔：评估集是会被手改的数据，一旦有人加了道题、引用了一篇不存在的文档，整个评测就静默地错了。有它守着，评估集烂不了。
 
-## 2. 补齐双侧 6 维指标
+## 2. 补齐双侧指标：5 个 RAGAS 加 Hit@K
 
-有了标准答案，就能补上缺的两个 reference-based 指标，凑齐 6 维：
+有了标准答案，就能补上缺的两个 reference-based 指标，凑齐 5 个 RAGAS 指标，再加上 Java 侧不依赖判官的 Hit@K 锚点：
 
 | 维度 | 指标 | 侧 | 要标准答案 | 含义 |
 | --- | --- | --- | --- | --- |
@@ -88,26 +88,29 @@ reference-free 三指标我已经用真实判官跑出来了（判官 `Qwen2.5-7
 读出来几个结论：
 
 - **hybrid 相对 vector 全面提升**：faithfulness 0.854→0.948、answer_relevancy 0.370→0.526、context_precision 0.653→0.843。混合检索召回了更相关的上下文，答案于是更忠实、也更切题——这就给前面「混合检索值得做」补上了数字证据。
+- **answer_relevancy 整体偏低**（vector 约 0.37）：可能的原因是无答案题。这类题的正确回答是兜底句「根据现有资料无法回答。」，它和问题的语义相似度天然低，在这个指标上会拉低平均分。这是推测：前提是这 26 题里有无答案题，我没按题型拆开算过，待核。
 - **rerank 把 context_precision 顶到最高 0.889**：精排把最相关的块顶到最前面，这正是它该干的。faithfulness / relevancy 略低于 hybrid，在小样本上属判官波动范围。
+
+这组数字和 [RAG 评估体系](/blog/llm-learn/03-rag-evaluation-ragas/) 那篇里同样 26 题的第一次评估对不上（那篇 vector 的 faithfulness 是 0.942、context_precision 是 0.967），以本篇为准，那篇也加了更正。
 
 ## 4. 诚实说：还有两块没跑完
 
 按我这个系列一贯的规矩，没跑的就不编：
 
-- **context_recall / answer_correctness 代码就绪，但还没出数值**。它们需要一次判官 LLM 联网评测，我本机当时没有可用的判官 API。复现命令就一行 `python eval/ragas_eval.py`，它会自动 join 标准答案、跑满 6 个指标。
-- **`FIXED / MARKDOWN+parent / +contextual` 三方案对比**还没填。这依赖前面分块那篇的开关，按方案各跑一遍采集 + RAGAS 才能填进同一张 6 指标表。表框架已经在 `docs/eval-metrics.md` 摆好了，就差真 API 环境下重跑一遍。
+- **context_recall / answer_correctness 代码就绪，但还没出数值**。它们需要一次判官 LLM 联网评测，我本机当时没有可用的判官 API。复现命令就一行 `python eval/ragas_eval.py`，它会自动 join 标准答案、跑满 5 个 RAGAS 指标。
+- **`FIXED / MARKDOWN+parent / +contextual` 三方案对比**还没填。这依赖前面分块那篇的开关，按方案各跑一遍采集 + RAGAS 才能填进同一张指标表。表框架已经在 `docs/eval-metrics.md` 摆好了，就差真 API 环境下重跑一遍。
 
-把「待重跑」明明白白标出来，而不是拿现成的三指标硬凑成六指标——这是我觉得做评估最该守的底线。评估的意义就是诚实，自己骗自己的数字一点用都没有。
+把「待重跑」明明白白标出来，而不是拿现成的三个指标硬凑成一整张表——这是我觉得做评估最该守的底线。评估的意义就是诚实，自己骗自己的数字一点用都没有。
 
 ## 5. 写在最后
 
 这套评估搭下来，我对「怎么衡量一个 RAG 好不好」的理解清楚多了：
 
 - **评估集是地基**，质量比数量重要——53 题带标准答案、还分了四类题型、有 schema 测试守门，比 200 题没标准答案的有用得多。
-- **指标要双侧**——只看生成侧（答得好不好）会漏掉检索侧（根本没找全），反之亦然。6 维 + Java 侧 Hit@K 锚点，检索和生成都覆盖到了。
+- **指标要双侧**——只看生成侧（答得好不好）会漏掉检索侧（根本没找全），反之亦然。5 个 RAGAS 指标加 Java 侧 Hit@K 锚点，检索和生成都覆盖到了（目前只跑出其中 3 个）。
 - **采集和评判解耦**——把贵的（真 API 采集）和常变的（标准答案）分开，省下大量重跑成本。
 
-这也是这一轮 RAG 升级系列的收尾。从[混合检索+精排](/blog/rag-pgvector-migration/)、[分块/父块/Contextual](/blog/rag-chunking-parent-contextual/)、[多模态](/blog/rag-multimodal/)、[多轮会话](/blog/rag-conversational/)，到这篇评估——每一步都尽量做到「能讲清为什么这么选，能用数字（或诚实标注的待测）说话」。对我来说，这种把 demo 一步步做成像样系统、并且能量化验证的过程，比堆功能本身收获大得多。
+这也是这一轮 RAG 升级系列的收尾。从[混合检索+精排](/blog/llm-learn/02-rag-retrieval-quality/)、[分块/父块/Contextual](/blog/rag-chunking-parent-contextual/)、[多模态](/blog/rag-multimodal/)、[多轮会话](/blog/rag-conversational/)，到这篇评估——每一步都尽量做到「能讲清为什么这么选，能用数字（或诚实标注的待测）说话」。对我来说，这种把 demo 一步步做成像样系统、并且能量化验证的过程，比堆功能本身收获大得多。
 
 ---
-*配套代码：`questions.json`（53 题带 groundTruthAnswer）、`EvalSetSchemaTest`、`eval/ragas_eval.py`（6 指标 + judge/数据集解耦）、`eval/test_ragas_eval.py`（离线单测）。完整指标体系与对比表见仓库 `docs/eval-metrics.md`。*
+*配套代码：`questions.json`（53 题带 groundTruthAnswer）、`EvalSetSchemaTest`、`eval/ragas_eval.py`（5 个 RAGAS 指标 + judge/数据集解耦）、`eval/test_ragas_eval.py`（离线单测）。完整指标体系与对比表见仓库 `docs/eval-metrics.md`。*

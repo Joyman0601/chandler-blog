@@ -101,7 +101,8 @@ boolean exists = mapper.exists(Wrappers.<BizArea>lambdaQuery()
 我的模块里有个细节挺能说明「联合开发」的味道：模块里**并存两个顶层包**——一个是带教先写的，一个是我写的。主类上于是要显式声明扫描两个包：
 
 ```java
-@SpringBootApplication(scanBasePackages = {"org.dromara.inspection", "org.dromara.system"})
+// org.dromara.xxx 代表业务模块包，已脱敏
+@SpringBootApplication(scanBasePackages = {"org.dromara.xxx", "org.dromara.system"})
 ```
 
 > 默认情况下 Spring Boot 只扫描主类所在包及其子包。两个人各起一个顶层包，就必须手动把两个都加进 `scanBasePackages`，否则**另一个人的 Bean 全都不会被注册**，启动起来一切正常、调接口却 404 或找不到 Bean。

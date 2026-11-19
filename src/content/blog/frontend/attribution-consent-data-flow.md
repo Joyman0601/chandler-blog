@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 0226f61b0940c48285e999574e32b1980698f13802ddc2cc31c8f82e7c21547a
+# import-articles-sha256: 0ee3f04f772df5598138203435b3cb2bd2ea87ed5b291567f714d88aa75356c9
 # Imported by scripts/import-articles.mjs from posts/frontend/attribution-consent-data-flow.md
 # Source date: 2026-11-03
 title: "统计与来源归因：沿数据流理解同意控制"
@@ -49,6 +49,31 @@ Clarity 提供行为分析、热力图与会话回放；Google Ads 的网站转�
 
 `first-touch` 可以表示最早记录的来源，`last-touch` 可以表示转化前最近的明确来源。直接访问是否覆盖旧来源、跨设备如何处理，都要由具体规则决定，不能只凭字段名推断。
 
+下面是一种写法：进站时只把来源参数记在内存里，同意统计以后才落到持久存储并上报。它用到第 3 节的 `readAttribution` 和 `KEY`：
+
+```js
+// 演示：进站时来源参数只放在内存里；同意统计以后才写入持久存储并上报
+let pendingSource = null
+
+function captureSource(url = location.href) {
+  const p = new URL(url).searchParams
+  const source = p.get('utm_source')
+  if (source) pendingSource = { source, medium: p.get('utm_medium'), at: Date.now() }
+}
+
+function onAnalyticsGranted() {
+  if (!pendingSource) return
+  const rec = readAttribution() ?? { visitorId: crypto.randomUUID() }
+  rec.firstTouch ??= pendingSource                    // 最早的明确来源只记一次
+  rec.lastTouch = pendingSource                       // 最近一次明确来源
+  localStorage.setItem(KEY, JSON.stringify(rec))
+  navigator.sendBeacon('/collect', JSON.stringify({ visitorId: rec.visitorId, ...pendingSource }))
+  pendingSource = null
+}
+```
+
+内存里的值整页跳转后就没了。要跨页面保留，放不放进会话存储，也是许可策略要定的事。
+
 这类数据可以有业务价值。判断它是否影响核心功能，还要看调用链：少了来源信息，登录是否仍能成功？分析发送失败时，是否会拖住主请求？某些显式邀请输入是否还承担独立的权益确认用途？
 
 因此要把用途拆开核，不因同在一份存储里就一起删除，也不因业务希望保留就把所有用途归成一种。本文只讨论怎样查清工程事实，具体许可与告知要求仍需按实际场景确定。
@@ -65,7 +90,33 @@ Clarity 提供行为分析、热力图与会话回放；Google Ads 的网站转�
 
 这个区别会改变修法。如果目标是不再生成对应标识，单纯清空旧值不够；应核所有可能补值和写回的调用方。辅助方法是否应该只读取，或者是否明确接收当前许可状态，也需要一并讨论。
 
-查找时不要只搜 `setItem`。写入可能藏在名为 `get`、`ensure`、`sync` 的封装里，浏览器和后端也可能各有一套入口。函数名字是线索，实际副作用才是依据。
+一种拆法是让读取函数只读，补编号的函数显式接收许可状态：
+
+```js
+// 演示：读取函数只读；补编号的函数显式接收许可状态，不许可就不生成、不写回
+const KEY = 'attribution'
+
+function readAttribution() {
+  const raw = localStorage.getItem(KEY)
+  return raw ? JSON.parse(raw) : null                 // 没有就返回 null，不顺手补
+}
+
+function ensureVisitorId(consent) {
+  if (!consent.analytics) return null                 // ← 拒绝状态下到此为止
+  const rec = readAttribution() ?? { visitorId: crypto.randomUUID() }
+  localStorage.setItem(KEY, JSON.stringify(rec))
+  return rec.visitorId
+}
+
+// 登录路径：拿到编号就带上，拿不到登录照常进行
+function loginPayload(credentials, consent) {
+  return { ...credentials, visitorId: ensureVisitorId(consent) }
+}
+```
+
+登录路径照常调用 `loginPayload`。拒绝状态下拿到的编号是 `null`，存储保持为空。
+
+查找时不要只搜 `setItem`。写入可能藏在名为 `get`、`ensure`、`sync` 的封装里，浏览器和后端也可能各有一套入口。函数名字是线索，实际副作用才是依据。怎样给函数记下它真正承担的职责，另写在[函数职责记录](/blog/methods/function-contract-impact-checks/)里。
 
 ## 4. 分类接受：共同入口不等于共同用途
 
@@ -92,6 +143,41 @@ Google 官方也区分支持内置同意检查的标签，以及需要额外配�
 
 一个稳妥的设计判断是：调度任务时检查一次，真正执行时再检查最新状态；可以取消的队列及时取消，并对可停止的订阅、监听或供应商接口执行相应操作。哪些旧记录要清理，要按已确定的策略处理，不能拿任意删存储代替设计。
 
+把这几条写成最小代码，大致是这样：
+
+```js
+// 演示：同意前不加载统计脚本；排队任务执行时再查一次；撤回时取消队列
+const consent = { analytics: false }
+const queue = new Set()
+
+function grantAnalytics() {
+  consent.analytics = true
+  if (document.querySelector('script[data-analytics]')) return
+  const s = Object.assign(document.createElement('script'), { src: '/analytics.js', async: true })
+  s.dataset.analytics = ''
+  document.head.append(s)                             // 首次就拒绝时，这一步从未发生
+}
+
+function schedule(event, delay = 2000) {
+  if (!consent.analytics) return                      // 调度时查一次
+  const id = setTimeout(() => {
+    queue.delete(id)
+    if (!consent.analytics) return                    // 执行时再查最新状态
+    navigator.sendBeacon('/collect', JSON.stringify(event))
+  }, delay)
+  queue.add(id)
+}
+
+function revokeAnalytics() {
+  consent.analytics = false
+  for (const id of queue) clearTimeout(id)            // 等待中的任务直接取消
+  queue.clear()
+  // 已经运行的第三方脚本：调用它自己提供的停止接口（名字因产品而异）
+}
+```
+
+首次就拒绝时，`grantAnalytics` 从未调用，脚本不加载、队列为空。先接受再撤回时，`revokeAnalytics` 清掉还没执行的任务；执行时的那次检查兜住已经出队、正在跑的回调。
+
 还要区分「不写 Cookie」与「不发送数据」。Google 的 basic 模式会在许可之前阻挡标签；advanced 模式可以在拒绝存储时发送无 Cookie 的测量请求。因此验收目标如果是「此前零统计外发」，仅看到 Cookie 为空不够。[两种模式的区别](https://developers.google.com/tag-platform/security/concepts/consent-mode#basic-versus-advanced-consent-mode)。
 
 后端独立发送也是同样的问题。浏览器停止某个脚本，不会自动关闭服务器的分析路径。需要核对实际调用方、运行开关，以及用户选择怎样传到那里；源码里默认关闭，也不能直接写成生产正在关闭。
@@ -102,7 +188,7 @@ Google 官方也区分支持内置同意检查的标签，以及需要额外配�
 
 我会分别确认：记录何时写入、是否带过期信息、每次读取是否判断、是否有主动清理，以及服务器副本有没有独立保存期。只找到一个天数，无法回答整条链路保存多久。
 
-用途、保留时间与实际运行配置之间，需要有明确对应。代码提交可以解释当初为什么加入功能；当前源码可以说明存在什么路径；后台配置和实际请求，才支持它现在是否启用。三种证据不要合成一句「已确认」。
+用途、保留时间与实际运行配置之间，需要有明确对应。代码提交可以解释当初为什么加入功能；当前源码可以说明存在什么路径；后台配置和实际请求，才支持它现在是否启用。三种证据不要合成一句「已确认」，来源怎么分级见[信息来源分三级](/blog/methods/source-tiers-meeting-transcript/)。
 
 ## 7. 一份沿数据流执行的检查清单
 

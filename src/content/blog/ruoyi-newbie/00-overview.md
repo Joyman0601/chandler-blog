@@ -42,7 +42,7 @@ seriesLabel: "微服务新人踩坑实录"
 | 04 | [代码分层与实现模式](/blog/ruoyi-newbie/04-code-patterns/) | DDD 分层、避免 N+1、全量覆盖、租户唯一校验、翻译注解 |
 | 05 | [字典枚举与 Excel 导入导出的坑](/blog/ruoyi-newbie/05-dict-and-excel/) | 字典两套机制、`char(1)` 约定、导入反解析、强类型炸批 |
 | 06 | [雪花 ID 在前端精度丢失](/blog/ruoyi-newbie/06-snowflake-id-precision/) | 19 位 ID 超过 JS 安全整数，列表有数据但详情查不到 |
-| 07 | [合并分支引发的依赖雪崩](/blog/ruoyi-newbie/07-dependency-avalanche/) | profile 污染、`-am`、classpath 过长、端口前缀、前端代理 |
+| 07 | [同步主分支后的连锁故障](/blog/ruoyi-newbie/07-dependency-avalanche/) | profile 污染、`-am`、classpath 过长、端口前缀、前端代理 |
 | 08 | [协作规范与经验总结](/blog/ruoyi-newbie/08-collaboration-and-summary/) | 接口文档口径、权限串、和带教协作、整体复盘 |
 
 ## 这个系列适合谁

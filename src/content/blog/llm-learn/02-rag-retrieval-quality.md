@@ -36,6 +36,36 @@ seriesLabel: "大模型应用岗学习"
 
 这样无论两路的打分尺度差多少，都能公平融合。
 
+下面用前面订单号的例子演示：向量把编号相近的 `A12346` 排第一、正确的 `A12345` 只排第四，BM25 把 `A12345` 排第一。两路排名按 `1/(k+r)` 求和后重排：
+
+```python
+def rrf(rankings, k=60):
+    """rankings: 多路检索结果，每路是按相关度从高到低排好的文档 id 列表"""
+    scores = {}
+    for ranking in rankings:
+        for r, doc in enumerate(ranking, start=1):  # r 从 1 开始
+            scores[doc] = scores.get(doc, 0) + 1 / (k + r)
+    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+vector = ["A12346", "doc_b", "doc_c", "A12345"]  # 向量：语义近的编号排第一
+bm25 = ["A12345", "doc_c", "doc_d"]              # BM25：字面完全命中排第一
+
+for doc, score in rrf([vector, bm25]):
+    print(f"{doc:7} {score:.5f}")
+```
+
+运行输出：
+
+```text
+A12345  0.03202
+doc_c   0.03200
+A12346  0.01639
+doc_b   0.01613
+doc_d   0.01587
+```
+
+`A12345` 和 `doc_c` 两路都出现，得分接近单路第一名的两倍，排到了最前面；只在一路里排第一的 `A12346` 落到第三。RRF 奖励的是「多路都认为相关」。
+
 ## 重排：Bi-Encoder vs Cross-Encoder
 
 这是检索里最值得讲清的一组概念。
@@ -52,25 +82,36 @@ seriesLabel: "大模型应用岗学习"
 - **chunk 太大**：一块里塞太多内容，语义被稀释，匹配不准。
 - **chunk 太小**：句子被腰斩，**语义不完整**，检索到也用不了。
 
-一个好用的策略是**父子分块（small-to-big）**：用小块去检索（定位精准、命中准），但喂给 LLM 时返回小块所属的大块（上下文完整）。兼顾了「准」和「全」。
+一个好用的策略是**父子分块（small-to-big）**：用小块去检索（定位精准、命中准），但喂给 LLM 时返回小块所属的大块（上下文完整）。兼顾了「准」和「全」。在项目里把分块做成可插拔策略、落地独立父块的过程，见 [可插拔分块、独立父块、Contextual Retrieval](/blog/rag-chunking-parent-contextual/)。
 
 ## 中文 Embedding 选型
 
-中文 RAG 的 embedding 主流首选是 **bge（BAAI）系列**：开源、可私有化部署，而且配套有 bge-reranker，召回和精排能用同一家。
+中文 RAG 的 embedding 主流首选是 **bge（BAAI）系列**：开源、可私有化部署，而且配套有 bge-reranker，召回和精排能用同一家。主线项目用的是 bge-m3，重排用 bge-reranker-v2-m3。按模型卡，bge-m3 的稠密向量是 1024 维，输入最长 8192 token，支持 100 多种语言，同时提供稠密、稀疏、多向量三种检索方式。
 
 选型时主要看几个维度：
 
-- MTEB 中文榜上的效果。
-- 向量维度（影响存储和检索速度）。
-- 能否私有化（合规要求）。
-- 中文支持程度。
-- 成本与合规。
+- **效果**：先看 MTEB 中文榜，再用自己的评估集跑一遍，榜单只是起点。
+- **向量维度**：影响存储和检索速度，还要和向量库的列定义一致。换维度不同的模型，向量库的列和索引都要跟着改。
+- **换模型的成本**：不同模型产出的向量不在同一个空间，不能混着比。换模型就要把全部文档重新向量化。
+- **能否私有化**：有合规要求、数据不能出内网时，只能选开源可自部署的模型。
+- **接口形态**：很多平台都提供兼容 OpenAI 的 `/v1/embeddings` 接口，换平台只改 base URL、key 和模型 ID。注意同一个开源模型在不同平台上的 ID 写法不同，比如有的平台要带组织前缀，写成 `BAAI/bge-m3`，以平台文档为准。
+- **配套重排**：同一家有没有对应的 reranker，召回和精排能不能一起换。
+- **访问延迟和成本**：调云端接口要算上网络往返和按 token 计的费用；自部署要算显卡和运维。
+
+调用形态以 OpenAI 兼容接口为例，请求头要带 `Content-Type`：
+
+```bash
+curl https://<平台地址>/v1/embeddings \
+  -H "Authorization: Bearer $EMBEDDING_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "<平台上的模型 ID>", "input": ["这是一段中文文本"]}'
+```
 
 ## 一次完整的检索改造
 
 把上面拼起来，一次典型的检索升级是这样的：
 
-1. 在原有向量检索旁边接入 BM25，两路结果用 RRF 融合 —— 得到混合检索。
+1. 在原有向量检索旁边接入 BM25，两路结果用 RRF 融合 —— 得到混合检索。向量这一路从内存换到 pgvector 的过程见 [把内存里的向量库换成 pgvector](/blog/rag-pgvector-migration/)。
 2. 混合检索召回几百条候选后，接一个 Cross-Encoder（如 bge-reranker）重排，取 top-k 喂给 LLM。
 3. 工程上给重排做失败降级：rerank 调用失败时自动退回 RRF 融合的顺序，不报错、不中断链路。
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: ed7c082cc81ebf1b0c08f96f26fa1d882a131c366c72784f42635f584bdae244
+# import-articles-sha256: 40521f662be3fec04745e208edc8af5e8373090ef2680bee1d667aeea03b787a
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/stream-terminal-usage-eof-lifecycle.md
 # Source date: 2026-11-01
 title: "流式收尾：终态、用量、EOF 和保活要分开"
@@ -39,6 +39,55 @@ SSE（Server-Sent Events，服务端发送事件）用空行划分事件，冒�
 
 如果保活先拿到通知，主循环可能继续等待；如果主循环拿到通知，保活又可能迟迟不退出。共享一个名字叫 stop 的通道，不代表具备广播语义。
 
+下面是一个能跑的对照。两个观察者各等 100 毫秒，先用一次发送通知，再换成关闭通道：
+
+```go
+func watch(name string, done <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+	select {
+	case <-done:
+		fmt.Println("  ", name, "收到结束")
+	case <-time.After(100 * time.Millisecond):
+		fmt.Println("  ", name, "没收到，还在等")
+	}
+}
+
+// 关闭可以广播；sync.Once 保证 EOF 和读错误两条路径都调用也只关一次
+type doneSignal struct {
+	once sync.Once
+	ch   chan struct{}
+}
+
+func (d *doneSignal) Close() { d.once.Do(func() { close(d.ch) }) }
+
+func main() {
+	var wg sync.WaitGroup
+	stop := make(chan struct{})
+	wg.Add(2)
+	go watch("主循环", stop, &wg)
+	go watch("保活", stop, &wg)
+	stop <- struct{}{} // 错误：一次发送只被一个接收方拿走
+	wg.Wait()
+
+	d := &doneSignal{ch: make(chan struct{})}
+	wg.Add(2)
+	go watch("主循环", d.ch, &wg)
+	go watch("保活", d.ch, &wg)
+	d.Close() // 读到 EOF
+	d.Close() // 读错误路径也调了一次，不会 panic
+	wg.Wait()
+}
+```
+
+我连跑三次，输出都一样：前半段只有一个观察者收到，后半段两个都收到。我这台机器上每次都是后启动的保活抢到，语言并不保证是谁，这正是竞争消费：
+
+```text
+   保活 收到结束
+   主循环 没收到，还在等
+   保活 收到结束
+   主循环 收到结束
+```
+
 我现在会区分事件通知和生命周期关闭。读取完成用专属信号，所有观察者只读；实际停止工作由明确的取消路径负责。关闭通道可以广播，但关闭权应唯一，不能让多个协程各自尝试关闭。
 
 还要看等待依赖：如果「读取完成」要等一个仍在等待的保活协程退出，读取明明已经 EOF，也会被后者拖住。通知应该在真正的读取结束点发出，资源汇合另行完成。
@@ -67,7 +116,53 @@ SSE（Server-Sent Events，服务端发送事件）用空行划分事件，冒�
 
 ![假上游发业务终态与完整用量，再持续发送注释、保持响应体不 EOF；网关应在应用宽限结束后返回，假上游观察到取消后退出 handler](figures/stream-terminal-usage-eof-lifecycle-hanging-fixture.svg)
 
-测试同时观察下游何时返回、上游是否被取消、响应体是否关闭、用量是否保留。只给整个测试设一个超时，跑完没挂，不足以证明是目标结束条件生效。
+用 `httptest` 写这个夹具不到 30 行。`readUntilSettled` 代表被测的读取函数，按第 3 节的规则实现：见到终态和用量后开始宽限，注释不刷新宽限：
+
+```go
+func TestEndsAfterGraceWithoutEOF(t *testing.T) {
+	canceled := make(chan struct{})
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f := w.(http.Flusher)
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "data: {\"done\":true,\"usage\":{\"in\":3,\"out\":5}}\n\n")
+		f.Flush()
+		tick := time.NewTicker(20 * time.Millisecond)
+		defer tick.Stop()
+		for {
+			select {
+			case <-r.Context().Done(): // 只有网关断开，handler 才退出
+				close(canceled)
+				return
+			case <-tick.C:
+				fmt.Fprint(w, ": ping\n\n") // 有字节，没有业务进展
+				f.Flush()
+			}
+		}
+	}))
+	defer up.Close()
+	defer up.CloseClientConnections() // 先于 Close 执行：被测函数挂住时，Close 也不会跟着卡死
+
+	got := make(chan string, 1)
+	go func() { u, _ := readUntilSettled(up.URL, 100*time.Millisecond); got <- u }()
+	select {
+	case u := <-got:
+		if u != `{"in":3,"out":5}` {
+			t.Fatalf("用量丢了: %q", u)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("1 秒内没返回")
+	}
+	select {
+	case <-canceled:
+	case <-time.After(time.Second):
+		t.Fatal("上游没观察到取消")
+	}
+}
+```
+
+`httptest.Server.Close` 会等所有在途请求结束，handler 又只在请求取消时退出。被测函数要是一直不断开，测试会卡在 `Close` 里，看不到失败信息；所以先断开客户端连接。
+
+我按第 3 节的规则写了一个最小读取函数，这个测试约 100 毫秒返回，用量完整，上游观察到取消，带 `-race` 连跑 20 次都通过。再把被测函数换成只等 EOF 的写法，测试在 1 秒处失败，报「1 秒内没返回」。夹具能区分这两种实现，才说明它测的是主动收尾。
 
 ## 5. 慢传用量要故意晚于短宽限
 

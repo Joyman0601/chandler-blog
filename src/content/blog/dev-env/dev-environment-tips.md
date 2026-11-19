@@ -32,12 +32,12 @@ Maven Profile 是一套独立的构建配置块，常见的有 `dev`（开发）
 mvn clean package -Pdev,local
 ```
 
-Maven 会**合并**这些 profile 的配置，**后定义的覆盖前面的同名属性**：
+Maven 会合并这些 profile 的配置。同名属性冲突时，**POM 里后声明的 profile 覆盖先声明的**，和 `-P` 后面写的顺序无关。Maven 官方文档「Profile Order」一节写明：同一个 POM 里多个 profile 同时激活时，后定义的优先，和 profile id、激活顺序都无关。
 
 | 情况 | 结果 |
 |------|------|
 | 两个 profile 设不同属性 | 都保留 |
-| 两个 profile 设相同属性（如 `db.url`） | 后启用的覆盖前者 |
+| 两个 profile 设相同属性（如 `db.url`） | POM 里后声明的覆盖先声明的；上例中 `-Pdev,local` 和 `-Plocal,dev` 结果都是 `localdb` |
 | 不同依赖版本差异大 | 可能编译成功但运行异常 |
 
 **结论**：同时勾选不会报错，但可能造成配置互相覆盖。**建议每次只启用一个 profile**。Spring Boot 项目通常无需多 profile 同时打包，运行时指定即可：
@@ -100,11 +100,11 @@ wslpath "C:\Users\你\Desktop"            # Windows → WSL: /mnt/c/Users/你/De
 
 ## 四、管理员模式 CMD/PowerShell 与流式输出「行重叠」
 
-现象：在管理员模式终端里看流式输出，输出行重叠、闪烁、覆盖错乱。
+现象：在管理员模式终端里看流式输出，输出行重叠、闪烁、覆盖错乱。管理员模式下代理表现也不一样，那是另一个问题，见 [Windows 代理之谜](/blog/dev-env/windows-proxy-mystery/)。
 
-**原因**：流式输出（streaming）会用 ANSI/VT100 控制码（如回车 `\r`、清行 `\x1b[K`）原地刷新当前行。而管理员模式的传统 CMD/PowerShell 可能**关闭或降级了 VT（Virtual Terminal）序列解析**，控制符没被正确理解，旧文本没被清除，新内容叠上去：
+**原因**：流式输出（streaming）会用 ANSI/VT100 控制码（如回车 `\r`、清行 `\x1b[K`）原地刷新当前行。传统控制台窗口（conhost）里，VT（Virtual Terminal）序列解析要由程序自己调用 `SetConsoleMode` 打开 `ENABLE_VIRTUAL_TERMINAL_PROCESSING`，或者在注册表里全局打开，和是不是管理员无关。程序和宿主窗口都没打开时，控制符没被正确理解，旧文本没被清除，新内容叠上去：
 
-```
+```text
 我
 我懂
 我懂了
@@ -120,4 +120,4 @@ wslpath "C:\Users\你\Desktop"            # Windows → WSL: /mnt/c/Users/你/De
 | 用 **WSL / Linux bash** | 原生 VT 控制台 |
 | 必须用传统 CMD 时 | 开启注册表 VT 支持：<br>`reg add HKCU\Console /f /v VirtualTerminalLevel /t REG_DWORD /d 1` |
 
-**一句话**：管理员模式 CMD/PowerShell 会禁用或降级 ANSI/VT 序列解析，导致流式刷新指令无法正确渲染，从而行叠加、闪烁。日常调试流式输出请优先用 Windows Terminal / VS Code / IDEA 终端。
+**一句话**：行叠加、闪烁是因为当前控制台没有开 VT 序列解析，流式刷新的控制符没被渲染。管理员模式下更容易碰到，我的推测是提权后打开的是传统 conhost 窗口，而不是平时用的 Windows Terminal，这一点没有单独验证。日常调试流式输出请优先用 Windows Terminal / VS Code / IDEA 终端。

@@ -11,17 +11,20 @@ seriesLabel: "JeecgBoot 项目"
 
 ## 一、核心设计：同一套业务代码，两种运行模式
 
-JeecgBoot 微服务最精妙的地方不是用了哪些框架，而是一个工程上的设计决策：**业务代码对“我在单体里跑还是微服务里跑”完全无感知**。
+JeecgBoot 微服务最精妙的地方不是用了哪些框架，而是一个工程上的设计决策：**业务代码对「我在单体里跑还是微服务里跑」完全无感知**。
 
 实现方式是**接口 + 两套实现**，核心接口是 `ISysBaseAPI`。
 
 ```text
 jeecg-system-api/
-├── jeecg-system-local-api/    ← 单体模式
-│   └── ISysBaseAPI.java       （普通 Java 接口，无 HTTP 注解）
-└── jeecg-system-cloud-api/    ← 微服务模式
-    └── ISysBaseAPI.java       （@FeignClient，带 HTTP 注解）
+├── jeecg-system-local-api/
+│   └── ISysBaseAPI.java
+└── jeecg-system-cloud-api/
+    └── ISysBaseAPI.java
 ```
+
+- `jeecg-system-local-api`：单体模式用，普通 Java 接口，没有 HTTP 注解；
+- `jeecg-system-cloud-api`：微服务模式用，`@FeignClient`，带 HTTP 注解。
 
 两个模块的接口同名、同包：`org.jeecg.common.system.api.ISysBaseAPI`。
 
@@ -54,23 +57,18 @@ public interface ISysBaseAPI extends CommonAPI {
 
 ## 二、微服务各组件全貌
 
-```text
-前端 (3100)
-  │
-  ▼
-Gateway (9999)           ← Spring Cloud Gateway，Webflux 响应式
-  │  ↕ 服务发现
-  ▼
-Nacos (8848)             ← 服务注册 + 配置中心
-  │
-  ├── jeecg-system        ← 系统服务（用户/角色/权限/字典）
-  ├── jeecg-demo          ← Demo 独立微服务
-  │
-  └── jeecg-visual/
-       ├── Monitor (9111) ← Spring Boot Admin
-       ├── Sentinel (9000)← 流控熔断控制台
-       └── XXL-Job (9080) ← 分布式任务调度
-```
+按请求经过的顺序分层：
+
+1. **前端**（3100）
+2. **Gateway**（9999）：Spring Cloud Gateway，基于 WebFlux 的响应式网关，靠 Nacos 做服务发现
+3. **Nacos**（8848）：服务注册 + 配置中心
+4. **业务服务**
+   - `jeecg-system`：系统服务（用户、角色、权限、字典）
+   - `jeecg-demo`：Demo 独立微服务
+5. **周边组件**（`jeecg-visual/`）
+   - Monitor（9111）：Spring Boot Admin
+   - Sentinel（9000）：流控熔断控制台
+   - XXL-Job（9080）：分布式任务调度
 
 两种启动方式对比：
 
@@ -88,11 +86,11 @@ Nacos (8848)             ← 服务注册 + 配置中心
 
 路由配置不是写死在 YAML 里的，由 `DynamicRouteLoader` 运行时加载，支持热更新：
 
-```text
-dataType = nacos    → 从 Nacos Config 读路由 JSON，并注册监听器（配置变更自动推送）
-dataType = database → 从 Redis 读路由（由 jeecg-system 服务写入）
-dataType = yml      → 静态路由（写死在 application.yml）
-```
+| `dataType` | 路由从哪来 |
+|---|---|
+| `nacos` | 从 Nacos Config 读路由 JSON，并注册监听器，配置变更自动推送 |
+| `database` | 从 Redis 读路由，由 `jeecg-system` 服务写入 |
+| `yml` | 静态路由，写死在 `application.yml` |
 
 路由示例（最终形态）：
 
@@ -115,7 +113,7 @@ predicates:
 
 把 Gateway 自身的域名+端口传给下游服务，用于生成正确的文件下载等绝对 URL。
 
-`X-Access-Token` 本身不需要在 Filter 里处理——Gateway 配置了 `allowed-headers: "*"`，浏览器发来的所有 Header 都被自动转发给下游服务。
+`X-Access-Token` 本身不需要在 Filter 里处理：Spring Cloud Gateway 默认就把请求头原样转发给下游服务，Filter 只是在此基础上追加了 `X_GATEWAY_BASE_PATH`。跨域配置里的 `allowed-headers: "*"` 管的是浏览器跨域预检时允许带哪些头，和转发无关。
 
 ## 四、认证链路全流程
 
@@ -129,7 +127,7 @@ header . payload . signature
 例：eyJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFkbWluIn0.abc123xyz
 ```
 
-本项目的 JWT payload 只存了 `username`，**签名密钥是用户的密码**（HMAC256）。
+本项目的 JWT payload 只存了 `username`（3.9.2 登录时还会多写一个 `clientType`），**签名密钥是库里存的密码密文**（HMAC256）。这里的「密码」是 `sys_user.password` 字段的值，也就是 `PasswordUtil.encrypt(用户名, 明文密码, salt)` 加密后的结果，不是用户输入的明文。
 
 签名时（登录）：
 
@@ -137,72 +135,66 @@ header . payload . signature
 JWT.create()
    .withClaim("username", username)
    .withExpiresAt(expireDate)
-   .sign(Algorithm.HMAC256(password));   // 密码作为签名密钥
+   .sign(Algorithm.HMAC256(password));   // password：库里的密码密文
 ```
 
 验签时：
 
 ```java
-Algorithm algorithm = Algorithm.HMAC256(password);       // 用密码重建算法
+Algorithm algorithm = Algorithm.HMAC256(password);       // 用同一份密文重建算法
 JWTVerifier verifier = JWT.require(algorithm)
                           .withClaim("username", username)
                           .build();
 verifier.verify(cacheToken);   // 重算签名，和 token 的 signature 段比对
 ```
 
-**验证的不是“和某个东西比对”，而是密码学自证明**：重新用密码计算一遍签名，看能不能和 token 的 signature 段对上。能对上，说明这个 token 确实是用这个密码签出来的。
+**验证的不是「和某个东西比对」，而是密码学自证明**：重新用密码密文计算一遍签名，看能不能和 token 的 signature 段对上。能对上，说明这个 token 确实是用这份密文签出来的。
 
-用户改密码 → 签名密钥变了 → 所有旧 token 自动失效。
+用户改密码后签名密钥变了，按理旧 token 验签会失败。但旧会话不会因此掉线，原因在 4.3 的续期逻辑：验签失败会被当成「过期」处理，直接用新密码重签。
+
+> 更正：初稿这里写的是「用户改密码 → 所有旧 token 自动失效」，和 6.3 节的说法相反。按 3.9.2 源码核对，这句不成立，见 4.3。
 
 ### 4.2 为什么还要 Redis
 
 JWT 自带过期时间，按理不需要 Redis。但有一个需求它做不到：**活跃不掉线，闲置自动退出**。
 
-纯 JWT 只能设固定过期时间，做不到“用户一直用就一直有效，一直不用就过期”这种效果。
+纯 JWT 只能设固定过期时间，做不到「用户一直用就一直有效，一直不用就过期」这种效果。
 
-解决方案是“双 token”机制：
+解决方案是「双 token」机制：
 
 ```text
-Redis Key:   "jeecg:token:{浏览器发来的原始 token}"
-Redis Value: 服务器存的最新 token（会不断续期）
-Redis TTL:   JWT 有效期 × 2（PC端 14天，APP端 60天）
+Key:   prefix_user_token:<原始 token>
+Value: 服务器存的最新 token（会续期）
+TTL:   JWT 有效期 × 2
 ```
+
+key 前缀来自 `CommonConstant.PREFIX_USER_TOKEN`。有效期按 3.9.2 `JwtUtil` 的常量算：PC 端是 `(7 * 12) * 60 * 60 * 1000L`，即 84 小时，缓存 7 天；APP 端是 15 天，缓存 30 天。常量上方的注释写的是「PC 端 7 天、APP 端 30 天，缓存两倍」，和常量值对不上，以常量为准。
 
 ### 4.3 完整验证流程
 
-```text
-请求到达，携带 Header: X-Access-Token = <原始token>
-  ↓
-JwtFilter.executeLogin()
-  从 Header 取出原始 token，包装成 JwtToken
-  交给 Shiro: subject.login(jwtToken)
-  ↓
-ShiroRealm.doGetAuthenticationInfo()
-  ↓
-  1. JWT.decode(原始token) → 取出 username（不需要密钥，payload 是明文 Base64）
-  2. 从 Redis 取 LoginUser 缓存（优先缓存，避免每次查数据库）
-  3. 校验用户状态（是否被锁定）
-  4. 进入 jwtTokenRefresh()：
-     ┌──────────────────────────────────────────────────────┐
-     │ cacheToken = Redis.get("jeecg:token:" + 原始token)  │
-     │                                                      │
-     │ 找不到 → 非法 token 或已空闲超时 → 拒绝             │
-     │ 找到了 ↓                                             │
-     │                                                      │
-     │ JwtUtil.verify(cacheToken, username, password)       │
-     │   重算签名，校验 cacheToken 有没有过期               │
-     │                                                      │
-     │ 过期 → 用密码重签新 token → 写回 Redis → 续期成功   │
-     │ 未过期 → 直接通过                                    │
-     └──────────────────────────────────────────────────────┘
-  5. 校验租户 ID 是否匹配（多租户场景）
-  ↓
-  返回 LoginUser，存入 Shiro Subject
-  ↓
-Controller 执行，通过 SecurityUtils.getSubject().getPrincipal() 取当前用户
-```
+请求带着 `X-Access-Token: <原始 token>` 到达后，依次经过三层：
 
-注意：**verify 校验的是 Redis 里的 cacheToken，不是浏览器发来的原始 token**。原始 token 只是 Redis 的 key（一把永不变的“钥匙”），cacheToken 才是真正被校验和续期的令牌。
+1. **`JwtFilter.executeLogin()`**：从 Header 取出原始 token，包装成 `JwtToken`，交给 Shiro 的 `subject.login(jwtToken)`。
+2. **`ShiroRealm.doGetAuthenticationInfo()`**：
+   1. `JWT.decode(原始 token)` 取出 username。这一步不需要密钥，payload 只是 Base64 编码的明文。
+   2. 从 Redis 取 `LoginUser` 缓存，优先走缓存，避免每次查数据库。
+   3. 校验用户状态（是否被锁定）。
+   4. 进入 `jwtTokenRefresh()`，见下面单列。
+   5. 校验租户 ID 是否匹配（多租户场景）。
+   6. 返回 `LoginUser`，存入 Shiro Subject。
+3. **Controller**：通过 `SecurityUtils.getSubject().getPrincipal()` 取当前用户。
+
+第 4 步 `jwtTokenRefresh()` 的逻辑：
+
+1. 用 `prefix_user_token:` + 原始 token 去 Redis 取 `cacheToken`。
+2. 取不到：非法 token，或已经空闲超时，拒绝。
+3. 取到了：用库里当前的密码密文调 `JwtUtil.verify(cacheToken, username, password)`。
+4. 验签通过：直接放行。
+5. 验签失败：不区分原因，过期和密码已改都走这一支。用当前密码密文重签一个新 token，写回 Redis 并重置 TTL，然后放行。
+
+`JwtUtil.verify` 把所有异常都吞掉、只返回 `false`，所以第 5 步分不出「过期」和「签名对不上」。这就是改密码后旧会话还能继续用的原因。
+
+注意：**verify 校验的是 Redis 里的 cacheToken，不是浏览器发来的原始 token**。原始 token 只是 Redis 的 key（一把永不变的「钥匙」），cacheToken 才是真正被校验和续期的令牌。
 
 ### 4.4 微服务间 Feign 调用如何带 Token
 
@@ -237,7 +229,7 @@ public LoginUser getUserByName(String username) {
 
 ## 六、设计取舍分析
 
-### 6.1 “把刷新推到服务端”的本质
+### 6.1 「把刷新推到服务端」的本质
 
 传统 OAuth2 双 token 模式下，token 刷新是**客户端主动发起的额外 HTTP 请求**。本项目把它变成了**服务端每次请求附带的一次 Redis 写操作**。
 
@@ -266,36 +258,37 @@ if (redisUtil.hasKey(loginUserKey)) {
 ### 6.3 这样做换来了什么
 
 - **强制下线能力**：删 Redis key 立即踢人，纯无状态 JWT 做不到
-- **密码改了立即生效**：签名密钥变了，旧 cacheToken 验签失败，自动续期时用新密码重签
 - **前端零负担**：不需要处理任何 token 过期逻辑
-- **代价**：每次请求多一次 Redis 读（通常 < 0.1ms），以及 Redis 成为单点依赖
+- **代价**：每次请求多一次 Redis 读，以及 Redis 成为单点依赖
+- **副作用：改密码不踢人**：旧 cacheToken 验签失败后会用新密码重签，旧会话继续有效。3.9.2 的两个改密码接口（`SysUserServiceImpl.resetPassword`、`changePassword`）只清了用户信息缓存，没有删 `prefix_user_token:*`。要「改密码即下线」，得在改密码时自己删掉该用户的 token key
 
 ## 七、完整链路图
 
 ```text
 用户登录
-  → 后端：sign(username, password) → JWT token
-  → Redis.set("jeecg:token:" + token, token, TTL=14天)
-  → 返回 token 给浏览器
+→ sign(username, 密码密文)
+→ Redis 存 token，TTL = 有效期×2
+→ 返回 token 给浏览器
 
-浏览器后续每次请求（单体模式）：
-  Header: X-Access-Token = <原始token>
-    → JwtFilter → ShiroRealm
-    → Redis.get(原始token) → cacheToken
-    → verify(cacheToken, username, password)
-    → 过期则续期 → 放行
+单体模式，后续每次请求
+→ JwtFilter → ShiroRealm
+→ 用原始 token 取 cacheToken
+→ verify(cacheToken)
+→ 验签失败就重签续期
+→ 放行
 
-浏览器后续每次请求（微服务模式）：
-  Header: X-Access-Token = <原始token>
-    → Gateway (9999)
-        GlobalAccessTokenFilter：裁路径，Token 随 Header 自动透传
-    → jeecg-system (内部端口)
-        JwtFilter + ShiroRealm（验证逻辑与单体完全相同）
-        → Controller 执行
+微服务模式，后续每次请求
+→ Gateway：裁路径
+  Token 随 Header 默认转发
+→ jeecg-system
+  JwtFilter + ShiroRealm
+  （逻辑与单体相同）
+→ Controller 执行
 
-jeecg-demo 通过 Feign 调用 jeecg-system：
-  FeignInterceptor：从 HTTP 上下文或 ThreadLocal 取 Token → 注入 Header
-    → jeecg-system 的 JwtFilter 照常验证
+jeecg-demo 用 Feign 调 jeecg-system
+→ FeignInterceptor 注入 Token
+  （来自请求上下文或 ThreadLocal）
+→ 下游 JwtFilter 照常验证
 ```
 
 > **核心结论**：验证逻辑始终在各业务服务自己的 Shiro 里，Gateway 只负责路由和裁路径，Token 靠 HTTP Header 在整条链路上自然流动。Redis 是所有服务共享的 token 存储，是微服务下认证能工作的基础。

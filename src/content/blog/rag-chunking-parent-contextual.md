@@ -115,11 +115,11 @@ user   (input)        ← 该子块正文
 output                ← ≤50 字定位说明
 ```
 
-把 `contextSource` 放进 system，是因为 `LlmClient` 在缓存开启时正是对 system 块注入 `cache_control`。于是**同一父块/全文的多个子块，system 内容完全一致 → 命中缓存**：第 1 个子块付全价写缓存，后面的子块那段父块/全文就按缓存价计费。一篇文档切 N 个子块，本来要把全文重读 N 遍，现在只读 1 遍。这一点把「Contextual 给每个子块加一次 LLM 调用」的成本压了下来。
+把 `contextSource` 放进 system，是因为 `LlmClient` 在缓存开启时正是对 system 块注入 `cache_control`。于是**同一父块/全文的多个子块，system 内容完全一致 → 可以命中缓存**：第 1 个子块付全价写缓存，后面的子块那段父块/全文就按缓存价计费。前提是 system 块够长：显式缓存要求被缓存的内容至少 1024 token，父块太短时根本建不起缓存，每个子块照样全价（门槛细节见 [Prompt Caching 那篇](/blog/rag-prompt-caching/)）。按章节切出来的父块可能不到这个长度；用全文当 contextSource 时更容易满足。满足前提时，一篇文档切 N 个子块，本来要把全文重读 N 遍，现在只有第 1 遍是全价。这一点把「Contextual 给每个子块加一次 LLM 调用」的成本压了下来。
 
 两个我守得很死的约束：
 
-- **只改 embedding 的输入，不改展示**。`embeddingText` 是个临时变量，不落库；`chunk.content` 保持原文。回填给 LLM、返回给前端的 source，都是干净的原文——前缀只为向量服务，绝不污染内容。所以我连 `DocumentChunk` 的字段都没加。
+- **只改 embedding 的输入，不改展示**。`embeddingText` 是个临时变量，不落库；`chunk.content` 保持原文。回填给 LLM、返回给前端的 source，都是干净的原文——前缀只为向量服务，绝不污染内容。所以我连 `DocumentChunk` 的字段都没加。这样做的代价是 BM25 用不上这段前缀：BM25 在应用层对 `chunk.content` 打分，而前缀只进了向量。Anthropic 原文是 embedding 和 BM25 两路都加前缀（他们叫 Contextual Embeddings 和 Contextual BM25），两路都加时检索失败率降得更多。我这里只做了向量那一路；想补 BM25，就得把前缀落库，单独存一列给 BM25 用，展示时仍用原文。
 - **失败就降级**。开关关 / 没有 client / 子块或上下文为空 / LLM 抛异常 / 返回空串，全部回退成「不加前缀、直接用原文」，绝不让一次 LLM 抖动卡死整个入库。这个降级理念和我之前的单轮 query 改写是一致的。
 
 ## 4. 怎么做到零回归

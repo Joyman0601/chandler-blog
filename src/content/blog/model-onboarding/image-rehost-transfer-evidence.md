@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 49a2e59d3b43e4808e81059f63e4cd5a4552d215c5e4916a15b4292f8fe7db32
+# import-articles-sha256: f2533ba777f428de04540682718b4e9a90dd9ece89ebff4ada8c1ac8da04a30c
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/image-rehost-transfer-evidence.md
 # Source date: 2026-11-03
 title: "图片取图失败：换传输路径，还要分清证据边界"
@@ -16,7 +16,7 @@ seriesLabel: "模型接入"
 
 我处理过一条图片生成恢复路径：第一次把参考图 URL 发给上游；上游明确返回取图失败后，SDK 下载图片，转成 base64，再随生成请求一起发送。
 
-这绕过了上游访问原站的问题，却把几个短地址变成了很大的 JSON。多图时，编码膨胀还会叠加。历史样本显示大请求体与长时间超时相关，但没有单独证明瓶颈只在上传。
+这绕过了上游访问原站的问题，却把几个短地址变成了很大的 JSON。多图时，编码膨胀还会叠加。问题单里的观察是，请求体大的单子容易一直等到超时。这是转述的现象，我手上没有能算相关性的样本，更不能据此认定瓶颈在上传。
 
 第一轮曾尝试压缩图片。我补做生成对照以后发现，缩体积和保留模型看到的细节是两项不同目标。后续策略改成转存参考图、继续通过 URL 交给同一个生成接口。这里更值得留下的是数据流和证据边界，不是某一组临时压缩参数。
 
@@ -34,26 +34,19 @@ seriesLabel: "模型接入"
 
 前者由 SDK 向生成接口上传图片内容。后者先发送地址，上游再主动向图床发起 GET，请求图片字节。图床是在响应下载请求，不是把图片主动上传到另一个隐藏的生成接口。
 
-把参与方画出来，更容易分清谁做哪件事：
+把参与方和每次请求按顺序列出来，更容易分清谁做哪件事。参与方有四个：SDK、生成上游、文件服务、图片原站。
 
-```mermaid
-sequenceDiagram
-    participant S as SDK
-    participant U as 生成上游
-    participant F as 文件服务
-    participant O as 图片原站
-    S->>U: 原始参考图 URL
-    U->>O: 下载参考图
-    O--xU: 明确取图失败
-    U-->>S: 返回可识别的失败
-    S->>F: 请求转存原始 URL
-    F->>O: 下载并保存
-    F-->>S: 返回转存后的 URL
-    S->>U: 相同生成接口，替换参考图地址
-    U->>F: 下载图片
-    F-->>U: 图片字节
-    U-->>S: 生成结果
-```
+1. SDK → 生成上游：生成请求，带原始参考图 URL。
+2. 生成上游 → 图片原站：下载参考图，失败。
+3. 生成上游 → SDK：返回可识别的取图失败。
+4. SDK → 文件服务：请求转存原始 URL。
+5. 文件服务 → 图片原站：下载图片并保存。
+6. 文件服务 → SDK：返回转存后的 URL。
+7. SDK → 生成上游：同一个生成接口，只把参考图地址换掉。
+8. 生成上游 → 文件服务：下载图片，拿到图片字节。
+9. 生成上游 → SDK：返回生成结果。
+
+第 2、5、8 步都是「谁去下载」，图片字节的流向是原站到文件服务、文件服务到上游。SDK 从头到尾只发地址，不经手图片字节。
 
 SDK 负责恢复决策，文件服务负责下载和保存。它们是不同职责。生成参数应继续沿用原请求，仅替换契约允许替换的资源引用。
 
@@ -91,6 +84,52 @@ Go 的 `http.Client.Timeout` 包含连接、重定向和读取响应体，返回
 
 历史本机下载曾命中缓存，但这只能证明当时那个客户端、那个节点的响应。刚转存的新 URL 可能遇到冷缓存，上游访问的又可能是另一地区节点。缺真实两端计时，就不能给出确定提速比例。
 
+表里第二行的阶段时间，在 Go 里可以用 `net/http/httptrace` 拿到。下面的函数下载一次 URL，在 DNS、建连、TLS、请求写完、首字节和读完这几个点各记一笔：
+
+```go
+func timedGet(url string) {
+	var mu sync.Mutex // trace 回调可能并发执行
+	start := time.Now()
+	mark := func(stage string) {
+		mu.Lock()
+		defer mu.Unlock()
+		fmt.Printf("%6v  %s\n", time.Since(start).Round(time.Millisecond), stage)
+	}
+	trace := &httptrace.ClientTrace{
+		DNSDone: func(httptrace.DNSDoneInfo) { mark("DNS 完成") },
+		ConnectDone: func(_, addr string, err error) {
+			mark(fmt.Sprintf("连接 %s err=%v", addr, err)) // 双栈可能各试一次
+		},
+		TLSHandshakeDone:     func(tls.ConnectionState, error) { mark("TLS 握手完成") },
+		WroteRequest:         func(httptrace.WroteRequestInfo) { mark("请求写完") },
+		GotFirstResponseByte: func() { mark("首字节") },
+	}
+	req, _ := http.NewRequest("GET", url, nil)
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		mark("失败: " + err.Error())
+		return
+	}
+	n, _ := io.Copy(io.Discard, resp.Body)
+	resp.Body.Close()
+	mark(fmt.Sprintf("读完 %d B", n))
+}
+```
+
+我在本机起了一个假图床（`httptest`，先等 150 毫秒再出首字节，响应体 1 MiB），用 `localhost` 访问它：
+
+```text
+   3ms  DNS 完成
+   4ms  连接 [::1]:54006 err=dial tcp [::1]:54006: connect: connection refused
+   4ms  连接 127.0.0.1:54006 err=<nil>
+   4ms  请求写完
+ 155ms  首字节
+ 156ms  读完 1048576 B
+```
+
+时间几乎都花在「请求写完」到「首字节」之间，也就是服务端处理。第二、三行是双栈的副作用：`localhost` 解析出 IPv6 和 IPv4 两个地址，先试的 IPv6 被拒，再连上 IPv4。只看总耗时，这些都看不出来。这段代码只能在你自己控制的一端跑；上游下载图片那一端的计时，得由上游或文件服务的日志给出。
+
 连接池里的空闲连接数也不是并发上限；缓存保留时间也不是下载超时。这些参数名称接近，职责却不同，应该顺着实际配置使用点解释。
 
 观测还不能直接决定是否可重发。Go 的 HTTP trace 回调可能并发执行，也可能晚于请求结束或失败；没有观察到写完回调，不足以证明上游没有收到完整请求。[Go ClientTrace 文档](https://pkg.go.dev/net/http/httptrace#ClientTrace)
@@ -99,7 +138,7 @@ Go 的 `http.Client.Timeout` 包含连接、重定向和读取响应体，返回
 
 上游明确说参考图获取失败，和本地等不到最终回答，是两种状态。
 
-前者有具体可恢复原因。后者可能已经完成生成，只是结果没有送回来。贸然重新生成，可能产生第二次执行和第二次上游费用。
+前者有具体可恢复原因。后者可能已经完成生成，只是结果没有送回来。贸然重新生成，可能产生第二次执行和第二次上游费用。怎样按请求走到了哪一步来区分这两种失败，见[失败后能不能再发](/blog/model-onboarding/resend-by-stage-not-error-text/)。
 
 我现在会为恢复状态写一张表：
 

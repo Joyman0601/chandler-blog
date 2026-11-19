@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: dde262e485045df4d636c64867440c67fbd01e6396b91771c429a3e138bfc35b
+# import-articles-sha256: b9dae8fd8ab4d5a752b591bf0076d0023b6a620e8565f0bde329756fc8343593
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/upstream-probe-evidence.md
 # Source date: 2026-09-29
 title: "上游接口实测：判通判拒都要指到证明它的字段"
@@ -130,28 +130,51 @@ ffmpeg -f lavfi -i color=c=white:s=320x240:d=2 \
 
 **根因**：SDK 客户端对所有型号固定下发五类安全设置，外加系统指令、响应模态这些探测脚本没带的字段，新型号不认其中一类。探测脚本拼的「同形请求」从来没拿客户端真正发出去的 body 对过。对照裸请求也印证了：带五类的 400，带四类的 200。
 
-**修复**：每条渠道交付前，至少一单「经网关 → SDK → 真上游 → 终态 → 核实扣」。在那之前，先用假上游抓一次 SDK 实际出站的 body，和探测请求逐字段比，多出来的字段每个都在真上游验一遍。探测报告里把「裸请求」和「经网关 / SDK」分成两列，裸请求通过只填前一列。抓出站 body 的假上游写起来很短：
+**修复**：每条渠道交付前，至少一单「经网关 → SDK → 真上游 → 终态 → 核实扣」。在那之前，先用假上游抓一次 SDK 实际出站的 body，和探测请求逐字段比，多出来的字段每个都在真上游验一遍。探测报告里把「裸请求」和「经网关 / SDK」分成两列，裸请求通过只填前一列。抓出站 body 的假上游写起来很短。Go 的 HTTP 客户端在 body 长度未知时用分块编码发送，不带 `Content-Length`，Python 的 `http.server` 又不会替你解码分块，所以读请求体要两种都支持，否则录下来的 body 是空的：
 
 ```python
 # fake_upstream.py：把收到的请求原样落盘，回一个固定的成功响应
 import json, http.server
 
+def read_body(h):
+    if "chunked" in h.headers.get("Transfer-Encoding", "").lower():
+        chunks = []
+        while True:
+            size = int(h.rfile.readline().split(b";")[0], 16)  # 块大小行可带 ;扩展
+            if size == 0:
+                break
+            chunks.append(h.rfile.read(size))
+            h.rfile.readline()                       # 每块后面的 CRLF
+        while h.rfile.readline() not in (b"\r\n", b"\n", b""):
+            pass                                     # trailer 字段：读掉，不记录
+        return b"".join(chunks)
+    return h.rfile.read(int(h.headers.get("Content-Length") or 0))
+
 class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
-        body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        body = read_body(self)
         with open("captured.jsonl", "a") as f:
             f.write(json.dumps({"path": self.path, "headers": dict(self.headers),
                                 "body": json.loads(body or b"{}")}) + "\n")
         out = json.dumps({"id": "fake-1", "status": "succeeded"}).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(out)))
         self.end_headers()
         self.wfile.write(out)
 
 http.server.HTTPServer(("localhost", 18080), H).serve_forever()
 ```
 
-本地渠道地址指到这个端口，经网关发一单，`captured.jsonl` 里就是 SDK 真正发出去的东西。
+先用 curl 强制分块发一次，确认录到的是完整请求体：
+
+```bash
+curl -s -H 'Transfer-Encoding: chunked' --data '{"model":"m1","temperature":0.2}' \
+  http://localhost:18080/v1/x
+tail -1 captured.jsonl   # body 应是 {"model": "m1", "temperature": 0.2}，不是 {}
+```
+
+本地渠道地址指到这个端口，经网关发一单，`captured.jsonl` 里就是 SDK 真正发出去的东西。分块编码的来龙去脉见[网关改写请求的几个漏洞](/blog/model-onboarding/gateway-outbound-body-pitfalls/)第 7 节。
 
 同一类问题还有凭证格式：上游换了凭证格式，旧客户端只认旧格式。某视频上游的控制台现在发的是新格式的 key，直连上游鉴权正常。配进网关渠道，任务几秒就失败，上游没收到任何请求：网关里那个老客户端按旧格式解析渠道 key，在发请求之前就报格式错误了。mock 上游和用旧格式假 key 做的测试都发现不了。验收要用运营现在实际能从控制台申请到的那种 key，直连和经网关各打一次，两边的结论分开写。
 

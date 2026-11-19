@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: ebaec3d884947f2f8863ded09d0a11755b0de476e6acd769f88274b2e007e9f9
+# import-articles-sha256: 65a1409ee0426ece26c88677b8cba8961117057b9213fd54944667ba348dc985
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/long-rulebook-partial-read.md
 # Source date: 2026-10-06
 title: "长规范只读了不到三分之一就开工：规则清单、检查卡和读取守卫"
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 
 核对要自动触发，不能靠「记得跑一下」。约定是：skill 正文、给子代理的任务提示、交接给新窗口的消息里，都单独写一行 `必读：路径……`（没有也写「无」）。hook 在两个时刻拿读取记录去比：
 
-- **子代理交回前**：交回也是一次工具调用，`PreToolUse` 匹配它，没读全就拒绝，理由里给出补读的段；`SubagentStop` 兜底；
+- **子代理交回前**：挂在 `SubagentStop` 上，没读全就返回 `{"decision": "block", "reason": …}`，理由里给出补读的段，子代理补读后才能结束。我用的环境里子代理交回报告要调用一个专门的交回工具（`SubagentHandback`），所以我另在 `PreToolUse` 上匹配这个工具名、返回拒绝，在报告送出前就拦；没有这个工具的环境只用 `SubagentStop`（细节见[hooks 那篇](/blog/ai-workflow/claude-code-hooks-inject-context/)第 2 节）；
 - **主会话每轮结束前**：`Stop` 返回 `{"decision": "block", "reason": …}`。
 
 同一处最多拦 2 次。主会话确实用不上某份必读时，可以在回复里写一行「跳过：原因」放行，记进日志。实测：一个子代理只读了前 10 行就想交回，被拦一次，照给出的两段补读，然后改了结论再交；我发的消息里带了必读、模型没读就想结束，也被拦了一次。

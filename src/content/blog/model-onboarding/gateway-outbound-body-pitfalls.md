@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: b81dc0755b3fca8ddd2d2b4d61bb0f28b6425b424ed8682e5fd0f988400bdad9
+# import-articles-sha256: 4a227bd82de2b1d2d01450422d960f1dbe0449cf4bbe015818add0e39891f663
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/gateway-outbound-body-pitfalls.md
 # Source date: 2026-09-29
 title: "网关改写请求的漏洞：结构体改了，上游没收到"
@@ -204,22 +204,26 @@ func TestOutboundBody(t *testing.T) {
 }
 ```
 
-用 Python 的 `http.server` 自己写 mock 时要注意：Go 的 HTTP 客户端在 body 长度未知时发 `Transfer-Encoding: chunked`，不带 `Content-Length`。有一次 mock 只按 `Content-Length` 读，记录下来的 body 全是 `{}`，看上去像网关把字段全丢了。判法是先打一条对照：客户端显式传的字段直接发出去，如果连它都看不见，就是 mock 的问题。修法是让 mock 支持分块：
+用 Python 的 `http.server` 自己写 mock 时要注意：Go 的 HTTP 客户端在 body 长度未知时发 `Transfer-Encoding: chunked`，不带 `Content-Length`。有一次 mock 只按 `Content-Length` 读，记录下来的 body 全是 `{}`，看上去像网关把字段全丢了。判法是先打一条对照：客户端显式传的字段直接发出去，如果连它都看不见，就是 mock 的问题。修法是让 mock 支持分块。块大小行是十六进制，后面可以跟 `;name=value` 形式的扩展参数，要先按 `;` 截断再解析；大小为 0 的末块之后还可能有 trailer 字段（几行 `名字: 值`），一直读到空行才算请求结束：
 
 ```python
 def read_body(handler):
-    if handler.headers.get("Transfer-Encoding", "").lower() == "chunked":
+    if "chunked" in handler.headers.get("Transfer-Encoding", "").lower():
         chunks = []
         while True:
-            size = int(handler.rfile.readline().strip(), 16)
+            line = handler.rfile.readline()
+            size = int(line.split(b";")[0], 16)    # 去掉块扩展参数
             if size == 0:
-                handler.rfile.readline()
                 break
             chunks.append(handler.rfile.read(size))
-            handler.rfile.readline()        # 每块后面的 CRLF
+            handler.rfile.readline()               # 每块后面的 CRLF
+        while handler.rfile.readline() not in (b"\r\n", b"\n", b""):
+            pass                                   # trailer：读掉；要录就在这里存下
         return b"".join(chunks)
-    return handler.rfile.read(int(handler.headers.get("Content-Length", 0)))
+    return handler.rfile.read(int(handler.headers.get("Content-Length") or 0))
 ```
+
+trailer 不读完，连接复用时，留在连接上的几行会被当成下一个请求的开头。
 
 **第二步，准备一份输入变体矩阵，每个端点各发一轮。** 每条改写规则都至少包括：
 

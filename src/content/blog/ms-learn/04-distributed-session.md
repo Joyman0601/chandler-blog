@@ -152,6 +152,20 @@ Authorization:login:session:88       # loginId 的会话数据
 
 这个坑很隐蔽，因为 body 里明明写着 401，很容易以为 HTTP 也是 401。
 
+下面是补充示例，演示在 `setError` 里同时设置 HTTP 状态码和响应类型（不是这套 demo 里跑过的代码）。`SaHolder.getResponse()` 拿到的是当前请求的响应对象，`setStatus` 改的才是 HTTP 状态码：
+
+```java
+.setError(e -> {
+    SaHolder.getResponse()
+            .setStatus(401)   // ← 新加：真正的 HTTP 401
+            .setHeader("Content-Type", "application/json;charset=UTF-8");
+    // body 里的 code 照旧，方便前端两种判断方式都能用
+    return SaResult.error("blocked by gateway: " + e.getMessage()).setCode(401);
+})
+```
+
+改完用 `curl -i` 看响应首行，应该是 `401` 而不是 `200`。
+
 ## 另一条路：JWT（无状态鉴权）
 
 这里用的是「Redis 存 token」的**有状态**方案——token 本身只是个随机串，真正的用户信息存在 Redis，每次校验都要查 Redis。
@@ -165,12 +179,6 @@ Authorization:login:session:88       # loginId 的会话数据
 
 这个 demo 选 Redis 方案，是因为它更直观地体现「会话外置 + 跨进程共享」这个核心概念。
 
-## 一个工作目录的小坑
-
-学习过程中踩到一个和代码无关、但很烦的坑：**工作目录在命令之间会保持**。前面 `cd .../docker` 起 Redis 后，当前目录停在了 docker 子目录，再跑 `mvn -pl ms-user` 就报 `Could not find the selected project in the reactor`（Maven 在 docker 目录下找不到项目）。
-
-教训：每条 mvn 命令前显式 `cd /e/yhl/ms-learn &&`，或确保当前目录在项目根。
-
 ## 小结
 
 | 问题 | 方案 | 关键点 |
@@ -178,7 +186,7 @@ Authorization:login:session:88       # loginId 的会话数据
 | 单体 session 存内存，微服务不行 | 会话外置到 Redis | 各进程内存不共享，必须搬出进程 |
 | 怎么共享 | Sa-Token + 同一个 Redis | 签发方写 Redis，校验方读同一个 Redis |
 | 三个一致 | token-name / Redis / 序列化 | 少一个就「这边签那边不认」 |
-| 隐蔽坑 | Sa-Token 返回 HTTP 200 | `setCode(401)` 只改 body，不改 HTTP status |
+| 隐蔽坑 | Sa-Token 返回 HTTP 200 | `setCode(401)` 只改 body，HTTP 状态码要另用 `setStatus(401)` 设 |
 | 另一条路 | JWT 无状态鉴权 | token 自带信息，验签即可，无需查存储 |
 
 到这里，服务能互相找到、能优雅通信、登录态也能跨进程共享了——「正常情况」下整套系统跑得很顺。但分布式系统的真正考验是**异常**：下一篇我们直面第 1 篇埋的那个伏笔——下游突然变慢、变挂，怎么不被它拖死？这就是 Sentinel 的限流与熔断。

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: c2a45a965368735ce0ed0be06f8ab8abcd98db72d69f7ad72751b0dac2c8ee4a
+# import-articles-sha256: 9e4648811d5d141cd98a5bdd2f0a75307088ab6e145f61d4940e2becdb9c9755
 # Imported by scripts/import-articles.mjs from posts/testing/playwright-walkthrough-gotchas.md
 # Source date: 2026-10-15
 title: "用 Playwright 走查页面、截证据图的一串坑"
@@ -29,7 +29,24 @@ seriesLabel: "测试与验收"
 
 ## 1. 定位：脚本看到的是 DOM，不是屏幕
 
-**大小写**。页面用 CSS `text-transform: uppercase` 把标签显示成大写，源码里还是 `Preview text`。`hasText: 'PREVIEW TEXT'` 找不到它，脚本卡满 30 秒超时。按文本定位一律用不区分大小写的正则。
+**大小写**。页面用 CSS `text-transform: uppercase` 把标签显示成大写，DOM 里的文本还是 `Preview text`。照屏幕上看到的大写去精确匹配，就找不到它，脚本卡满 30 秒超时。
+
+更正：这里原先写的是「`hasText: 'PREVIEW TEXT'` 找不到它」，这和 Playwright 文档不符，当时卡住的具体写法我没能回查到。按文档并在一个最小页面上实测（Playwright 1.58），规律是这样的：
+
+- `hasText`、`getByText` 传字符串：不区分大小写、按子串匹配，`'PREVIEW TEXT'` 能找到；
+- `getByText(..., { exact: true })`、带引号的 `text="PREVIEW TEXT"`、不带 `i` 的正则 `/PREVIEW TEXT/`：区分大小写，找不到；
+- `textContent` 读到的是 `Preview text`，`innerText` 读到的却是 `PREVIEW TEXT`，因为它按渲染结果返回。拿 `innerText` 或截图里的字去拼精确匹配，就会和 DOM 对不上。
+
+```js
+await page.setContent('<style>label{text-transform:uppercase}</style><label>Preview text</label>')
+await page.locator('label', { hasText: 'PREVIEW TEXT' }).count()   // 1
+await page.getByText('PREVIEW TEXT', { exact: true }).count()       // 0
+await page.locator('text="PREVIEW TEXT"').count()                   // 0
+await page.locator('label', { hasText: /PREVIEW TEXT/ }).count()    // 0
+await page.locator('label', { hasText: /preview text/i }).count()   // 1
+```
+
+所以规则是：要精确或用正则时，按 DOM 里的原文写，或者加 `i`；照屏幕抄来的文本，用字符串 `hasText` 做子串匹配。
 
 **隐藏的副本**。有的页面切换模式时，不会卸载另一个模式的表单，只是把它隐藏起来。`locator(...).first()` 经常落到那份看不见的副本上，然后一直报 `element is not visible`，直到超时。选择器加上 `:visible`，或者先按可见性过滤，再取下标。
 
@@ -151,7 +168,7 @@ clearInterval(timer)
 
 - 从控制台首页点侧栏进入任务日志：挂件早就加载好了，Esc 能关；
 - 先点一下弹窗再按 Esc：能关；
-- 用 CDP 列出弹窗上的键盘监听器，再直接向弹窗派发一个合成的 keydown：能关。
+- 用 CDP（Chrome DevTools Protocol，Chrome 的调试协议）列出弹窗上的键盘监听器，再直接向弹窗派发一个合成的 keydown：能关。
 
 所以组件逻辑没问题，问题出在加载时序。结论写成「有条件失败」，附上两种进入路径的对照、复现次数（2 次），以及「Esc 失效时不会保存任何设置，× 和取消照常可用」的影响范围。既不写「Esc 坏了」，也不当成「测试环境问题」放过。
 
@@ -232,7 +249,7 @@ const visible = !!hit && (hit === anc || anc.contains(hit))   // false：换存�
 
 ## 收尾
 
-1. **定位** —— 文本用不区分大小写的正则；选择器加 `:visible`；判可见用 `innerText`，展开 FAQ 只在 `<details>` 里找。
+1. **定位** —— 精确匹配按 DOM 原文写，正则加 `i`；选择器加 `:visible`；判可见用 `innerText`，展开 FAQ 只在 `<details>` 里找。
 2. **等待** —— 盯状态徽标，不在整页文本里匹配「Failed」；链接输入要点「添加」，提交前读 JSON 预览。
 3. **不花钱地试** —— `route.abort` 看客户端校验；「只问一次」的状态只拦写请求，先确认 GET 被截到；拦截只证明 body，后端状态要真提交一次。
 4. **本地状态** —— 截「提交前」先按完整键名清历史，草稿和历史分开清；「完成」态先核对是付费那一单，再免费重截。

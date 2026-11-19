@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 52283abfd61f8ed8ada5b785db455e1f313a928c962197c347d3806e08c9f454
+# import-articles-sha256: fd7fb873610440396dcb1d71847fb8449fc0db68d5fc8ad4740ddd6d885580c2
 # Imported by scripts/import-articles.mjs from posts/billing-regression/long-request-lease-durable-settlement.md
 # Source date: 2026-11-01
 title: "长请求计费：租约、实际工作与补扣各有生命周期"
@@ -58,6 +58,46 @@ Go 的服务端请求 context 会在连接关闭、请求取消或 handler 返�
 
 更新还要满足三个条件：只更新待结算状态、只延长期限、数据库操作本身有独立的有界超时。迟到续租不能让已退款或已确认的记录重新变成 pending。
 
+前两个条件可以写进同一条条件更新。下面用一张通用的冻结表演示，表名和列名都是示例：
+
+```sql
+-- 续租：只动待结算记录，期限只往后延
+UPDATE holds
+SET expires_at = GREATEST(expires_at, ?)   -- ? = 现在 + 租约长度
+WHERE id = ? AND status = 'pending';
+```
+
+已确认、已退款的记录不满足 `status = 'pending'`，迟到的续租影响 0 行，终态保持不动。注意 MySQL 默认返回「实际改了的行数」：新期限不比旧期限晚时，待结算记录同样返回 0 行。所以影响行数为 0 不能直接当成「已进终态」，续租循环靠工作结束来停，不靠这个数。
+
+第三个条件和「工作结束就停」放在续租协程里。下面是一个 Go 的最小写法，`work` 结束时协程退出：
+
+```go
+// renewFunc 执行上面的条件 UPDATE；until 是希望延到的新期限。
+type renewFunc func(ctx context.Context, holdID int64, until time.Time) error
+
+// keepLeaseAlive 在 work 存活期间定期续租，work 结束就退出。
+// work 要取持有上游执行的 context，不一定是客户端连接的那个。
+func keepLeaseAlive(work context.Context, holdID int64, every, ttl time.Duration, renew renewFunc) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-work.Done(): // 工作返回、panic 后的 defer、显式取消都走这里
+			return
+		case now := <-t.C:
+			// 数据库操作单独限时，卡住的连接拖不住下一次 tick
+			db, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			if err := renew(db, holdID, now.Add(ttl)); err != nil {
+				log.Printf("renew hold %d: %v", holdID, err) // 只记日志，下次 tick 再试
+			}
+			cancel()
+		}
+	}
+}
+```
+
+调用方在持有工作的函数里用 `work, stop := context.WithCancel(...)` 派生出 `work`，紧跟一行 `defer stop()`，再 `go keepLeaseAlive(work, ...)`。这样正常返回、出错和 panic 都会让 `work` 结束，续租随之停下；进程崩溃时没有人续租，冻结到期后由清理任务回收。
+
 可以把核心状态转换写成下面的检查表：
 
 | 当前状态 | 收到什么 | 允许的结果 |
@@ -77,13 +117,31 @@ Go 的服务端请求 context 会在连接关闭、请求取消或 handler 返�
 
 随后由独立消费者完成确认，重复处理同一标识仍只产生一笔费用。确认、退款和过期清理发生竞争时，也要通过条件更新或事务维持终态唯一。
 
+「同一标识只扣一笔」最直接的做法，是给账务标识建唯一键，让数据库替你挡住重复。下面同样是示例表，几条语句放在同一个事务里：
+
+```sql
+-- 消费明细上有唯一键：UNIQUE KEY uk_settle_key (settle_key)
+START TRANSACTION;
+INSERT IGNORE INTO charges (settle_key, hold_id, amount)
+VALUES (?, ?, ?);
+-- 应用读影响行数：1 = 第一次处理，接着往下走；0 = 处理过了，直接提交
+UPDATE holds SET status = 'confirmed'
+WHERE id = ? AND status = 'pending';
+-- 这里再扣余额；确认这一步影响 0 行时回滚，说明冻结已被退款或清理
+COMMIT;
+```
+
+`INSERT IGNORE` 会把重复键以外的错误也降成警告。想更严格，就用普通 `INSERT`，只把重复键错误（MySQL 错误码 1062）当成「已处理」，其他错误照常失败。
+
 这里的幂等是业务性质：第一次处理成功后，再次收到同一条记录，余额、冻结和消费明细都不应变化。仅仅「第二次没有报错」不够。也不能为了恢复，把已经退款的终态强制改回待结算。
 
 ## 5. 写进队列不代表有人会消费
 
-我遇到过一轮复审：测试里手动调用消费者，恢复成功；真实启动流程却把这个消费者绑在媒体分发开关后面。只使用同步文字请求的节点没有开启媒体分发，也就没有运行补扣循环。
+**现象**：一轮复审里，结算失败后的补扣记录已经落库，数据库也恢复正常，冻结却长时间不收敛。手动调用一次消费者，马上就结清了。测试里也是手动调用消费者，恢复一直是成功的。
 
-结果是持久记录存在、数据库也恢复正常，冻结仍长时间不收敛。手动消费一下又好了。缺陷在启动接线，单独调用处理函数的测试看不到。
+**根因**：真实启动流程把补扣消费者绑在媒体分发开关后面。只使用同步文字请求的节点没有开启媒体分发，也就没有运行补扣循环。缺陷在启动接线，单独调用处理函数的测试看不到。
+
+**修复**：把补扣消费者的启动条件从媒体分发开关里拆出来，按它自己的规则启动；原来「从节点默认不启动、显式启用才启动」的规则保留。然后在目标配置下起节点，不手动调用，看冻结能不能自己收敛。
 
 现在我会把三层分开验证：
 
@@ -126,4 +184,4 @@ Go 的服务端请求 context 会在连接关闭、请求取消或 handler 返�
 4. **重放只补账务** —— 保留原请求统计和耗时，避免恢复过程污染指标。
 5. **终态保持唯一** —— 迟到续租、重复消费与清理竞争都不能复活已结束的账。
 
-下次排查长请求漏收，我会先把四个时钟放到一起，再看哪个事件提前结束或没有接上。更一般的少交付结算问题见[预扣缺价与部分交付](/blog/billing-regression/reserve-fallback-partial-delivery/)。
+下次排查长请求漏收，我会先把四个时钟放到一起，再看哪个事件提前结束或没有接上。更一般的少交付结算问题见[预扣缺价与部分交付](/blog/billing-regression/reserve-fallback-partial-delivery/)。租约过期后，旧持有者迟到的写入怎么挡，见[结果已经存好](/blog/model-onboarding/result-retention-until-ack/)第 8 节。

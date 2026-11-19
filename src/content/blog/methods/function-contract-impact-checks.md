@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 3b4e799d76350a3af98d964ac439827cb487a8f47e3b32d5b436a17def0b5586
+# import-articles-sha256: 8f44f13396ed7e30d3a983523013841f06712786e4021b67bf955ace51566beb
 # Imported by scripts/import-articles.mjs from posts/methods/function-contract-impact-checks.md
 # Source date: 2026-11-01
 title: "函数职责记录：在行为保证未变的边界停止追查"
@@ -20,7 +20,7 @@ seriesLabel: "工作方法"
 
 助手最初建议让我每次读出旧函数的完整功能，再逐项检查。我指出，这会把大量重复理解转嫁给我。代码持续增加，旧函数也会变化，仅靠记忆维护不了。于是我提出把职责记录在函数附近，读过一次后复用，同时把有限的关联检查接进现有审查。
 
-这篇讲那次讨论形成的设计和边界。首版已有本地机制及历史对照记录，我在本次写作时只回读来源，没有重新执行业务回归，也没有测量它在所有后续任务中的收益。
+这篇讲那次讨论形成的设计和边界，它在后续任务里省了多少还没有量过。
 
 ## 1. 函数名、调用索引和职责记录回答不同问题
 
@@ -54,13 +54,33 @@ seriesLabel: "工作方法"
 
 A 不需要知道 C 具体怎样写存储，却要知道自己必须把通知所需的数据交给 B。只写「调用 B」仍然过粗，因为丢失的恰好可能是那项附带保证。
 
+落到代码里，我把记录写在函数自己的 docstring 里，固定三块：本函数的保证、依赖谁的哪条保证、什么时候审阅的。下面是一个自编的模板：
+
+```python
+def export_report(ctx, report):
+    """导出报告，返回下载地址。
+
+    保证：
+      - 返回时文件已可下载；保存失败抛 ExportError，不返回地址。
+      - 同一 ctx.op_id 重复调用，只产生一次完成通知。
+    依赖：
+      - save_and_notify 的保证：保存失败不发通知；同一操作只记一次通知。
+      - 前置责任：把 ctx 里的订阅上下文原样交给 save_and_notify。
+    审阅：2026-11-01，指纹 0731AA0B8C87
+    """
+    url = save_and_notify(ctx, report)
+    return url
+```
+
+「依赖」一栏只写用到的那几条，不抄 `save_and_notify` 的全部说明。「审阅」一栏的指纹见下一节。
+
 如此分工后，职责说明有一个主要维护位置。调用关系由工具生成，目录页只是入口。多个层级再人工维护相同功能简介，会重新制造同步问题。
 
 ## 3. 复用需要有效期，哈希不证明理解
 
 如果每次都相信上一次的说明，只是把相信函数名换成相信旧注释。实现、相关类型、配置和依赖变化后，记录需要重新判断是否有效。
 
-代码指纹适合做变化检测，但它的结论应很窄：对应内容是否和审阅时一致。
+代码指纹是对一段代码算出的短哈希：审阅时记下，之后重算一次，不一样就说明代码动过。它适合做变化检测，但结论应很窄：对应内容是否和审阅时一致。
 
 | 当前情况 | 应怎样处理 |
 |---|---|
@@ -71,6 +91,48 @@ A 不需要知道 C 具体怎样写存储，却要知道自己必须把通知所
 | 关系无法识别 | 标出未知，补显式关联或继续阅读 |
 
 指纹相同不能证明第一次没有漏写；指纹变化也不能证明业务一定变化。一个只换内部算法的重构，可能仍兑现全部保证。此时记录保证未变的理由与证据即可，不需要为了消除提示随意改几个字。
+
+下面是一个最小的指纹检查脚本。它用 `ast` 取出函数的参数和函数体，去掉 docstring，规范化成文本后算哈希（取前 12 位、写成大写），和 docstring 里「指纹」后面的值比。只改说明文字、加注释、调整排版不会触发；函数体变了才提示复核：
+
+```python
+#!/usr/bin/env python3
+"""核函数职责记录有没有过期：参数加函数体（去掉 docstring）的哈希，和记录里的指纹比。"""
+import ast, hashlib, re, sys
+
+MARK = re.compile(r"指纹\s+([0-9A-F]{12})")
+
+def fingerprint(fn):
+    body = fn.body[1:] if ast.get_docstring(fn) is not None else fn.body
+    text = ast.unparse(fn.args) + "\n" + "\n".join(ast.unparse(s) for s in body)
+    return hashlib.sha256(text.encode()).hexdigest()[:12].upper()   # unparse 后注释和排版不影响结果
+
+def check(path):
+    stale = 0
+    for fn in ast.walk(ast.parse(open(path, encoding="utf-8").read())):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        m, now = MARK.search(ast.get_docstring(fn) or ""), fingerprint(fn)
+        if m is None:
+            print(f"{path}:{fn.lineno} {fn.name}：没有职责记录（当前指纹 {now}）")
+        elif m.group(1) != now:
+            stale += 1
+            print(f"{path}:{fn.lineno} {fn.name}：实现变了（记录 {m.group(1)}，现在 {now}），请复核职责")
+    return stale
+
+if __name__ == "__main__":
+    sys.exit(1 if sum(check(p) for p in sys.argv[1:]) else 0)
+```
+
+拿上面的模板依次试三种改动：
+
+```text
+$ python3 check_contracts.py export.py          # 记录刚写好
+$ python3 check_contracts.py export.py          # 只改了 docstring 措辞、加了一行注释
+$ python3 check_contracts.py export.py          # 加了一条 if ctx.dry_run: return None
+export.py:1 export_report：实现变了（记录 0731AA0B8C87，现在 9457E44D373E），请复核职责
+```
+
+前两次没有输出、退出码 0，第三次退出码 1。它只看本函数，`save_and_notify` 改了不会让 `export_report` 报警，那要靠「依赖」一栏去查下层的记录。另外，`ast.unparse` 的输出可能随 Python 版本变，团队要用同一个版本算指纹。
 
 同样，零条记录不是零风险。检查器对空集合返回成功，最多说明没有登记项可查；不能据此宣称仓库已经完成职责审查。
 

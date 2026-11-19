@@ -30,7 +30,7 @@ JeecgBoot 选择了**行级隔离**，并且默认是**关闭**的——一个�
 public static final Boolean OPEN_SYSTEM_TENANT_CONTROL = false;
 ```
 
-开启后，凡是加入 `TENANT_TABLE` 白名单的业务表（如 `sys_depart`、`sys_category`、Online 自定义表等），所有 SQL 都会被自动注入租户过滤条件。
+开启后，凡是加入 `TENANT_TABLE` 白名单的表，经过 MyBatis 执行的 SQL 都会被自动注入租户过滤条件。3.9.2 开关打开后默认加进名单的是 `sys_depart`、`sys_category`、`sys_position` 等系统表，以及仪表盘、报表、AI 应用相关的几张表。Online 建的表默认不在名单里，源码里只留了一行注释掉的示例，要隔离得自己加进去。
 
 ---
 
@@ -65,7 +65,7 @@ new TenantLineHandler() {
 }
 ```
 
-注意 `ignoreTable` 的逻辑是反向白名单：**在列表里才隔离，不在列表里直接跳过**。`sys_menu`、`sys_role`、`sys_permission` 等系统配置表不做隔离，所有租户共享。
+注意 `ignoreTable` 的逻辑是反向白名单：**在列表里才隔离，不在列表里直接跳过**。按 3.9.2 `MybatisPlusSaasConfig` 里的注释，菜单表（`sys_permission`）、租户表不做隔离，所有租户共享；`sys_role` 在名单里那一行是注释掉的。
 
 ---
 
@@ -79,10 +79,36 @@ String tenantId = httpServletRequest.getHeader(CommonConstant.TENANT_ID);
 TenantContext.setTenant(tenantId);   // 存入 ThreadLocal
 
 // JwtFilter.afterCompletion()
-TenantContext.clear();               // 请求结束后必须清理，防止内存泄漏
+TenantContext.clear();               // 请求结束后必须清理
 ```
 
 `TenantContext` 本质就是一个 ThreadLocal 的简单包装，确保并发请求之间的租户信息不会互相污染。
+
+清理不只是为了防内存泄漏。Tomcat 用线程池处理请求，线程会被反复复用。上一个请求设的租户如果没清掉，下一个落到同一线程、又没有重新设置租户的请求，就会读到上一个租户，查出别人的数据。比如被 Shiro 排除在外、不经过 `JwtFilter` 的接口，就不会重新设置租户。这比内存泄漏严重得多。
+
+下面是一个最小示例，演示用 try/finally 保证清理一定执行。这里用 Servlet Filter 写，和 `JwtFilter.afterCompletion()` 是同一个目的：
+
+```java
+public final class TenantContext {
+    private static final ThreadLocal<String> TENANT = new ThreadLocal<>();
+    public static void setTenant(String id) { TENANT.set(id); }
+    public static String getTenant() { return TENANT.get(); }
+    public static void clear() { TENANT.remove(); }   // 用 remove，不用 set(null)
+}
+
+public class TenantFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain)
+            throws IOException, ServletException {
+        TenantContext.setTenant(((HttpServletRequest) req).getHeader("X-Tenant-Id"));
+        try {
+            chain.doFilter(req, resp);
+        } finally {
+            TenantContext.clear();   // 正常返回和抛异常都会走到这里
+        }
+    }
+}
+```
 
 ---
 
@@ -142,7 +168,7 @@ JwtFilter.afterCompletion()
 
 一个容易产生误解的地方：`sys_user` 表**没有 `tenant_id` 字段**。
 
-用户是"人"，可以同时受雇于多家公司（属于多个租户）；但一条业务数据（如一张订单）只能属于一家公司。因此两者的数据模型不同：
+用户是「人」，可以同时受雇于多家公司（属于多个租户）；但一条业务数据（如一张订单）只能属于一家公司。因此两者的数据模型不同：
 
 - **业务数据（订单、部门等）**：多对一，用 `tenant_id` 字段表示
 - **用户与租户的关系**：多对多，用独立关联表表示
@@ -177,11 +203,11 @@ loginUser.relTenantIds = "1001,1002"
 | 实现简单，无需多数据源 | 所有业务表必须有 `tenant_id` 字段 |
 | SQL 层自动注入，业务代码无感 | 忘记开 `OPEN_SYSTEM_TENANT_CONTROL` 会全量返回数据 |
 | 支持一用户多租户，灵活切换 | Redis 是认证链路的关键依赖（JWT 续期也在 Redis） |
-| ThreadLocal 线程安全隔离 | ThreadLocal 必须手动清理，否则内存泄漏 |
+| ThreadLocal 线程安全隔离 | ThreadLocal 必须手动清理，否则租户会串到线程池里的下一个请求 |
 
 ---
 
-## 二、低代码平台：从"写死代码"到"解释执行"
+## 二、低代码平台：从「写死代码」到「解释执行」
 
 ### 2.1 核心问题
 
@@ -203,18 +229,19 @@ Controller → Service → Mapper（固定 Entity）→ MyBatis XML（固定 SQL
 List<Order> list = orderMapper.selectList(queryWrapper);
 ```
 
-Online 运行时的做法（`jeecg-online.jar` 内部推断）：
+Online 的运行时引擎在闭源的 `jeecg-online` jar 里，公开源码看不到它怎么执行 SQL。下面是我按这个思路写的示意，演示「不用实体类、用 Map 接收」，**不是 jar 里的代码**：
 
 ```java
+// 示意代码，不是 jeecg-online 的实现
 // tableName 来自请求参数，运行时才知道
 String tableName = params.getString("tableName");
-
-// 不用实体类，用 Map 接收数据
-String sql = "SELECT * FROM " + tableName + " WHERE tenant_id = ?";
-
-// JdbcTemplate 执行，返回 List<Map<String,Object>>
-List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId);
+// 表名不能用 ? 占位，真实实现要先拿元数据校验表名
+String sql = "SELECT * FROM " + tableName;
+// 不用实体类，每行用 Map 接收
+List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
 ```
+
+示意里用 JdbcTemplate 只是因为它写起来最短。真实引擎走 MyBatis 还是直接走 JDBC，会影响租户拦截器管不管得到它，见第三节。
 
 **本质就一句话：用 `Map<String,Object>` 代替 Entity，用运行时拼 SQL 代替 MyBatis XML。**
 
@@ -224,7 +251,7 @@ List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId);
 
 光有动态 SQL 还不够。还需要知道：这张表有哪些字段？字段什么类型？哪些字段显示在列表？哪些字段是必填的？
 
-这些"关于数据结构的数据"就是**元数据**，存储在 `onl_cgform_field` 表里：
+这些「关于数据结构的数据」就是**元数据**，存储在 `onl_cgform_field` 表里：
 
 ```
 db_field_name   = "order_no"   ← 数据库字段名，拼 SQL 用
@@ -235,7 +262,7 @@ field_must_input = 1           ← 是否必填
 field_extend_json = "{...}"    ← 扩展配置（JSON）
 ```
 
-运行时 CRUD 流程：
+运行时 CRUD 流程（按元数据表结构推断，同样不是 jar 里的代码）：
 
 ```
 POST /online/cgform/api/saveData
@@ -252,10 +279,11 @@ POST /online/cgform/api/saveData
    - 组装 INSERT 的字段列表和值列表
             │
             ▼
-3. jdbcTemplate.update(
-     "INSERT INTO cg_order (order_no, amount, ...) VALUES (?, ?, ...)",
-     ["001", 999.0, ...]
-   )
+3. 执行 INSERT：
+   INSERT INTO cg_order
+     (order_no, amount, ...)
+   VALUES (?, ?, ...)
+   参数 ["001", 999.0, ...]
 ```
 
 ---
@@ -264,17 +292,8 @@ POST /online/cgform/api/saveData
 
 Online 平台给了用户两种选择：
 
-```
-配置好的元数据
-    │
-    ├──→ [直接运行]  ────────────────→ 无需生成代码，配置即上线
-    │       读元数据 → 动态 SQL → JDBC      前端自动渲染控件
-    │       由 jeecg-online.jar 负责
-    │
-    └──→ [代码生成]  ────────────────→ 固化成可手工维护的代码
-            FreeMarker 模板渲染              产出 Java + Vue + SQL 文件
-            模板在 resources/jeecg/code-template-online/
-```
+- **直接运行**：读元数据 → 动态 SQL → 执行，前端按元数据自动渲染控件。不用生成代码，配置即上线，由 `jeecg-online` jar 负责。
+- **代码生成**：用 FreeMarker 模板渲染，产出 Java、Vue、SQL 文件，固化成可以手工维护的代码。模板在 `jeecg-system-biz` 的 `resources/jeecg/code-template-online/` 下。
 
 两者并不互斥：先用直接运行快速验证业务逻辑，确认无误后再代码生成转入正式开发，是一种常见的工作流。
 
@@ -282,7 +301,7 @@ Online 平台给了用户两种选择：
 
 ### 2.5 增强机制：解决 20% 的个性化需求
 
-通用 CRUD 引擎只能覆盖大多数标准场景，复杂业务逻辑需要通过"钩子"注入。JeecgBoot 提供三层增强：
+通用 CRUD 引擎只能覆盖大多数标准场景，复杂业务逻辑需要通过「钩子」注入。JeecgBoot 提供三层增强：
 
 **JS 增强**（前端联动，存 `onl_cgform_enhance_js`）：
 
@@ -319,59 +338,33 @@ public Result<?> enhanceJavaHttp(@RequestBody JSONObject params) {
 
 ---
 
-### 2.6 演化历史
+### 2.6 演化思路
 
-理解这套设计，还需要看它是怎么一步步演化过来的：
+下面是我读代码时对这套设计怎么演化过来的理解，不是官方的发布记录。我没有找到能对上具体版本的公开 release notes，所以不写年份和版本号。
 
-```
-阶段一：纯代码生成器（早期 Jeecg，2012 年前后）
-  用户填配置 → 工具跑模板 → 输出 Java/XML/JSP 代码 → 手动粘贴进项目 → 编译部署
-  本质：批量帮你写代码的工具，和 MyBatisGenerator 是同一个思路
+1. **纯代码生成器**：用户填配置，工具跑模板，输出 Java、XML、页面代码，再粘贴进项目编译部署。本质是批量帮你写代码的工具，和 MyBatis Generator 是同一个思路。
+2. **解释执行**：同样的元数据配置，不生成代码。后端运行时读元数据、拼动态 SQL 执行，前端读元数据动态渲染控件。本质是把「编译时确定」变成「运行时解释」，和脚本语言对编译语言是同一个权衡。
+3. **黑盒化**：运行时引擎做成独立的闭源依赖，开放元数据表结构、代码生成模板和增强接口，用增强机制解决个性化需求。
 
-          ↓ 关键转变：为什么要生成代码再编译？直接运行不行吗？
-
-阶段二：Online 解释执行（JeecgBoot 2.x）
-  同样的元数据配置，不生成代码
-  运行时读元数据 → 动态 SQL → JdbcTemplate 执行
-  前端读元数据 → FormSchemaFactory 动态渲染控件
-  本质：把"编译时确定"变成"运行时解释"（和脚本语言 vs 编译语言是同一个权衡）
-
-          ↓ 功能越来越复杂，商业化需要保护核心知识产权
-
-阶段三：黑盒化（JeecgBoot 3.x）
-  Online 运行时提取为独立的 jeecg-online.jar，闭源
-  以 Maven 依赖方式引入：org.jeecgframework.boot3:jeecg-online
-  开放：元数据表结构 + 代码生成模板 + 增强接口
-  用增强机制解决个性化需求
-```
+能从源码核实的只有现状：3.9.2 里 Online 运行时以 Maven 依赖 `org.jeecgframework.boot3:jeecg-online` 引入（见 `jeecg-system-biz/pom.xml`），实现不在公开仓库里。
 
 ---
 
 ### 2.7 黑盒的边界
 
-```
-┌──────────────────────────────────────────┐
-│         jeecg-online.jar（闭源）          │
-│                                          │
-│  输入：                                  │
-│    tableName（请求参数）                  │
-│    record（请求体）                       │
-│    onl_cgform_* 元数据表                 │
-│                                          │
-│  内部：读元数据 → 校验 → 类型转换         │
-│        → 动态 SQL → JdbcTemplate 执行   │
-│        → 调用增强钩子                    │
-│                                          │
-│  输出：Result<T>（标准响应）              │
-└──────────────────────────────────────────┘
+`jeecg-online` jar 是闭源的，可以把它看成一个黑盒：
 
-你能控制的（开放接口）：
-  ✅ 元数据配置（字段定义、控件类型、校验规则）
-  ✅ JS 增强（前端联动、提交前校验）
-  ✅ Java 增强（后端数据拦截、外部系统调用）
-  ✅ SQL 增强（操作后附加 SQL）
-  ✅ 代码生成（把元数据固化成可维护的手写代码）
-```
+- **输入**：`tableName`（请求参数）、`record`（请求体）、`onl_cgform_*` 元数据表
+- **内部**：读元数据 → 校验 → 类型转换 → 动态 SQL → 执行 → 调用增强钩子
+- **输出**：`Result<T>`（标准响应）
+
+你能控制的是这几类开放接口：
+
+- 元数据配置：字段定义、控件类型、校验规则
+- JS 增强：前端联动、提交前校验
+- Java 增强：后端数据拦截、外部系统调用
+- SQL 增强：操作后附加 SQL
+- 代码生成：把元数据固化成可维护的手写代码
 
 ---
 
@@ -379,9 +372,11 @@ public Result<?> enhanceJavaHttp(@RequestBody JSONObject params) {
 
 多租户和低代码并不是独立的两个模块，它们在几个关键位置深度集成：
 
-- **数据隔离**：Online 同步建表时自动加 `tenant_id` 字段；运行时 CRUD 由 `TenantLineInnerInterceptor` 自动过滤，无需额外处理。
+- **数据隔离**：Online 同步建表时自动加 `tenant_id` 字段。运行时 CRUD 会不会被 `TenantLineInnerInterceptor` 过滤，取决于 Online 的 SQL 是不是经过 MyBatis：这个拦截器只改写 MyBatis 执行的 SQL，管不到直接用 JdbcTemplate 执行的。公开源码里有两条线索偏向「至少部分经过 MyBatis」：`MybatisPlusSaasConfig` 里有一行注释掉的「online 租户隔离测试」示例，教你把 Online 表加进 `TENANT_TABLE`；同一个类里修分页的注释提到，升级 MyBatis-Plus 后 SQL Server 下的分页写法导致「online 报表报错」，说明 Online 报表的查询经过 MyBatis-Plus 分页拦截器。但引擎闭源，我没法确认每条 CRUD 都走 MyBatis。另外 Online 表默认不在 `TENANT_TABLE` 里，不手动加就不会被过滤。
 - **认证链路**：Online 接口同样经过 `JwtFilter` + `ShiroRealm`，共用同一套认证和租户校验逻辑。
-- **公共字段**：`MybatisInterceptor` 在 INSERT 时自动注入 `create_by`、`create_time`、`tenant_id`，对 Online 动态 CRUD 同样生效。
+- **公共字段**：`MybatisInterceptor` 是 MyBatis 的 Executor 插件，INSERT 时用反射给参数对象里名为 `createBy`、`createTime`、`sysOrgCode` 的字段赋值，开了租户开关时还会填 `tenantId`。它管不到 JdbcTemplate，参数是 `Map` 时也找不到这些字段。Online 动态 CRUD 的公共字段由谁来填，在闭源 jar 里，公开源码看不出来。
+
+> 更正：初稿这一节写的是「运行时 CRUD 由 `TenantLineInnerInterceptor` 自动过滤」「`MybatisInterceptor` 对 Online 动态 CRUD 同样生效」，同时 2.2 节又说 Online 用 JdbcTemplate 执行，两处不能同时成立。按公开源码核对后改成上面不下死结论的说法。
 
 ---
 
@@ -395,4 +390,4 @@ public Result<?> enhanceJavaHttp(@RequestBody JSONObject params) {
 | **代价** | 所有业务表必须有 `tenant_id` | 性能略低于编译期确定的代码 |
 | **默认状态** | 关闭（需手动开启） | 开启（配置即可使用） |
 
-两者共同体现了 JeecgBoot 的设计哲学：**把"变化的部分"从代码里抽出来，放进数据库配置**——多租户把"属于谁"放进数据行，低代码把"表结构定义"放进元数据表，本质是同一个思路在不同层次的应用。
+两者共同体现了 JeecgBoot 的设计哲学：**把「变化的部分」从代码里抽出来，放进数据库配置**——多租户把「属于谁」放进数据行，低代码把「表结构定义」放进元数据表，本质是同一个思路在不同层次的应用。

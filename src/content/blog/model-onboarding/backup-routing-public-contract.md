@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 6978eb9a7e4514ddf025fd5eaeb17c8c8da79addd40b3deb3a066282c447727a
+# import-articles-sha256: 7efe1bea2dda9d6abff87a78b2918be34b4612557a53fb3d093277c20f35f65c
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/backup-routing-public-contract.md
 # Source date: 2026-10-26
 title: "备份上游兼容性：从公开契约逐项核对"
@@ -44,6 +44,20 @@ seriesLabel: "模型接入"
 
 **提示词语法**是最典型的一类。某个接口允许在提示词正文里描述有结构的多段场景；备份只提供普通文本提示。两边都有 `prompt`，所以字段黑名单看不见差异。
 
+用一组自编的请求体看得更清楚。主渠道的文档约定方括号标出镜头：
+
+```json
+{"prompt": "[镜头 1] 猫走进厨房 [镜头 2] 特写：猫跳上桌", "planning": "manual"}
+```
+
+切到备份时，`prompt` 逐字搬过去：
+
+```json
+{"text": "[镜头 1] 猫走进厨房 [镜头 2] 特写：猫跳上桌"}
+```
+
+字段名换了、内容一字没丢，按字段比对是「全部支持」。可主渠道会把它拆成两段镜头，备份的文档里没有这种语法。
+
 本地可以证明旧代码会放行，并把文本原样发过去。至于备份会把它当普通描述、报错，还是理解成预期的结构，需要文档或真实探测支持。直接写「一定输出单段结果」就越过了证据边界。
 
 **取值语义**也一样。一个接口区分自动规划和手动编排，另一个接口只有是否开启的布尔值。把前者转成真，证明了开关打开，却没有证明自动规划能力等价。
@@ -79,6 +93,49 @@ print(parse_switch("false"))
 ```
 
 这不是建议所有接口都接受字符串。允许哪些类型，要从该接口的既有行为或新契约取得。原路径若还接受别的写法，就需要决定是否保留，并给出对应用例。
+
+把三步串起来，就是下面这个小函数组。它沿用上面的 `parse_switch`，契约和两条拒绝规则都是自编的：`mode` 缺省为手动编排，`keep_audio` 缺省为开：
+
+```python
+DEFAULTS = {"mode": "manual", "loop": False, "keep_audio": True}  # 公开契约的缺省值
+
+def effective(req):          # 第一步：补缺省值、归一，只做这一次
+    p = {**DEFAULTS, **req}
+    p["loop"] = parse_switch(p["loop"])
+    return p
+
+def backup_ok(p):            # 第二步：只看有效参数判兼容
+    if p["mode"] == "auto":
+        return False, "备份没有自动规划，会静默变成普通生成"
+    if p.get("ref_video") and p["keep_audio"]:
+        return False, "备份不能保留参考视频的原声"
+    return True, ""
+
+def build_backup(p):         # 第三步：用同一份有效参数构造请求
+    body = {"text": p["prompt"], "loop_enabled": p["loop"]}
+    if "ref_image" in p:
+        body["image_url"] = p["ref_image"]
+    return body
+
+for req in [{"prompt": "a cat", "loop": "true"},
+            {"prompt": "a cat", "mode": "auto"},
+            {"prompt": "a cat", "ref_image": "https://img.example/1.png"},
+            {"prompt": "a cat", "ref_video": "https://video.example/1.mp4"}]:
+    p = effective(req)
+    ok, why = backup_ok(p)
+    print(req, "->", build_backup(p) if ok else f"留在主渠道：{why}")
+```
+
+输出四行：
+
+```text
+{'prompt': 'a cat', 'loop': 'true'} -> {'text': 'a cat', 'loop_enabled': True}
+{'prompt': 'a cat', 'mode': 'auto'} -> 留在主渠道：备份没有自动规划，会静默变成普通生成
+{'prompt': 'a cat', 'ref_image': 'https://img.example/1.png'} -> {'text': 'a cat', 'loop_enabled': False, 'image_url': 'https://img.example/1.png'}
+{'prompt': 'a cat', 'ref_video': 'https://video.example/1.mp4'} -> 留在主渠道：备份不能保留参考视频的原声
+```
+
+第一行的字符串开关在归一后变成布尔真，备份请求里带上了。第三行只有参考图，虽然 `keep_audio` 缺省为开，也照常切到备份，这就是第 4 节说的正向对照。兼容判断和构造读的是同一个 `p`，判断时看到的值就是发出去的值。
 
 修复测试也不能只断言兼容函数返回允许。还要捕获实际发出的请求，检查开关、结构化内容和默认值确实被带上。判定正确而构造时丢字段，仍然会产生同样的问题。
 

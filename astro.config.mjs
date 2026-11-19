@@ -43,6 +43,15 @@ for (const file of collectMarkdown(BLOG_DIR)) {
 // https://astro.build/config
 export default defineConfig({
   site: 'https://chandlerblog.com',
+  // 合并或删除的文章：旧地址跳到合并去向
+  redirects: {
+    '/blog/ms-learn/09-retrospective': '/blog/ms-learn/00-overview/',
+    '/blog/ai-llm-app': '/blog/llm-learn/00-overview/',
+    '/blog/embeddings-api-selection': '/blog/llm-learn/02-rag-retrieval-quality/',
+    '/blog/billing-regression/regression-core-set-single-key': '/blog/billing-regression/pre-launch-regression-real-billing/',
+    '/blog/ai-workflow/workflow-change-evidence-layers': '/blog/ai-workflow/risk-based-delivery-gates/',
+    '/blog/model-onboarding/task-create-ambiguity-compat-closure': '/blog/model-onboarding/resend-by-stage-not-error-text/',
+  },
   markdown: {
     shikiConfig: {
       theme: 'github-dark-high-contrast',

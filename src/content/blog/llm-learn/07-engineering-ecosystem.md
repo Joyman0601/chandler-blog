@@ -30,17 +30,19 @@ seriesLabel: "大模型应用岗学习"
 
 ## MCP（Model Context Protocol）
 
-**解决什么**：各个平台的 Tool Calling 格式互不兼容——OpenAI 一套、各框架各一套、手搓又一套。同一个工具要为每个平台分别适配。MCP 定义了一个统一的标准协议，**工具实现一次，全平台可用**。
+**解决什么**：同一个工具（查数据库、读文件、调某个 SaaS）要接进不同的 AI 应用，以前每个应用都得单独写一遍对接代码。MCP 统一的是工具服务和 AI 应用之间的协议：应用是宿主（host），工具以 MCP server 的形式提供，双方用 JSON-RPC 通信，`tools/list` 列工具、`tools/call` 执行工具。**工具服务实现一次，支持 MCP 的应用都能接**。
 
-> USB 比喻：以前每个设备有自己的充电口，MCP 就像 USB，统一了接口，设备不用再分品牌适配。
+它不统一模型侧的 tool calling 格式。模型怎么表达「我要调这个工具」，仍然是各家 API 自己的格式（OpenAI 一套、Anthropic 一套）。宿主负责中间的翻译：把 MCP server 列出的工具转成模型 API 要的工具定义，模型提出调用后，再转成 `tools/call` 发给对应的 server。MCP 官方文档也写明，它只管上下文交换的协议，不规定应用怎么用 LLM。
 
-如果项目里已经有手搓的工具注册表 + 工具定义（JSON Schema）+ 工具执行服务，那它本质上就是一个私有的 MCP 等价物，迁移到 MCP 只需要对齐协议格式。
+> USB 比喻：以前每个设备有自己的充电口，MCP 就像 USB，统一的是设备和电脑之间的接口；电脑内部怎么处理，各家照旧。
+
+如果项目里已经有手搓的工具注册表 + 工具定义（JSON Schema）+ 工具执行服务，那它在宿主一侧已经做了 MCP 要做的事。迁移到 MCP，就是把工具执行服务包成 MCP server，或者让应用作为 MCP 宿主去接现成的 server。
 
 ## LLM 可观测性：Langfuse / LangSmith
 
 **为什么需要**：LLM 应用出了问题（奇怪的答案、异常的高成本），普通日志查不清——你需要知道每一次 LLM 调用的完整 prompt 和原始输出、token 成本，以及 RAG 链路每一步的质量。
 
-如果你做过后端的链路追踪，这个类比会很顺：
+如果你做过后端的链路追踪，这个类比会很顺（后端这边的做法见 [可观测性：微服务出了问题怎么定位](/blog/ms-learn/08-observability/)）：
 
 | Langfuse | 链路追踪（如 Zipkin） |
 |---|---|
@@ -61,7 +63,7 @@ Langfuse 真正的**增量价值**是结构化日志做不到的两点：
 
 接入时有个小技巧：**在 LLM 调用的唯一出入口埋点**，按 requestId 把一次请求串成一条 trace。这样一处埋点就能覆盖 RAG、Agent、Query 改写所有走 LLM 的路径，不用到处插桩。
 
-工程上注意两点：埋点要异步、fire-and-forget，失败只 warn 不影响主链路；另外某些 HTTP 客户端默认走 HTTP/2，和部分 Langfuse 部署不兼容，需要强制 HTTP/1.1。
+工程上注意两点：埋点要异步、fire-and-forget，失败只 warn 不影响主链路；另外某些 HTTP 客户端默认走 HTTP/2，和部分 Langfuse 部署不兼容，需要强制 HTTP/1.1。自建 Langfuse 时踩过的坑见 [自建 Langfuse 反代到公网](/blog/rag-langfuse-selfhost/)。
 
 ## 整条路线收尾
 

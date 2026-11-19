@@ -43,6 +43,8 @@ CREATE EXTENSION IF NOT EXISTS vector;        -- 装扩展
 embedding vector(4096)                         -- 一个能存 4096 维向量的列
 ```
 
+存 4096 维没问题，但这个维度建不了 HNSW 索引，见第 5 节的更正。
+
 它支持三种距离运算符：
 
 - `<=>` 余弦距离（cosine）
@@ -51,28 +53,36 @@ embedding vector(4096)                         -- 一个能存 4096 维向量的
 
 我用 `<=>`，因为原来的内存实现算的就是余弦相似度，得对齐语义，不然结果会对不上。
 
-更关键的是 pgvector 支持 **ANN 索引**（近似最近邻），这正是它跟「线性扫描」的本质区别——下面第一个设计点会细讲。
+更关键的是 pgvector 支持 **ANN 索引**（近似最近邻），这正是它跟「线性扫描」的本质区别——第 5 节会细讲。
 
 为什么选 pgvector 而不是 Qdrant / Elasticsearch？主要是图省事：一个 PostgreSQL 实例，既能做向量检索，又能顺手把后面想做的 usage 持久化、文档元数据落库一起解决，不用再多引入一个组件。学习项目，能少装一个是一个。
 
 ## 2. 改了哪些东西
 
-```
-pom.xml                          +spring-boot-starter-jdbc, postgresql
-db/init/01_schema.sql            建表 + HNSW 索引 + 预留 usage 表
-docker-compose.pgvector.yml      一键起 pgvector 容器
-vector/PgVectorStore.java        新：pgvector 后端实现（核心）
-vector/Bm25Scorer.java           新：抽出共享的 BM25 打分逻辑
-vector/InMemoryVectorStore.java  改：加一行开关注解，逻辑不动
-application.yml                  加开关 + datasource 配置
-vector/PgVectorStoreIT.java      新：连真 PG 的集成测试
+```text
+pom.xml
+  加 jdbc、postgresql 依赖
+db/init/01_schema.sql
+  建表、HNSW 索引、预留 usage 表
+docker-compose.pgvector.yml
+  一键起 pgvector 容器
+vector/PgVectorStore.java
+  新：pgvector 后端实现（核心）
+vector/Bm25Scorer.java
+  新：抽出共享的 BM25 打分
+vector/InMemoryVectorStore.java
+  改：加一行开关注解，逻辑不动
+application.yml
+  加开关和 datasource 配置
+vector/PgVectorStoreIT.java
+  新：连真 PG 的集成测试
 ```
 
-文件不多。真正让我琢磨了挺久的是接下来三个设计点，下面我尽量讲「我当时为什么这么想」，而不是干巴巴列「做了什么」。
+文件不多。真正让我琢磨了挺久的是接下来三个设计点（第 3–5 节），下面我尽量讲「我当时为什么这么想」，而不是干巴巴列「做了什么」。
 
 ---
 
-## 设计点一：用开关装配，做到「零回归」
+## 3. 设计点一：用开关装配，做到「零回归」
 
 ### 我担心的事
 
@@ -126,7 +136,7 @@ public class PgVectorStore implements VectorStore { ... }
 
 ---
 
-## 设计点二：用 SQL WHERE 表达权限过滤
+## 4. 设计点二：用 SQL WHERE 表达权限过滤
 
 这一点是我整个改造里最有意思、也最费脑子的地方。
 
@@ -189,9 +199,41 @@ CUSTOM 可见性有两个白名单：允许的用户列表、允许的角色列�
 
 把 visibility 的五种可见性翻译成 SQL 的 OR 分支、租户隔离放 WHERE 第一条、CUSTOM 白名单用数组运算符配 GIN 索引——这套东西真正写一遍，比看十篇博客都记得牢。
 
+### 带过滤条件时，HNSW 可能返回不足 topK
+
+权限 WHERE 和 `ORDER BY 距离 LIMIT` 写在一起，有个坑当时没想到。走 HNSW 索引时，pgvector 先从图里取一批候选，再拿 WHERE 过滤。候选数由 `hnsw.ef_search` 决定，默认 40。README 举的例子是：条件只匹配 10% 的行时，平均只剩 4 行。条件越严，返回的行数越可能不足 topK。
+
+两种补法都写在 pgvector README 里：
+
+```sql
+-- 1) 调大候选数（只影响当前事务）
+BEGIN;
+SET LOCAL hnsw.ef_search = 200;
+SELECT ... ORDER BY embedding <=> ?::vector LIMIT 10;
+COMMIT;
+
+-- 2) pgvector 0.8.0 起：结果不够就接着扫索引
+SET hnsw.iterative_scan = relaxed_order;
+-- 最多再扫多少条由 hnsw.max_scan_tuples 控制，默认 20000
+```
+
+`relaxed_order` 返回的结果可能略微乱序。README 建议外面再按距离排一次：
+
+```sql
+WITH r AS MATERIALIZED (
+  SELECT chunk_id, embedding <=> ?::vector AS distance
+  FROM document_chunk
+  WHERE tenant_id = ?
+  ORDER BY distance LIMIT 10
+)
+SELECT * FROM r ORDER BY distance;
+```
+
+要严格保持顺序，可以用 `strict_order`，代价是多扫一些。我这个项目的过滤命中率、实际漏了多少，这次没有测。
+
 ---
 
-## 设计点三：向量检索走 HNSW，BM25 留在应用层
+## 5. 设计点三：向量检索走 HNSW，BM25 留在应用层
 
 ### 先讲 HNSW——「线性扫描」的解药
 
@@ -213,6 +255,30 @@ CREATE INDEX ON document_chunk USING hnsw (embedding vector_cosine_ops)
 - `vector_cosine_ops`：告诉索引「我用余弦距离」（要和查询用的 `<=>` 对应）。
 - `m = 16`：每个节点在图里连多少条边。越大越准，但索引越大、建得越慢。
 - `ef_construction = 64`：建索引时每步考察多少候选。越大越准，建得越慢。
+
+> 更正：这条语句在我的表上建不出来。pgvector README 写明，HNSW 和 IVFFlat 对 `vector` 类型最多索引 2000 维，`halfvec` 最多 4000 维。第 1 节建表用的是 `vector(4096)`，超过了上限，执行这句会直接报错。我当时实际怎么处理的，待我回头核对。
+
+4096 维想走索引，有几条路可选：
+
+1. **降维**：不少 Embedding 模型有输出维度参数，直接要 1024 维这类较低维度，列改成 `vector(1024)`。后来[部署那篇](/blog/rag-deploy-compose-pitfalls/)换成了 1024 维的模型。
+2. **二值量化加重排**：用 `binary_quantize` 建表达式索引（`bit` 类型最多 64000 维），先按汉明距离粗召回，再用原向量重排。半精度 `halfvec` 上限 4000，装不下 4096。
+3. **不建索引**：数据量小的时候走精确扫描，结果和暴力检索一样，本节说的 HNSW 收益也就没有了。
+
+第 2 条的写法，照 README 的例子改成本文的表：
+
+```sql
+CREATE INDEX ON document_chunk USING hnsw
+  ((binary_quantize(embedding)::bit(4096)) bit_hamming_ops);
+
+SELECT * FROM (
+  SELECT * FROM document_chunk
+  ORDER BY binary_quantize(embedding)::bit(4096)
+           <~> binary_quantize(?::vector)
+  LIMIT 100                       -- 先粗召回 100 条
+) t
+ORDER BY embedding <=> ?::vector  -- 再按余弦距离重排
+LIMIT 10;
+```
 
 这俩参数本质都在调同一个跷跷板：**召回率 vs 延迟**。数据量真上来以后，把 O(N) 的暴力扫描换成接近 O(log N) 的 HNSW，再根据召回要求调 m / ef_search，是个能一直往下抠的方向。
 
@@ -248,7 +314,7 @@ public final class Bm25Scorer {
 
 ---
 
-## 3. 怎么验证的
+## 6. 怎么验证的
 
 **默认 memory 模式（不需要数据库）：**
 
@@ -269,9 +335,11 @@ PG_URL=jdbc:postgresql://localhost:5432/rag PG_USER=rag PG_PASSWORD=rag \
 # 3. 想看索引到底有没有生效，连进去 EXPLAIN ANALYZE 看执行计划是否命中 HNSW
 ```
 
+这次没贴 EXPLAIN 的结果。怎么看：命中 HNSW 时，计划里有一行 `Index Scan using document_chunk_embedding_idx on document_chunk`（建索引没起名时，PostgreSQL 自动按「表名_列名_idx」命名）；看到 `Seq Scan` 加 `Sort`，就是没走索引。pgvector README 提醒，查询要有按距离升序的 `ORDER BY` 加 `LIMIT`，规划器才会考虑这个索引；表很小时，它也可能认为顺序扫描更快。
+
 集成测试 `PgVectorStoreIT` 我故意做成「只在设了 `PG_URL` 时才运行」，没有 PG 的环境自动跳过，不影响默认全绿。它覆盖的场景和内存实现的单元测试一一对应：权限过滤、版本过滤、私有/部门/自定义可见性、关键词检索、向量 round-trip——就是为了确认 SQL 翻译之后的行为，和内存语义真的完全一致。
 
-## 4. 写在最后
+## 7. 写在最后
 
 这次改造对我来说其实是一条挺完整的小闭环：
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: fb1ebab357dba6db1599106b3e55a79cde2b61707ea763db9b435354670745e7
+# import-articles-sha256: aff65b698b8490a5524bd529766339b0550c2f05ce809d9e6bdf78b2845870a0
 # Imported by scripts/import-articles.mjs from posts/git-collab/integrate-green-branches-inventory.md
 # Source date: 2026-11-15
 title: "合并全绿分支再盘点未合分支：交叉处和「没变化」都要验"
@@ -112,11 +112,17 @@ done
 不碰工作区，不碰任何分支。补回之后，再核一次补回的提交和整合分支上的原提交是不是同一份补丁：
 
 ```bash
-git show "$FIX"     | git patch-id --stable | cut -d' ' -f1
-git show feat/a     | git patch-id --stable | cut -d' ' -f1   # 两行相同才算同一份
+want=$(git show "$FIX" | git patch-id --stable | cut -d' ' -f1)
+# 按提交范围逐个算 patch-id，补回的提交在不在顶端都找得到
+git log -p origin/main..feat/a | git patch-id --stable | grep "^$want " \
+  && echo "feat/a 上有同一份补丁" || echo "feat/a 上没有"
+# 同一件事的另一种写法：行首是 - 表示 feat/a 上已有等价补丁
+git cherry -v feat/a "$FIX" "$FIX^"
 ```
 
-patch-id 相同，两条分支先合哪条，git 都能认出是同一处改动，不会在这里冲突。补不回的修复，在给合并人的说明里写明「只能走整合分支」。
+更正：这里原先比的是 `git show feat/a`，它只取分支顶端那一个提交。补回之后分支上又有了新提交，顶端就不是补回的那个，两行永远不同。我在一个假仓库里实测：补回后再加一个提交，`git show feat/a` 算出的 patch-id 和原提交不同；按 `origin/main..feat/a` 范围算，能找到相同的那一行，`git cherry` 也把原提交标成 `-`。
+
+patch-id 相同，说明两边是同一份改动。两条分支先合哪条，同一处的修改内容一样，三方合并不会在这里冲突；rebase 也会按 patch-id 跳过已有的提交。补不回的修复，在给合并人的说明里写明「只能走整合分支」。
 
 用 merge-tree 预判 rebase 冲突的基本用法，见[出 diff 前先定主干和起点](/blog/git-collab/diff-range-trunk-merge-base/)第 4 节。那篇第 5 节讲的按提交日期生成的文件，这次也碰到了：兼容分支合主干的预演在一个 sitemap 生成文件上冲突，那是重算就行的生成物，不是两边逻辑打架。
 

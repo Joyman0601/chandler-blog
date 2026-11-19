@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: bf35fa96cd91dde3797a281d4b922103cdd57ef0d1a0a859febc08c69769dcac
+# import-articles-sha256: c533dae40da5981928b56c7930525c529b1113625ff1d81a79cc8ad144b56ec6
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/claude-code-hooks-inject-context.md
 # Source date: 2026-09-30
 title: "Claude Code hooks：提示拦不住命令，要拒绝一次"
@@ -19,7 +19,7 @@ seriesLabel: "AI 辅助开发"
 
 我要的是另一种东西：模型准备 `git push` 时，推送清单自己出现；测试失败时，「先在干净基线上复跑」自己出现；开始写某个页面文件时，这个文件该守的规则自己出现。这类「在某个时刻必须发生」的事，Claude Code 里只有 hook 能做。harness（Claude Code 的运行框架）在每个事件上都会确定地执行你配的命令。命令的输出可以作为上下文交给模型，也可以直接拒绝这次工具调用。
 
-前后一个月，我在 Claude Code 里陆续挂了六道 hook，这篇讲其中四类：
+前后一个月，我在 Claude Code 里陆续挂了六道 hook，这篇讲其中四类。会拦人的那几道我叫它「闸」：在某个时刻检查一个条件，不满足就拦下这次操作的 hook。
 
 - **经验卡片**：命令、报错、要写的文件路径命中某条经验的触发规则，就把那条经验的正文送进上下文；
 - **读取守卫**：记下长文件实际读进了哪几行，被截断时提示分段重读，交回前核对「必读」有没有读全；
@@ -71,7 +71,7 @@ hook 脚本从 stdin 读一段 JSON，向 stdout 打印一段 JSON。输入里�
 
 - 脚本自己兜住所有异常，以退出码 0 结束，错误写进日志文件。hook 报错会打断正常的工具调用。
 - 一个启动 Python、再读几十个小文件的 hook，每次约 40–80 毫秒。挂在每条 Bash 上可以接受。
-- 改 `~/.claude/settings.json` 里的 hook，正在运行的会话立即生效，不用重启。前提是会话启动时这个文件就已经存在。
+- 改 `~/.claude/settings.json` 里的 hook，正在运行的会话立即生效，不用重启。前提是会话启动时这个文件就已经存在。这是我用的版本实测的结果；早期文档写的是启动时取快照，不同版本可能不同，改完用一条能触发的命令确认一下。
 - 先用管道喂一段假的 stdin 把脚本测通，再写进配置；写进去以后，用一条无害但能触发的命令确认它真的触发了。zsh 的 `echo` 会把 `\n` 转成换行，喂 JSON 要用 `printf '%s'`。
 - hook 的输出在会话记录里是 `type: "attachment"` 的条目，不是 user 或 assistant 消息。按消息类型解析会话记录的脚本看不到它们。
 
@@ -144,12 +144,13 @@ if __name__ == "__main__":
 
 代价是每条命中的命令多一次重试，外加理由文字占的上下文。我当时的取舍是效果优先：宁可多一次重试，也要让经验赶在命令之前到。省的那一档也留着，一个开关改回去，就退成「照常执行、提示随结果到」。
 
-同样的「拒绝」可以用在两个结束点上：
+同样的「拒绝」可以用在结束的时刻上：
 
 - `Stop` 打印 `{"decision": "block", "reason": "……"}`，模型这一轮不会结束，把 reason 当作反馈接着做；
-- 子代理交回报告也是一次工具调用，`PreToolUse` 匹配它返回拒绝，子代理会照理由补做再交；`SubagentStop` 做兜底。
+- 子代理这一轮要结束时触发 `SubagentStop`，同样打印 `{"decision": "block", "reason": "……"}`，子代理不会结束，会照理由补做。这是公开的事件，我去掉别的拦截单独测过。
+- 我用的环境里，子代理交回报告要调用一个专门的交回工具（工具名 `SubagentHandback`），所以我还在 `PreToolUse` 上用 `matcher` 匹配这个工具名、返回拒绝，在报告送出之前就拦下，子代理照理由补做再交。你的环境里子代理如果是以最后一条回复直接交回、没有这个工具，`PreToolUse` 就无处可挂，只用 `SubagentStop`。
 
-这两处一定要限次（同一件事最多拦 2 次），并留一个出口，比如回复里写一行「跳过：原因」就放行并记日志，否则可能死循环。另外，hook 输出里的 `systemMessage` 只显示在终端里给人看，不进模型上下文，适合用来告诉我「这里放弃核对了」。
+这几处一定要限次（同一件事最多拦 2 次），并留一个出口，比如回复里写一行「跳过：原因」就放行并记日志，否则可能死循环。另外，hook 输出里的 `systemMessage` 只显示在终端里给人看，不进模型上下文，适合用来告诉我「这里放弃核对了」。
 
 ## 3. 失败的命令走另一个事件
 
@@ -179,7 +180,7 @@ def command_output(data):
 **修复**：
 
 - 要常驻的大段内容（目录、规范）不走 hook。生成成文件，在 CLAUDE.md 里用一行 `@路径` 引入，随全局指令进每个会话的上下文。
-- 走 hook 的内容自己控制总长。我设的是一次最多 9000 字符、最多 5 张卡片，放不下的卡片退成一句话摘要。
+- 走 hook 的内容自己控制总长。我给一次注入的总字数和卡片张数都设了上限，放不下的卡片退成一句话摘要。
 - 去重：同一会话里同一条只出现一次。
 
 注入得多不等于有用。每条注入都占上下文，不相关的提示还会让模型学会忽略后面相关的那条。所以要有条数上限，还要记命中日志（只记时间、会话、规则，不记对话原文），后面调规则全靠它。
@@ -271,7 +272,7 @@ def simple_commands(command):
 | 闸 | 要解决的问题 | 挂的事件 | 动作 |
 |---|---|---|---|
 | 经验卡片 | 经验在做事的那一刻到场 | `PreToolUse`（Bash、Write、Edit、Skill），`PostToolUse` 和 `PostToolUseFailure`（Bash），`UserPromptSubmit` | 命令和写文件前拦一次；报错、消息命中时注入 |
-| 读取守卫 | 长文件真的读全了 | `PostToolUse` 和 `PostToolUseFailure`（Bash、Read），`PreToolUse`（派子代理、子代理交回），`Stop`，`SubagentStop` | 记读取、被截断时提示分段；交回和结束前核必读 |
+| 读取守卫 | 长文件真的读全了 | `PostToolUse` 和 `PostToolUseFailure`（Bash、Read），`PreToolUse`（派子代理的 `Agent`；有交回工具的环境再加 `SubagentHandback`），`Stop`，`SubagentStop` | 记读取、被截断时提示分段；交回和结束前核必读 |
 | 上下文闸 | 压缩前把真相落盘 | `UserPromptSubmit`，`PreToolUse`（写操作），`PostToolUse`（Write），`PostCompact` | 到软阈值提醒；到硬阈值拦写操作，只放行写交接文件；压缩后存摘要 |
 | 页面规范闸 | 写页面前读全规范 | `SessionStart`，`UserPromptSubmit`，`PreToolUse`（Write、Edit、Bash 里的写入） | 第一次写页面文件先拦，要求写规则清单；之后按文件弹卡 |
 
