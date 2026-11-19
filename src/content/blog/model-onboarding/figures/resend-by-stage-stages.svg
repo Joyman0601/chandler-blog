@@ -1,31 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="520" height="484" viewBox="0 0 400 372" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="471" viewBox="0 0 400 362" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
   <title>请求走到了哪一步，各自能下什么结论</title>
-  <path d="M22 35V103" stroke="#a9a9a6" stroke-width="1.2" fill="none"/>
-  <path d="M22 125V193" stroke="#a9a9a6" stroke-width="1.2" fill="none"/>
-  <circle cx="22" cy="24" r="11" fill="none" stroke="#191919" stroke-width="1.2"/>
-  <text x="22" y="28.5" text-anchor="middle" font-size="12.5" font-weight="600" fill="#191919">1</text>
-  <text x="46" y="29" font-size="15" font-weight="600" fill="#191919">还没发出去</text>
-  <text x="46" y="52" font-size="13" fill="#626262">取凭证、下载输入图失败</text>
-  <circle cx="53" cy="69.5" r="5" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <path d="M14 26V108" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <path d="M14 116V198" stroke="#a9a9a6" stroke-width="1" fill="none"/>
+  <circle cx="14" cy="22" r="4" fill="#191919"/>
+  <text x="30" y="27" font-size="15" font-family="'Courier New', Courier, monospace" fill="#626262">1</text>
+  <text x="48" y="28" font-size="17" font-weight="300" fill="#191919">还没发出去</text>
+  <text x="48" y="52" font-size="13" fill="#626262">取凭证、下载输入图失败</text>
+  <circle cx="54" cy="69.5" r="4.5" fill="none" stroke="#191919" stroke-width="1.2"/>
   <text x="66" y="74" font-size="13" fill="#191919">上游没收到，没收钱</text>
-  <circle cx="22" cy="114" r="11" fill="none" stroke="#191919" stroke-width="1.2"/>
-  <text x="22" y="118.5" text-anchor="middle" font-size="12.5" font-weight="600" fill="#191919">2</text>
-  <text x="46" y="119" font-size="15" font-weight="600" fill="#191919">发出去了，没等到回包</text>
-  <text x="46" y="142" font-size="13" fill="#626262">连接断开、读超时</text>
-  <circle cx="53" cy="159.5" r="5" fill="none" stroke="#191919" stroke-width="1.2"/>
-  <path d="M53 154.5A5 5 0 0 0 53 164.5Z" fill="#191919"/>
+  <circle cx="14" cy="112" r="4" fill="#191919"/>
+  <text x="30" y="117" font-size="15" font-family="'Courier New', Courier, monospace" fill="#626262">2</text>
+  <text x="48" y="118" font-size="17" font-weight="300" fill="#191919">发出去了，没等到回包</text>
+  <text x="48" y="142" font-size="13" fill="#626262">连接断开、读超时</text>
+  <circle cx="54" cy="159.5" r="4.5" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <path d="M54 155.0A4.5 4.5 0 0 0 54 164.0Z" fill="#191919"/>
   <text x="66" y="164" font-size="13" fill="#191919">不知道上游做没做</text>
-  <circle cx="22" cy="204" r="11" fill="none" stroke="#191919" stroke-width="1.2"/>
-  <text x="22" y="208.5" text-anchor="middle" font-size="12.5" font-weight="600" fill="#191919">3</text>
-  <text x="46" y="209" font-size="15" font-weight="600" fill="#191919">收到了状态码</text>
-  <text x="46" y="232" font-size="13" fill="#626262">非 200，带上游自己的错误体</text>
-  <circle cx="53" cy="249.5" r="5" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <circle cx="14" cy="202" r="4" fill="#191919"/>
+  <text x="30" y="207" font-size="15" font-family="'Courier New', Courier, monospace" fill="#626262">3</text>
+  <text x="48" y="208" font-size="17" font-weight="300" fill="#191919">收到了状态码</text>
+  <text x="48" y="232" font-size="13" fill="#626262">非 200，带上游自己的错误体</text>
+  <circle cx="54" cy="249.5" r="4.5" fill="none" stroke="#191919" stroke-width="1.2"/>
   <text x="66" y="254" font-size="13" fill="#191919">明确拒绝，没收钱</text>
-  <text x="46" y="282" font-size="13" fill="#626262">非 200，只有一页 HTML 或纯文本</text>
-  <circle cx="53" cy="299.5" r="5" fill="none" stroke="#191919" stroke-width="1.2"/>
-  <path d="M53 294.5A5 5 0 0 0 53 304.5Z" fill="#191919"/>
-  <text x="66" y="304" font-size="13" fill="#191919">不知道是谁回的</text>
-  <text x="46" y="332" font-size="13" fill="#626262">200</text>
-  <circle cx="53" cy="349.5" r="5" fill="#191919" stroke="#191919" stroke-width="1.2"/>
-  <text x="66" y="354" font-size="13" fill="#191919">已经收钱；这时读响应体断了，钱花了、图没拿到</text>
+  <text x="48" y="280" font-size="13" fill="#626262">非 200，只有一页 HTML 或纯文本</text>
+  <circle cx="54" cy="297.5" r="4.5" fill="none" stroke="#191919" stroke-width="1.2"/>
+  <path d="M54 293.0A4.5 4.5 0 0 0 54 302.0Z" fill="#191919"/>
+  <text x="66" y="302" font-size="13" fill="#191919">不知道是谁回的</text>
+  <text x="48" y="328" font-size="13" fill="#626262">200</text>
+  <circle cx="54" cy="345.5" r="4.5" fill="#191919" stroke="#191919" stroke-width="1.2"/>
+  <text x="66" y="350" font-size="13" fill="#191919">已经收钱；这时读响应体断了，钱花了、图没拿到</text>
 </svg>
