@@ -1,11 +1,11 @@
 ---
-# import-articles-sha256: 8b3495fecc8b7b57b4e12a79448a1398fd54beacdb746f2e6802ed16bea21cbe
+# import-articles-sha256: 8687fc5ba6d89e06ef8b11755f49673e4458486244de40becbfebe5d1d44d365
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/rules-learning-and-public-writing.md
 # Source date: 2026-11-02
 title: "知识沉淀分三处：执行规则、个人理解和公开文章"
 description: "经验写进 AI 技能，不代表本人已经理解，私人素材也需要经过改写才能公开。我把执行规则、学习笔记和文章按用途分开，再区分维护位置、按需读取和公开范围；用唯一源生成备份，从远端隔离恢复，核验文件、权限、链接和必要依赖。"
 pubDate: 2026-11-02
-updatedDate: 2026-11-04
+updatedDate: 2026-11-19
 tags: ["AI 编程","Skill","工作方法","复盘","文档","脱敏"]
 series: ai-workflow
 seriesLabel: "AI 辅助开发"
@@ -206,6 +206,41 @@ updated: 2026-01-01
 
 这不是要求每次生成三份文件。它只是防止把「系统会做」直接当成「我已学会」，也防止把私人来源原样带进公开正文。
 
+## 7. 一个真实案例：规则写错，文章跟着错
+
+第 2 节的例子是自编的。下面是 2026-11-19 的一次真实经过，三处正好都走了一遍，只是方向反过来：先在文章里发现问题，再追回到规则。
+
+我让助手审一批准备上博客的文章。审到[前端页面迁移那篇](/blog/frontend/page-framework-migration/)时，它指出文中「支付 5 个套件是存量失败」的证据不成立：那是 `git stash` 之后在同一目录复跑得出的。
+
+`git stash`（加 `-u` 也一样）只收走未提交的改动，HEAD 不动。分支上已经提交的改动都还在，这时测试还红，可能正是分支自己弄坏的。用一个小仓库就能看到：
+
+```bash
+git init -q -b main demo && cd demo
+echo "echo ok" > test.sh && git add . && git commit -qm base
+git switch -qc feat
+echo "echo FAIL; exit 1" > test.sh && git commit -qam "break test"
+echo wip > notes.txt                 # 一点未提交的改动
+
+git stash -u -q && sh test.sh        # 输出 FAIL：坏提交还在 HEAD 上
+git stash pop -q
+git worktree add -q --detach ../base "$(git merge-base HEAD main)"
+sh ../base/test.sh                   # 输出 ok：分支起点才是基线
+```
+
+往回查，这个做法不是那篇文章自己想出来的。审稿时一并对照了执行规则，判断存量失败那一步写的就是「stash 后复跑」；[守卫测试那篇](/blog/testing/guard-tests-three-rules/)的基线也是这样跑的。文章从会话和规则里提炼，规则写错了，两篇文章都跟着错。
+
+三处当天各自改了，改法不一样：
+
+| 位置 | 改了什么 | 为什么这样改 |
+|---|---|---|
+| 执行规则 | 默认在分支起点另开 worktree 复跑，只有改动全部未提交时才用 stash；留一句更正日期 | 执行时只需要现在正确的做法 |
+| 学习笔记 | 补一节机制（stash 动不了 HEAD），附一道自问和参考答案；写明拿 stash 当基线是助手的执行做法 | 学习状态只能记「已记录」，我还没用自己的话讲过 |
+| 公开文章 | 两篇各加一段更正，保留原来的说法；页面迁移那篇的结论改成「多半仍是存量，但只有主干检出才算证据」 | 读者可能看过旧版，要看得出哪里改了 |
+
+笔记里那道自问是这样的：分支上有 3 个提交，工作区还改着 1 个文件，`git stash -u` 之后跑测试，跑的是哪份代码？答案是分支 HEAD，3 个提交都在，只少了那个未提交的改动。
+
+这次让我多记了一条：三处共用素材，一处的错很可能也在另外两处。发现一个说法错了，先问它是从哪来的、还有谁用了它，再逐处改。只改眼前这篇，规则下次还会生出同样的错。
+
 ## 收尾
 
 1. **按用途分记录** —— 执行、理解和公开表达，各自有明确读者。
@@ -214,5 +249,6 @@ updated: 2026-01-01
 4. **覆盖写实际范围** —— 检索命中不冒充读完，摘录不冒充完整原件。
 5. **维护与读取分开** —— 仓库可以统一备份，技能按当前任务选择必要模块。
 6. **备份实际恢复** —— 从远端固定版本验证文件、权限、链接和依赖，再说明启用到哪一层。
+7. **一处错，三处查** —— 规则、笔记、文章共用素材，改了眼前这篇不等于改完。
 
 下一次复盘，我会先问自己：这次到底增加了哪种能力，证据留在哪里。执行规则的结构可接着看[给 AI 搭一个会自己调出的经验库：记录、触发、复习](/blog/ai-workflow/agent-knowledge-base/)；从纠正走到可复用检查，怎么证明它真的生效，见[交付闸按风险分级：小改走短路，分流器本身严查](/blog/ai-workflow/risk-based-delivery-gates/)第 3 节。

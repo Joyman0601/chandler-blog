@@ -102,9 +102,9 @@ org.apache.dubbo.rpc.RpcException:
 
 ### 根因
 
-回到第 01 篇那句话：**`ruoyi-api` 只有接口，实现在 provider 模块（这里是 `ruoyi-system`）里。**
+回到[第 01 篇](/blog/ruoyi-newbie/01-architecture/)那句话：**`ruoyi-api` 只有接口，实现在 provider 模块（这里是 `ruoyi-system`）里。**
 
-Dubbo 是 provider / consumer 架构：
+[Dubbo](/blog/ms-learn/03-feign-vs-dubbo/) 是 provider / consumer 架构：
 - 我的业务模块是 **consumer**（调用方）；
 - `ruoyi-system` 是 **provider**（真正实现方法的人）。
 
@@ -145,4 +145,4 @@ Dubbo 是 provider / consumer 架构：
 - Dubbo 跨模块改动是新人最容易忽视的部署陷阱：**改了契约或别人的模块，就不是「只部署我自己」能解决的**；
 - 通用心法：遇到「本地好、远程崩」，先想**两个环境到底哪里不一样**——版本、配置、还是数据。
 
-下一篇回到代码本身，讲我在写这个模块时沉淀下来的几个实现模式：分层、避免 N+1、全量覆盖关联、租户唯一校验。
+[下一篇](/blog/ruoyi-newbie/04-code-patterns/)回到代码本身，讲我在写这个模块时沉淀下来的几个实现模式：分层、避免 N+1、全量覆盖关联、租户唯一校验。

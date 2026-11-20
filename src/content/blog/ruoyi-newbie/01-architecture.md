@@ -61,9 +61,9 @@ ruoyi-modules/
 
 几个对新人很关键的认知：
 
-1. **`ruoyi-api` 里只有接口，没有实现。** 它是「契约层」。比如「根据用户 ID 查昵称」这个能力，接口定义在 `ruoyi-api`，**实现在 `ruoyi-system`**。我的业务模块想用，就 `@DubboReference` 引这个接口。这个设计后面第 03 篇会狠狠坑我一次。
+1. **`ruoyi-api` 里只有接口，没有实现。** 它是「契约层」。比如「根据用户 ID 查昵称」这个能力，接口定义在 `ruoyi-api`，**实现在 `ruoyi-system`**。我的业务模块想用，就 `@DubboReference` 引这个接口。这个设计后面[第 03 篇](/blog/ruoyi-newbie/03-remote-collaboration/)会狠狠坑我一次。
 
-2. **`ruoyi-common` 是一堆子模块**，不是一个。`common-core`、`common-mybatis`、`common-tenant`、`common-excel`…… 我的模块按需依赖。这点在第 07 篇「编译报包不存在」时很关键。
+2. **`ruoyi-common` 是一堆子模块**，不是一个。`common-core`、`common-mybatis`、`common-tenant`、`common-excel`…… 我的模块按需依赖。这点在[第 07 篇](/blog/ruoyi-newbie/07-dependency-avalanche/)「编译报包不存在」时很关键。
 
 3. **`ruoyi-system` 是地基。** 用户、部门、菜单、租户都在它那。几乎任何业务模块都要通过 Dubbo 找它要数据。
 
@@ -94,7 +94,7 @@ ruoyi-modules/
 [ ruoyi-system ]  ← Dubbo RPC
 ```
 
-**关键点：前端永远只跟网关说话，端口只认网关那一个。** 后面的业务模块端口随便改，前端都感知不到——因为网关靠「服务名」而不是「写死端口」去找它们。这个事实在第 07 篇会成为破案的关键。
+**关键点：前端永远只跟网关说话，端口只认网关那一个。** 后面的业务模块端口随便改，前端都感知不到——因为[网关](/blog/ms-learn/02-gateway-auth/)靠「服务名」而不是「写死端口」去找它们。这个事实在第 07 篇会成为破案的关键。
 
 ## 多租户：你写的每条 SQL 都被偷偷加了条件
 
@@ -133,4 +133,4 @@ boolean exists = mapper.exists(Wrappers.<BizArea>lambdaQuery()
 - `ruoyi-api`=接口契约、`ruoyi-system`=地基、`ruoyi-common`=工具箱，这三个先记住；
 - 多租户、鉴权这类「横切能力」是框架偷偷帮你做的，**别重复造、也别和它对着干**。
 
-下一篇，我们从「第一次启动就报 `Unknown database`」开始，把环境搭建的坑挨个趟一遍。
+下一篇[下一篇](/blog/ruoyi-newbie/02-environment-setup/)，我们从「第一次启动就报 `Unknown database`」开始，把环境搭建的坑挨个趟一遍。

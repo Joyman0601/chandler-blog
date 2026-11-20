@@ -28,7 +28,7 @@ seriesOrder: 11
 - 段 3 Agent 演示「公司请年假」→ **报错 `TOOL_EXECUTION_FAILED`**
 - 段 5 Langfuse trace → **latency: 0ms, cost: $0.00**
 
-一段废掉、一段观感极差。要不是彩排先跑一遍，明天面试对着录屏讲 Langfuse 那段就直接抓瞎。
+一段废掉、一段观感极差。要不是彩排先跑一遍，明天拿录屏给人讲 Langfuse 那段就直接抓瞎。
 
 ## 1. Bug 1：Langfuse UI 里 latency = 0 和 cost = 0
 
@@ -96,7 +96,7 @@ void generationBody_startTimeIsLatencyMsBeforeEndTime() {
 }
 ```
 
-**面试口径**：Langfuse UI 是从 event 事件体的 `startTime` / `endTime` 减出 latency 的，**不是从 SDK 侧上报的 `latencyMs` 字段直接展示**。埋点时得同时给两个时间戳，不能只给耗时。这是可观测性 SDK 里常见的**「传的和展示的字段错位」**问题。
+**小结**：Langfuse UI 是从 event 事件体的 `startTime` / `endTime` 减出 latency 的，**不是从 SDK 侧上报的 `latencyMs` 字段直接展示**。埋点时得同时给两个时间戳，不能只给耗时。这是可观测性 SDK 里常见的**「传的和展示的字段错位」**问题。
 
 ## 2. Bug 2：Agent「公司请年假」稳定报 TOOL_EXECUTION_FAILED
 
@@ -183,7 +183,7 @@ Embedding 就没这些问题——同样的输入必然生成同样的向量，�
 1. 第 1 步：调 `search_knowledge_base` 检索「公司请年假」，返回 3 篇 chunk。
 2. 第 2 步：把 observation（3 篇 chunk 拼接）塞进 user message 生成最终答案，token 预算 checker 报 2650 tokens 超了 1500 的上限。
 
-**根因**：我把 chat/RAG/Agent 三条通路的 token 预算全部用同一个配置 `chatMaxInputTokens=1500`。这个 1500 是给 RAG 单轮 ask 设的。**Agent 通路不一样**——它每一步都要把 tool observation 累积到上下文里，这次年假那篇的 3 个 chunk 拼起来就超过了 2000 token。RAG ask 同样会把检索到的 chunk 放进 prompt，但它没撞上 1500，因为 RAG 拼资料时另有一道上下文预算：`buildContext` 按 `ragMaxContextTokens`（默认 1200）往里装 chunk，装不下的直接截掉；调 LLM 前的那次检查，上限也是 1500 加上这 1200。Agent 的 observation 没有这道截断，3 个 chunk 原样拼进去，就超了。
+**根因**：我把 chat/RAG/Agent 三条通路的 token 预算全部用同一个配置 `chatMaxInputTokens=1500`。这个 1500 是给 RAG 单轮 ask 设的。**Agent 通路不一样**——它每一步都要把 [tool observation 累积到上下文里](/blog/llm-learn/04-prompt-agent-react/)，这次年假那篇的 3 个 chunk 拼起来就超过了 2000 token。RAG ask 同样会把检索到的 chunk 放进 prompt，但它没撞上 1500，因为 RAG 拼资料时另有一道上下文预算：`buildContext` 按 `ragMaxContextTokens`（默认 1200）往里装 chunk，装不下的直接截掉；调 LLM 前的那次检查，上限也是 1500 加上这 1200。Agent 的 observation 没有这道截断，3 个 chunk 原样拼进去，就超了。
 
 用一个预算兜三条通路，最短板决定天花板。
 
@@ -230,7 +230,7 @@ app:
 
 `.env.prod` 里 `LLM_MAX_INPUT_CHARS=8000` 早就设了，但**没在 compose.yml 的 environment 段列出来，就不会进容器**。env 文件只用来替换 compose 文件里的 `${...}`，见[部署那篇的坑 2](/blog/rag-deploy-compose-pitfalls/)。教训是：`.env.prod` 里加了新变量，`compose.yml` 里也要跟着列一遍。
 
-**面试口径**：**双层预算是必要的**。token 预算限 LLM 侧成本，字符预算是 defensive coding 挡畸形输入。两道预算是独立护栏——token 是内容语义维度，字符是输入体积维度。Agent 循环的 observation 会累积长文本，两个维度都要给 Agent 单独放宽，不能和 chat/RAG 共用。
+**小结**：**双层预算是必要的**。token 预算限 LLM 侧成本，字符预算是 defensive coding 挡畸形输入。两道预算是独立护栏——token 是内容语义维度，字符是输入体积维度。Agent 循环的 observation 会累积长文本，两个维度都要给 Agent 单独放宽，不能和 chat/RAG 共用。
 
 ## 6. 最终验收
 
@@ -254,4 +254,4 @@ app:
 
 三个 bug 都不是「代码写错」这种低级错误——都是「假设跟实际对不上」。这也是我这次学到最重要的一课：**彩排是必要的，因为很多 bug 只有在「按用户视角完整走一遍」时才会暴露**。单元测试测不出 Langfuse UI 展示问题，集成测试测不出跨公网抖动，本地 debug 测不出文档长度分布。
 
-面试如果被追问「你的项目上线前是怎么做质量保障的」，除了讲测试覆盖率、CI/CD，我最想强调的是这次彩排——**「按面试官的视角完整走一遍」比任何单点测试都能发现问题**。这是从生产事故里学的，也是这次录屏 3 小时投入里最值得的一部分。
+上线前做质量保障，测试覆盖率、CI/CD 之外，我最想加上的一步是彩排：**「按看演示的人的视角完整走一遍」比任何单点测试都能发现问题**。这是从生产事故里学的，也是这次录屏 3 小时投入里最值得的一部分。

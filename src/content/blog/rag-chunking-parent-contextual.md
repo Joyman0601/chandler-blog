@@ -12,7 +12,7 @@ seriesOrder: 4
 
 ## 0. 起因：召回质量七分在分块
 
-边学边搭的 RAG 项目，之前一直把精力花在「混合检索 + 精排」上。某天回头看入库那一端，发现分块实现还是最朴素的样子：
+边学边搭的 RAG 项目，之前一直把精力花在「[混合检索 + 精排](/blog/llm-learn/02-rag-retrieval-quality/)」上。某天回头看入库那一端，发现分块实现还是最朴素的样子：
 
 ```java
 // 固定窗口：chunkSize=600, overlap=100，逐字符往前推
@@ -72,7 +72,7 @@ Parent-Document 的思路很直接：**检索时命中小子块（保精度）�
 - **反贴**：把父块正文复制进每个子块。简单，但冗余——一个父块切 N 个子块，正文就存 N 份。
 - **独立父块存储**（我选的）：子块只存一个 `parentId`，父块正文放在独立的 store 里；检索命中后按 `parentId` 回查父块。无冗余，父块更新也只动一处。
 
-选独立存储，是觉得它更像「教科书里的 ParentDocumentRetriever」，数据模型干净，面试也好讲。落地：
+选独立存储，是觉得它更像「教科书里的 ParentDocumentRetriever」，数据模型干净，也容易解释。落地：
 
 - `ParentBlock`：parentId / documentId / content / version + 和子块对齐的租户、权限元数据。
 - `ParentStore` 接口，两套实现按 `vectorstore.backend` 装配，跟之前 [pgvector 那篇](/blog/rag-pgvector-migration/) 里 `VectorStore` 的开关装配是同一套路：
@@ -163,7 +163,7 @@ output
 
 代码量不算大，但每一处我都能讲清楚「当时为什么这么选」——独立父块为什么不反贴、前缀为什么不存进 content、为什么默认全关。对我来说，把一个朴素分块踏踏实实改成一套讲得通的检索召回方案，比再囫囵学一个新框架收获大得多。
 
-下一篇想写**多模态**：让图片和 PDF 里的图也能被文本 query 召回——以及我在「真多模态 vs 伪多模态」上踩的一个挺典型的坑。
+[下一篇](/blog/rag-multimodal/)想写**多模态**：让图片和 PDF 里的图也能被文本 query 召回——以及我在「真多模态 vs 伪多模态」上踩的一个挺典型的坑。
 
 ---
 *配套代码：`com.yhl.rag.chunk` 包（TextSplitter 三实现 + ChunkingService）、`ParentStore` / `InMemoryParentStore` / `JdbcParentStore`、`ContextualEnricher`、配置 `rag.chunk` / `rag.contextual`。设计细节见仓库 `docs/chunking-strategy.md`、`docs/contextual-retrieval.md`。*

@@ -12,7 +12,7 @@ seriesOrder: 6
 
 ## 0. 起因：代词拿去检索会打空
 
-我项目里早就有单轮 query 改写（`QueryRewriterService.rewrite(String)`），但它只看当前这一句。问题出在多轮对话的追问上：
+我项目里早就有[单轮 query 改写](/blog/llm-learn/05-advanced-rag-patterns/)（`QueryRewriterService.rewrite(String)`），但它只看当前这一句。问题出在多轮对话的追问上：
 
 - 第 1 轮：「ThinkPad X1 的价格是多少？」→ 答「9999 元」。
 - 第 2 轮：「**它的**内存呢？」
@@ -139,7 +139,7 @@ harness（`ConversationalRetrievalHarnessTest`）入库 51 篇真实语料后，
 
 12 组里那 6 个从「召不回」到「召回」的追问，是我觉得这功能最直观的价值证明：检索系统终于能跟着对话「记住上一句在说什么」了。
 
-至此这一轮 RAG 升级（分块/父块/Contextual、多模态、多轮会话）就告一段落，下一篇会写配套的**评估体系**——怎么扩评估集、补检索+生成双侧的 RAGAS 指标，让上面这些「我觉得变好了」都能用数字说话。
+至此这一轮 RAG 升级（分块/父块/Contextual、多模态、多轮会话）就告一段落，[下一篇](/blog/rag-evaluation/)会写配套的**评估体系**——怎么扩评估集、补检索+生成双侧的 RAGAS 指标，让上面这些「我觉得变好了」都能用数字说话。
 
 ---
 *配套代码：`QueryRewriterService` 的 `rewrite(q, history)` / `summarizeHistory`、`ConversationHistoryStore` / `ConversationHistory` / `ConversationTurn`、`RagAskService.ask(q, conversationId, debug)`、配置 `rag.query-rewrite.conversation`。实测明细见仓库 `docs/conversational-rag.md` 与 `conversational-measurement-report.md`。*

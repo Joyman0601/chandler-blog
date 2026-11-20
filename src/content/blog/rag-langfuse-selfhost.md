@@ -8,7 +8,7 @@ seriesLabel: "RAG 项目"
 seriesOrder: 10
 ---
 
-> 一句话总结：给 RAG 项目做观测层，选了自建 Langfuse 而不是 Cloud——数据不出内网、面试可以给面试官 read-only 链接看真实 trace。整个过程从「拷官方 compose」到「面试官能匿名点开 trace 详情」花了 3 小时，其中至少 2 小时在排坑。这篇按踩到的顺序把 6 个坑复盘出来：观测栈解耦、NEXTAUTH_URL、Postgres 数据卷路径、Next.js 反代 WS 头、`web` 镜像必须 rebuild、以及最耗时的一个——Langfuse UI 里 trace input/output 显示为 null 的排查。
+> 一句话总结：给 RAG 项目做观测层，选了自建 Langfuse 而不是 Cloud——数据不出内网，还能给看演示的人一个 read-only 链接看真实 trace。整个过程从「拷官方 compose」到「访客能匿名点开 trace 详情」花了 3 小时，其中至少 2 小时在排坑。这篇按踩到的顺序把 6 个坑复盘出来：观测栈解耦、NEXTAUTH_URL、Postgres 数据卷路径、Next.js 反代 WS 头、`web` 镜像必须 rebuild、以及最耗时的一个——Langfuse UI 里 trace input/output 显示为 null 的排查。
 
 > 版本说明：本文基于 Langfuse v2 自托管，架构是一个 server 容器加一个 Postgres，trace 和 observation 都存在 Postgres 里，所以第 6 节能直接查 `observations` 表。v3 起架构变了：trace、observation 迁到 ClickHouse，另外要 Redis（或 Valkey）、S3 类对象存储和一个 worker 容器（见 Langfuse 官方的 v2 → v3 升级指南）。照本文的配置部署 v3 会缺组件，直接查 Postgres 的写法也不适用。
 
@@ -16,9 +16,9 @@ seriesOrder: 10
 
 Langfuse 有 Cloud 版，免费额度对演示环境完全够。但我最后还是选了自建：
 
-1. **数据不出内网**：面试演示的 prompt/response 里可能有脱敏 markdown 内容，不想上传给第三方，哪怕是免费的。
-2. **面试演示的完整度**：README 里能写「自建 Langfuse + 公开 read-only 链接」，比「Cloud 免费额度」听着工程师味重。
-3. **踩坑本身就是内容**：自建过程本身会积累一堆运维经验，日后写博客/面试都能用。
+1. **数据不出内网**：演示的 prompt/response 里可能有脱敏 markdown 内容，不想上传给第三方，哪怕是免费的。
+2. **演示的完整度**：README 里能写「自建 Langfuse + 公开 read-only 链接」，比只用「Cloud 免费额度」多出一段自己搭、自己运维的链路，能讲清每一层。
+3. **踩坑本身就是内容**：自建过程本身会积累一堆运维经验，日后写博客、做同类部署都能用。
 
 架构长这样：
 
@@ -67,7 +67,7 @@ networks:
 
 **启动顺序有依赖**：必须先起主 stack 创建网络，再起 langfuse stack 引用它。反过来会报「network rag-prod_rag-net not found」。
 
-**面试口径**：这套设计的核心思想是「业务栈 vs 观测栈解耦」。配合 `LangfuseClient` 里的 **fire-and-forget + `log.warn` 静默吞异常**——Langfuse 挂了，业务只是不上报 trace，不 fail 任何请求。
+**小结**：这套设计的核心思想是「业务栈 vs 观测栈解耦」。配合 `LangfuseClient` 里的 **[fire-and-forget + `log.warn` 静默吞异常](/blog/llm-learn/07-engineering-ecosystem/)**——Langfuse 挂了，业务只是不上报 trace，不 fail 任何请求。
 
 ## 2. NEXTAUTH_URL 必须精确匹配对外 URL
 
@@ -202,7 +202,7 @@ dcp up -d --build web
 
 带上 `--build` 才会重新跑 `docker build`，把新 nginx.conf COPY 进新镜像。
 
-**面试口径**：Docker 里 **build-time 资产**（COPY 进的配置、静态文件）改了必须 `--build`；**run-time 资产**（挂 volume 的、env vars）改了 `up -d` recreate 就够。这是 Docker 生命周期里最容易搞混的两类。
+**小结**：Docker 里 **build-time 资产**（COPY 进的配置、静态文件）改了必须 `--build`；**run-time 资产**（挂 volume 的、env vars）改了 `up -d` recreate 就够。这是 Docker 生命周期里最容易搞混的两类。
 
 ## 6. Langfuse UI 里 trace input/output 显示 null——两轮修复
 
@@ -283,4 +283,4 @@ Rebuild、部署、跑问答……**这次终于看到 chat 气泡了**：system
 
 其他 4 个（1、2、3、4）都是**「Docker Compose + 反向代理」**的通用陷阱，跟自建任何 Next.js 应用都会踩到，不局限于 Langfuse。如果你在自建 Metabase、Grafana、Sentry 之类，这几个坑照样适用。
 
-面试如果被追问「你的项目怎么落地可观测性」，除了讲埋点设计（trace/span/generation 三层），我最想强调的是**「Langfuse 挂了业务不 fail」**这个降级策略——fire-and-forget + `log.warn` 静默吞异常，业务链路和观测链路彻底解耦。这个思路和我之前写[对话式改写](/blog/rag-conversational/)里的「增强类功能失败就降级」是一脉相承的。
+给项目落地可观测性，埋点设计（trace/span/generation 三层）之外，我最想强调的是**「Langfuse 挂了业务不 fail」**这个降级策略——fire-and-forget + `log.warn` 静默吞异常，业务链路和观测链路彻底解耦。这个思路和我之前写[对话式改写](/blog/rag-conversational/)里的「增强类功能失败就降级」是一脉相承的。

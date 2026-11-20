@@ -117,7 +117,7 @@ public boolean relateSites(Long areaId, List<Long> siteIds) {
 
 ## 模式四：租户内唯一校验，别手写 tenant_id
 
-第 01 篇说过租户拦截器会自动补条件，这里给出唯一校验的标准写法（含「编辑时排除自己」）：
+[第 01 篇](/blog/ruoyi-newbie/01-architecture/)说过租户拦截器会自动补条件，这里给出唯一校验的标准写法（含「编辑时排除自己」）：
 
 ```java
 boolean exists = mapper.exists(Wrappers.<BizArea>lambdaQuery()
@@ -165,7 +165,7 @@ private String managerName;   // 不用写任何查询代码，序列化时自�
 
 > **它只能用于「展示」，不能用于「查询条件」。**
 
-如果需求是「按负责人姓名**搜索**」，不能指望这个注解。得反过来：先把「姓名」通过 Dubbo 换成一批「用户 ID」，再作为 `IN` 条件去查。（也正是这个需求引出了第 03 篇那个 Dubbo 跨模块部署的大坑。）
+如果需求是「按负责人姓名**搜索**」，不能指望这个注解。得反过来：先把「姓名」通过 Dubbo 换成一批「用户 ID」，再作为 `IN` 条件去查。（也正是这个需求引出了[第 03 篇](/blog/ruoyi-newbie/03-remote-collaboration/)那个 Dubbo 跨模块部署的大坑。）
 
 ## 小结
 
@@ -177,4 +177,4 @@ private String managerName;   // 不用写任何查询代码，序列化时自�
 
 新人写业务最大的浪费，是「不知道框架已经帮你做了」而重复造轮子，或者「不知道框架的魔法在哪生效」而用错地方。
 
-下一篇是重灾区：字典/枚举的两套机制，以及 Excel 导入导出怎么把我炸了好几次。
+[下一篇](/blog/ruoyi-newbie/05-dict-and-excel/)是重灾区：字典/枚举的两套机制，以及 Excel 导入导出怎么把我炸了好几次。

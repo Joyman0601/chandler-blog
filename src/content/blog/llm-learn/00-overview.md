@@ -28,13 +28,13 @@ seriesLabel: "大模型应用岗学习"
 
 | 阶段 | 主题 | 定位 |
 |---|---|---|
-| Phase 0 | 大模型基础直觉 | 地基，能讲清直觉而非推公式 |
-| Phase 1 | RAG 检索质量（Hybrid + Rerank） | 招牌，重中之重 |
-| Phase 2 | RAG 评估体系（RAGAS） | 给优化提供量化结论 |
-| Phase 3 | Prompt 工程与 Agent 原理 | 讲清 ReAct 与 Tool Calling 底层 |
-| Phase 4 | 进阶 RAG 范式 | 了解概念、知道解决什么问题 |
-| Phase 5 | 微调与本地部署 | 跳出「只会调 API」 |
-| Phase 6 | 工程化与生态 | 呼应后端可观测性经验 |
+| Phase 0 | [大模型基础直觉](/blog/llm-learn/01-llm-fundamentals/) | 地基，能讲清直觉而非推公式 |
+| Phase 1 | [RAG 检索质量（Hybrid + Rerank）](/blog/llm-learn/02-rag-retrieval-quality/) | 招牌，重中之重 |
+| Phase 2 | [RAG 评估体系（RAGAS）](/blog/llm-learn/03-rag-evaluation-ragas/) | 给优化提供量化结论 |
+| Phase 3 | [Prompt 工程与 Agent 原理](/blog/llm-learn/04-prompt-agent-react/) | 讲清 ReAct 与 Tool Calling 底层 |
+| Phase 4 | [进阶 RAG 范式](/blog/llm-learn/05-advanced-rag-patterns/) | 了解概念、知道解决什么问题 |
+| Phase 5 | [微调与本地部署](/blog/llm-learn/06-finetune-and-deployment/) | 跳出「只会调 API」 |
+| Phase 6 | [工程化与生态](/blog/llm-learn/07-engineering-ecosystem/) | 呼应后端可观测性经验 |
 
 ### Phase 0 · 大模型基础直觉
 

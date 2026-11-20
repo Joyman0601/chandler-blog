@@ -20,7 +20,7 @@ seriesOrder: 3
 | 命中收益 | 省一次 embedding 调用 | 省 prefill 算力 → 省钱、（有时）省延迟 |
 | 触发方式 | 应用层哈希查表 | 模型服务端按**前缀匹配** |
 
-换句话说，Embedding 缓存省的是「检索侧」的钱，Prompt Caching 省的是「生成侧」的钱。后者是我项目里一个干净的空白，于是拿它当加分项做了一轮完整的「诊断 → 修复 → 量化」。
+换句话说，Embedding 缓存省的是「检索侧」的钱，Prompt Caching 省的是「生成侧」的钱。后者是我项目里一个干净的空白，于是拿它做了一轮完整的「诊断 → 修复 → 量化」。
 
 生成侧用的是 **DashScope 的 Qwen（OpenAI 兼容接口）**：国内直连、不锁客户端。
 
@@ -44,7 +44,7 @@ DashScope 的两个关键细节（实测，不是 DeepSeek 的字段）：
 项目里有两条真实的 LLM 调用链路，我先逐一核对前缀结构：
 
 - **RAG 问答**（`RagAskService`）：`SYSTEM_PROMPT` 是个 ~80 token 的常量在最前，用户问题 + 检索资料拼进 user 消息放尾部。**排序正确**。
-- **Agent Loop**（`AgentLoopService`）：`LOOP_PROMPT.formatted(工具定义JSON)` 在前（~325–400 token），对话历史 append 到 messages 尾部。**排序也正确**。
+- **[Agent Loop](/blog/llm-learn/04-prompt-agent-react/)**（`AgentLoopService`）：`LOOP_PROMPT.formatted(工具定义JSON)` 在前（~325–400 token），对话历史 append 到 messages 尾部。**排序也正确**。
 
 问题不在排序，在**长度**：两条链路的稳定前缀都远低于 1024 token，挂在 system 上的 `cache_control` 创建不了显式缓存。
 
@@ -64,7 +64,7 @@ DashScope 的两个关键细节（实测，不是 DeepSeek 的字段）：
 接入侧的几个「零波及」手法值得记一笔：
 
 - 开关 `llm.cache-enabled` 默认 `false`，关时完全走原字符串路径，硅基流动 / Responses 模式不受影响。
-- `LlmGenerationResult` / `UsageRecord` / `LangfuseTracer.recordGeneration` 全部**保留旧构造器/旧签名重载**（缓存字段传 null/0），改动锁在新增字段，不碰任何现有调用点和 mock 测试。
+- `LlmGenerationResult` / [`UsageRecord`](/blog/rag-usage-persistence/) / `LangfuseTracer.recordGeneration` 全部**保留旧构造器/旧签名重载**（缓存字段传 null/0），改动锁在新增字段，不碰任何现有调用点和 mock 测试。
 - 结果：全量 `mvn test` **108 passed / 0 failed**，改生产 prompt 零回归。
 
 ## 4. 量化：一个可复现的 before/after harness
@@ -131,7 +131,7 @@ DashScope 的两个关键细节（实测，不是 DeepSeek 的字段）：
 
 ## 7. 小结
 
-一句话的加分项，背后是一条完整的工程链路：**先诊断（排序对、前缀短）→ 再修复（把扩 prompt 做成真实增强）→ 最后量化（可复现 harness + 诚实口径）**。Prompt Caching 不难接，难的是把「它到底省了什么、在什么条件下省」讲清楚。
+接入本身只是一个开关，背后是一条完整的工程链路：**先诊断（排序对、前缀短）→ 再修复（把扩 prompt 做成真实增强）→ 最后量化（可复现 harness + 诚实口径）**。Prompt Caching 不难接，难的是把「它到底省了什么、在什么条件下省」讲清楚。
 
 ---
 *配套代码：开关 `llm.cache-enabled`、命中数据沿 日志/UsageRecord/Langfuse 三处落点、量化 harness `AgentPromptCachingHarness`。*

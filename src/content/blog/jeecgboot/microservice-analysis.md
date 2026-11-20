@@ -60,7 +60,7 @@ public interface ISysBaseAPI extends CommonAPI {
 按请求经过的顺序分层：
 
 1. **前端**（3100）
-2. **Gateway**（9999）：Spring Cloud Gateway，基于 WebFlux 的响应式网关，靠 Nacos 做服务发现
+2. **Gateway**（9999）：Spring Cloud Gateway，基于 WebFlux 的响应式[网关](/blog/ms-learn/02-gateway-auth/)，靠 Nacos 做服务发现
 3. **Nacos**（8848）：服务注册 + 配置中心
 4. **业务服务**
    - `jeecg-system`：系统服务（用户、角色、权限、字典）
@@ -198,7 +198,7 @@ key 前缀来自 `CommonConstant.PREFIX_USER_TOKEN`。有效期按 3.9.2 `JwtUti
 
 ### 4.4 微服务间 Feign 调用如何带 Token
 
-业务服务之间通过 Feign 互调时，没有浏览器，Token 从 FeignInterceptor 取：
+业务服务之间通过 [Feign](/blog/ms-learn/03-feign-vs-dubbo/) 互调时，没有浏览器，Token 从 FeignInterceptor 取：
 
 ```java
 // 情况1：用户请求触发的 Feign（有 HTTP 上下文）

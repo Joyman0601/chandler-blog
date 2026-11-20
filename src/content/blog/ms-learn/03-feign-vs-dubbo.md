@@ -189,4 +189,4 @@ mvn -pl ms-api install    # 再把契约模块装进本地仓库
 | Feign | 声明接口，运行期生成实现，像调本地方法 | **大多数场景的默认选择** |
 | Dubbo | RPC，长连接 + 二进制 | 高并发、性能敏感、Java 生态 |
 
-服务间能优雅通信了。但你应该注意到了：第 2 篇网关说「校验 token」，token 又是 ms-user 签发的。**两个进程怎么共享登录态？** 下一篇解决这个悬念——分布式会话。
+服务间能优雅通信了。但你应该注意到了：[第 2 篇](/blog/ms-learn/02-gateway-auth/)网关说「校验 token」，token 又是 ms-user 签发的。**两个进程怎么共享登录态？** [下一篇](/blog/ms-learn/04-distributed-session/)解决这个悬念——分布式会话。

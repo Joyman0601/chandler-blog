@@ -8,7 +8,7 @@ seriesLabel: "RAG 项目"
 seriesOrder: 8
 ---
 
-> 一句话总结：这个 RAG 项目本地跑了几个月都很稳，为了面试演示要把它部署到阿里云 ECS 上。我给自己估的时间是「一下午」——毕竟 Dockerfile 都写好了、`docker-compose.prod.yml` 也 review 了好几遍。实际花了 **3.5 小时**，踩了 **5 个坑**。这篇把每个坑的现象、根因、修复原样记下来，尤其想强调其中几个「本地写 compose 时根本想不到会翻车」的点。
+> 一句话总结：这个 RAG 项目本地跑了几个月都很稳，为了对外演示要把它部署到阿里云 ECS 上。我给自己估的时间是「一下午」——毕竟 Dockerfile 都写好了、`docker-compose.prod.yml` 也 review 了好几遍。实际花了 **3.5 小时**，踩了 **5 个坑**。这篇把每个坑的现象、根因、修复原样记下来，尤其想强调其中几个「本地写 compose 时根本想不到会翻车」的点。
 
 ## 0. 起因
 
@@ -22,7 +22,7 @@ seriesOrder: 8
 
 ```text
 pgvector
-  PostgreSQL 15 + pgvector 扩展
+  PostgreSQL 16 + pgvector 扩展
     ↓
 app
   Spring Boot jar
@@ -83,7 +83,7 @@ app:
 ```yaml
 services:
   pgvector:
-    image: pgvector/pgvector:pg15
+    image: pgvector/pgvector:pg16
     healthcheck:
       # 走 TCP，避开初始化阶段只听 socket 的临时实例
       test: ["CMD-SHELL", "pg_isready -h localhost -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]

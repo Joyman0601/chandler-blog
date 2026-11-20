@@ -47,12 +47,12 @@ spring:
 
 两个关键点：
 
-- `uri: lb://ms-user` 里的 `lb://` 表示**经 Nacos 负载均衡**转发到该服务。又一次印证了上一篇的「服务靠名字寻址」——网关也不写 IP，只写服务名。
+- `uri: lb://ms-user` 里的 `lb://` 表示**经 Nacos 负载均衡**转发到该服务。又一次印证了[上一篇](/blog/ms-learn/01-nacos-discovery-config/)的「服务靠名字寻址」——网关也不写 IP，只写服务名。
 - `predicates: Path=/user/**` 是**断言**，决定哪些路径走这条路由。后端接口本来就是 `/user`、`/order` 前缀，所以不需要 `StripPrefix` 去剥路径。
 
 ## 统一鉴权：在入口处短路，不进内网
 
-网关的第二职责是把鉴权这个横切关注点收到入口。这里先用一个「假鉴权」过滤器演示机制（真正的 token 校验留到第 4 篇 Sa-Token）：实现 `GlobalFilter + Ordered`，白名单放行，其余无 `Authorization` 头的请求直接 401。
+网关的第二职责是把鉴权这个横切关注点收到入口。这里先用一个「假鉴权」过滤器演示机制（真正的 token 校验留到[第 4 篇 Sa-Token](/blog/ms-learn/04-distributed-session/)）：实现 `GlobalFilter + Ordered`，白名单放行，其余无 `Authorization` 头的请求直接 401。
 
 这里有个关键认知——**鉴权失败要在网关短路返回，不让请求进内网**。`getOrder()` 数值越小越先执行，所以鉴权过滤器设一个很靠前的 order（比如 -100），让它在路由之前就拦下非法请求。
 
@@ -139,4 +139,4 @@ public class FakeAuthFilter implements GlobalFilter, Ordered {
 | 网关编程模型 | WebFlux 响应式（本文用的版本） | **不能引 servlet web starter**，过滤器返回 Mono；要 Servlet 写法另有 Gateway Server MVC |
 | 新增的风险 | —— | 网关是单点入口，必须高可用 |
 
-入口立起来了，鉴权也收口了。但有个问题留着没解决：网关说「校验 token」，可 token 是 ms-user 签发的、由网关来验——**两个独立进程怎么共享同一个登录态？** 这正是第 4 篇分布式会话要解决的。不过在那之前，第 3 篇先把「服务间到底怎么通信」讲透：除了 RestTemplate，还有 Feign 和 Dubbo 两种姿势。
+入口立起来了，鉴权也收口了。但有个问题留着没解决：网关说「校验 token」，可 token 是 ms-user 签发的、由网关来验——**两个独立进程怎么共享同一个登录态？** 这正是第 4 篇分布式会话要解决的。不过在那之前，[第 3 篇](/blog/ms-learn/03-feign-vs-dubbo/)先把「服务间到底怎么通信」讲透：除了 RestTemplate，还有 Feign 和 Dubbo 两种姿势。

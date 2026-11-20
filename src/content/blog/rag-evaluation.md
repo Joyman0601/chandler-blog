@@ -12,7 +12,7 @@ seriesOrder: 7
 
 ## 0. 起因：「我觉得变好了」不算数
 
-这一轮我给 RAG 加了不少东西——混合检索、精排、分块、父块、Contextual、多模态、多轮。每加一个，我都「感觉」召回更好了。但感觉不是证据。要拿这套东西去面试、写进简历，得有一套能复现的评估，能回答两个问题：
+这一轮我给 RAG 加了不少东西——混合检索、精排、分块、父块、Contextual、多模态、多轮。每加一个，我都「感觉」召回更好了。但感觉不是证据。要说清这些改动到底值不值，得有一套能复现的评估，能回答两个问题：
 
 - **检索侧**：找得全不全（recall）、排得准不准（precision）？
 - **生成侧**：答得对不对（correctness）、有没有编（faithfulness）、切不切题（relevancy）？
@@ -107,7 +107,7 @@ reference-free 三指标我已经用真实判官跑出来了（判官 `Qwen2.5-7
 按我这个系列一贯的规矩，没跑的就不编：
 
 - **context_recall / answer_correctness 代码就绪，但还没出数值**。它们需要一次判官 LLM 联网评测，我本机当时没有可用的判官 API。复现命令就一行 `python eval/ragas_eval.py`，它会自动 join 标准答案、跑满 5 个 RAGAS 指标。
-- **`FIXED / MARKDOWN+parent / +contextual` 三方案对比**还没填。这依赖前面分块那篇的开关，按方案各跑一遍采集 + RAGAS 才能填进同一张指标表。表框架已经在 `docs/eval-metrics.md` 摆好了，就差真 API 环境下重跑一遍。
+- **`FIXED / MARKDOWN+parent / +contextual` 三方案对比**还没填。这依赖[前面分块那篇](/blog/rag-chunking-parent-contextual/)的开关，按方案各跑一遍采集 + RAGAS 才能填进同一张指标表。表框架已经在 `docs/eval-metrics.md` 摆好了，就差真 API 环境下重跑一遍。
 
 把「待重跑」明明白白标出来，而不是拿现成的三个指标硬凑成一整张表——这是我觉得做评估最该守的底线。评估的意义就是诚实，自己骗自己的数字一点用都没有。
 

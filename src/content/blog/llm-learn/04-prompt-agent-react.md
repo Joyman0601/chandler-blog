@@ -123,4 +123,4 @@ Prompt 只能提高模型守规矩的概率，替代不了后端校验。后端�
 
 ## 小结
 
-Agent = ReAct 循环（Thought/Action/Observation 用外部事实锚定推理）+ Tool Calling（模型提议、后端执行）+ 一圈工程护栏（硬上限、去重、Human-in-the-Loop、安全边界）。把这套拆开看，它一点都不神秘。下一篇进入进阶 RAG 范式，看看检索还能怎么玩。
+Agent = ReAct 循环（Thought/Action/Observation 用外部事实锚定推理）+ Tool Calling（模型提议、后端执行）+ 一圈工程护栏（硬上限、去重、Human-in-the-Loop、安全边界）。把这套拆开看，它一点都不神秘。[下一篇](/blog/llm-learn/05-advanced-rag-patterns/)进入进阶 RAG 范式，看看检索还能怎么玩。

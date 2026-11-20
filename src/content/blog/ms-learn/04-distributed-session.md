@@ -83,7 +83,7 @@ sa-token:
 
 ## 校验方：网关读同一个 Redis
 
-网关是 WebFlux 响应式应用（回顾第 2 篇的坑），加的是 `sa-token-reactor-spring-boot3-starter` + 同样的 redis 依赖。用 `SaReactorFilter` 做全局校验：
+网关是 WebFlux 响应式应用（回顾[第 2 篇](/blog/ms-learn/02-gateway-auth/)的坑），加的是 `sa-token-reactor-spring-boot3-starter` + 同样的 redis 依赖。用 `SaReactorFilter` 做全局校验：
 
 ```java
 @Bean
@@ -191,4 +191,4 @@ Authorization:login:session:88
 | 隐蔽坑 | Sa-Token 返回 HTTP 200 | `setCode(401)` 只改 body，HTTP 状态码要另用 `setStatus(401)` 设 |
 | 另一条路 | JWT 无状态鉴权 | token 自带信息，验签即可，无需查存储 |
 
-到这里，服务能互相找到、能优雅通信、登录态也能跨进程共享了——「正常情况」下整套系统跑得很顺。但分布式系统的真正考验是**异常**：下一篇我们直面第 1 篇埋的那个伏笔——下游突然变慢、变挂，怎么不被它拖死？这就是 Sentinel 的限流与熔断。
+到这里，服务能互相找到、能优雅通信、登录态也能跨进程共享了——「正常情况」下整套系统跑得很顺。但分布式系统的真正考验是**异常**：[下一篇](/blog/ms-learn/05-sentinel/)我们直面[第 1 篇](/blog/ms-learn/01-nacos-discovery-config/)埋的那个伏笔——下游突然变慢、变挂，怎么不被它拖死？这就是 Sentinel 的限流与熔断。

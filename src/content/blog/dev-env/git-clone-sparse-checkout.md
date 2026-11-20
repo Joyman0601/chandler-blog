@@ -112,7 +112,7 @@ fatal: unable to access 'https://github.com/.../xxx.git/':
 Failed to connect to 127.0.0.1 port 7890 after 2092 ms: Couldn't connect to server
 ```
 
-**原因**：之前用 `setx` 设置过代理环境变量（永久变量），Git 会读取它并尝试走 `127.0.0.1:7890`，但代理程序此刻没运行，端口无人监听 → 连接失败。
+**原因**：之前用 `setx` 设置过[代理环境变量（永久变量）](/blog/dev-env/windows-proxy-mystery/)，Git 会读取它并尝试走 `127.0.0.1:7890`，但代理程序此刻没运行，端口无人监听 → 连接失败。
 
 ```bash
 setx http_proxy http://127.0.0.1:7890

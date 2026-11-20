@@ -90,7 +90,7 @@ https://github.com/Joyman0601/RAG
 
 ## 收尾
 
-RAG 解决知识从哪里来，Tool Calling 解决模型如何连接业务系统，Agent Loop 解决多步任务编排。这些能力都要被后端的权限、参数校验、风险确认、日志和成本控制约束住。
+RAG 解决知识从哪里来，Tool Calling 解决模型如何连接业务系统，[Agent Loop](/blog/llm-learn/04-prompt-agent-react/) 解决多步任务编排。这些能力都要被后端的权限、参数校验、风险确认、日志和成本控制约束住。
 
 我的设计原则可以概括成一句话：
 
