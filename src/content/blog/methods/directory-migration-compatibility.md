@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 266304fec78b4269cea868fe95c008f7dcb7156c5aa8d7010f924224b9dca563
+# import-articles-sha256: d38ed0b1d66618337a1b651d951b0ac1a2db605ac9f12d53dfd76be112263773
 # Imported by scripts/import-articles.mjs from posts/methods/directory-migration-compatibility.md
 # Source date: 2026-11-02
 title: "整理项目目录：迁移后仍要按旧入口验证"
@@ -61,14 +61,14 @@ lsof +D "${ROOT}"   # 只看得到此刻开着的；间歇写入的进程要多�
 
 ```text
 == 写死旧绝对路径的文本文件
-/tmp/blogfix-aw/inv/root/scripts/run.sh
-/tmp/blogfix-aw/inv/root/reports/index.md
+/tmp/demo/scripts/run.sh
+/tmp/demo/reports/index.md
 == 符号链接和它们的目标（断链标 BROKEN）
-/tmp/blogfix-aw/inv/root/scripts/broken.md -> ../missing.md  BROKEN
-/tmp/blogfix-aw/inv/root/scripts/index-link.md -> ../reports/index.md
+/tmp/demo/scripts/broken.md -> ../missing.md  BROKEN
+/tmp/demo/scripts/index-link.md -> ../reports/index.md
 == 此刻开着这个目录下文件的进程
 COMMAND   PID USER FD   TYPE DEVICE SIZE/OFF     NODE NAME
-sleep   19363 me     3w   REG   1,17        0 54914390 /private/tmp/blogfix-aw/inv/root/state/run.log
+sleep   19363 me     3w   REG   1,17        0 54914390 /private/tmp/demo/state/run.log
 ```
 
 `lsof +D` 会递归扫整棵树，大目录要等一会儿；macOS 上它有输出时退出码也可能是 1，看输出，不看退出码。它只能看到这一刻开着的文件，每隔几分钟写一次、写完就关的任务，要靠所有者确认。

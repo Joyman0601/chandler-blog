@@ -2,7 +2,7 @@
 title: "01 架构全景与项目背景"
 description: "微服务模块怎么切分、一个请求怎么从浏览器流过网关到业务模块，以及多租户、Dubbo 契约、ruoyi-system 地基这些新人必须先建立的坐标。"
 pubDate: 2026-06-11
-tags: ["RuoYi", "微服务", "网关", "Dubbo", "多租户"]
+tags: ["RuoYi", "微服务", "API 网关", "Dubbo", "多租户"]
 series: "ruoyi-newbie"
 seriesLabel: "微服务新人踩坑实录"
 ---
@@ -37,14 +37,26 @@ seriesLabel: "微服务新人踩坑实录"
 整个后端是一个 Maven 多模块工程，大致分三类：
 
 ```
-ruoyi-api/          # Dubbo 接口契约（各模块对外暴露的 RPC 接口定义，只有接口没有实现）
-ruoyi-auth/         # 认证服务（登录、发 Token）
-ruoyi-common/       # 公共组件（core/security/mybatis/redis/excel/tenant... 一堆子模块）
-ruoyi-gateway/      # 网关（唯一入口）
+ruoyi-api/
+  # Dubbo 接口契约：各模块对外的
+  # RPC 接口定义，只有接口没有实现
+ruoyi-auth/
+  # 认证服务（登录、发 Token）
+ruoyi-common/
+  # 公共组件，一堆子模块：
+  # core/security/mybatis/
+  # redis/excel/tenant...
+ruoyi-gateway/
+  # 网关（唯一入口）
 ruoyi-modules/
-  ruoyi-system/     # 系统管理（用户/角色/部门/菜单/租户）—— 几乎所有模块都依赖它
-  biz-module/       # 【我负责的业务模块】
-  ...               # 代码生成、任务调度、文件存储、工作流等
+  ruoyi-system/
+    # 系统管理：用户/角色/部门/
+    # 菜单/租户，几乎所有模块都依赖它
+  biz-module/
+    # 【我负责的业务模块】
+  ...
+    # 代码生成、任务调度、
+    # 文件存储、工作流等
 ```
 
 几个对新人很关键的认知：
@@ -61,18 +73,23 @@ ruoyi-modules/
 
 ```
 浏览器
-  │  GET /biz/asset/v0.1/list   （前端只知道一个地址：网关）
+  │  GET /biz/asset/v0.1/list
+  │  （前端只知道一个地址：网关）
   ▼
 [ 网关 Gateway :端口X ]
   │  1. 校验 Token（Sa-Token）
   │  2. 按路径前缀 /biz/** 匹配路由
-  │  3. StripPrefix 去掉前缀，转发给服务名 lb://biz-module
-  │     （服务名→实例地址，靠 Nacos 服务发现）
+  │  3. StripPrefix 去掉前缀，
+  │     转发给服务名 lb://biz-module
+  │     （服务名→实例地址，
+  │       靠 Nacos 服务发现）
   ▼
 [ 业务模块 biz-module :端口Y ]
-  │  Controller → Service → Mapper → MySQL
+  │  Controller → Service
+  │    → Mapper → MySQL
   │  如果要「用户昵称」这种跨模块数据：
-  │     @DubboReference 调 ruoyi-system 的 RPC 接口
+  │     @DubboReference 调
+  │     ruoyi-system 的 RPC 接口
   ▼
 [ ruoyi-system ]  ← Dubbo RPC
 ```

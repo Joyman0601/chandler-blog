@@ -14,11 +14,20 @@ seriesLabel: "微服务新人踩坑实录"
 RuoYi 是强约定的框架，每个业务实体一套固定分层。我直接参照系统模块的样板：
 
 ```
-domain/XxxEntity.java          # 实体，继承 TenantEntity（带 create_*/update_* 审计列 + tenant_id）
-domain/bo/XxxBo.java           # 入参对象，@AutoMapper 映射到实体，带 Jakarta 校验注解
-domain/bo/XxxQueryBo.java      # 列表查询入参，extends PageQuery（自带分页字段）
-domain/vo/XxxVo.java           # 出参对象，带翻译注解
-mapper/XxxMapper.java          # extends BaseMapperPlus<Entity, Vo>
+domain/XxxEntity.java
+  # 实体，继承 TenantEntity
+  # （带 create_*/update_* 审计列
+  #   + tenant_id）
+domain/bo/XxxBo.java
+  # 入参对象，@AutoMapper 映射到
+  # 实体，带 Jakarta 校验注解
+domain/bo/XxxQueryBo.java
+  # 列表查询入参，extends PageQuery
+  # （自带分页字段）
+domain/vo/XxxVo.java
+  # 出参对象，带翻译注解
+mapper/XxxMapper.java
+  # extends BaseMapperPlus<Entity, Vo>
 service/IXxxService.java
 service/impl/XxxServiceImpl.java
 controller/XxxController.java

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 9e4648811d5d141cd98a5bdd2f0a75307088ab6e145f61d4940e2becdb9c9755
+# import-articles-sha256: 18288f4e4188f7390cd0b8a8a7572bd68dcd43de4c06e07439b391351e122cde
 # Imported by scripts/import-articles.mjs from posts/testing/playwright-walkthrough-gotchas.md
 # Source date: 2026-10-15
 title: "用 Playwright 走查页面、截证据图的一串坑"
@@ -31,7 +31,7 @@ seriesLabel: "测试与验收"
 
 **大小写**。页面用 CSS `text-transform: uppercase` 把标签显示成大写，DOM 里的文本还是 `Preview text`。照屏幕上看到的大写去精确匹配，就找不到它，脚本卡满 30 秒超时。
 
-更正：这里原先写的是「`hasText: 'PREVIEW TEXT'` 找不到它」，这和 Playwright 文档不符，当时卡住的具体写法我没能回查到。按文档并在一个最小页面上实测（Playwright 1.58），规律是这样的：
+更正：这里原先写的是「`hasText: 'PREVIEW TEXT'` 找不到它」，这和 Playwright 文档不符。当时卡住的是精确匹配：照屏幕抄了大写的 `PREVIEW TEXT`，又加了 `exact: true`。按文档并在一个最小页面上实测（Playwright 1.58），规律是这样的：
 
 - `hasText`、`getByText` 传字符串：不区分大小写、按子串匹配，`'PREVIEW TEXT'` 能找到；
 - `getByText(..., { exact: true })`、带引号的 `text="PREVIEW TEXT"`、不带 `i` 的正则 `/PREVIEW TEXT/`：区分大小写，找不到；

@@ -12,16 +12,17 @@
 - **不要**安装 `@astrojs/cloudflare` adapter——本站无 SSR 需求，装了反而会引入 SESSION KV 等麻烦。
 - 部署由根目录 `wrangler.jsonc` 钉死为静态资源上传（`assets.directory: ./dist`，无 worker、无 KV 绑定）。
 - 仓库：`Joyman0601/chandler-blog`。
-- 博客文章在 `src/content/blog/`；front-matter 按 `src/content.config.ts` 使用 `title / description / pubDate / updatedDate / tags / series / seriesLabel`。同 `series` 值的文章在首页按 `seriesLabel` 分组。
+- 博客文章在 `src/content/blog/`；front-matter 按 `src/content.config.ts` 使用 `title / description / pubDate / updatedDate / tags / series / seriesLabel / seriesOrder`。同 `series` 值的文章在首页按 `seriesLabel` 分组。
 
 ## 发布博客文章的标准流程（新窗口照此执行，无需通读项目）
 
 新增 / 修改文章并上线，按这套来：
 
 1. **放置文件**：Markdown 放进 `src/content/blog/`。独立文章直接放根下；属于某系列的放进对应子目录（如 `ms-learn/`、`dev-env/`、`jeecgboot/`）。
-2. **写 front-matter**：使用上述 7 个字段——
+2. **写 front-matter**：使用上述字段——
    - `title`（字符串）、`description`（字符串）、`pubDate`（`YYYY-MM-DD`，不加引号）、`updatedDate`（可选，`YYYY-MM-DD`）、`tags`（数组）、`series`（可选）、`seriesLabel`（可选）。
    - 同 `series` 值的文章在首页按 `seriesLabel` 归到一组；想让一组文章聚合显示，就给它们相同的 `series` + `seriesLabel`。
+   - `seriesOrder`（可选，整数）：系列内的阅读顺序，从 0 起。系列文件名带 00/01… 前缀的不用写；文件名排不出阅读顺序的（如 RAG 系列）才写。
 3. **本地构建验证**：跑 `npm run build`，必须 exit 0、页数符合预期（每篇文章 = 1 页）。构建报错通常是 front-matter 字段不对或日期格式不对。
 4. **提交**：`git add` 具体文件 → `git commit`，commit message 说清改了什么。
 5. **推送前先问用户**（见下方协作约定），得到同意后再 `git push origin main`。

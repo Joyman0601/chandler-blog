@@ -1,6 +1,6 @@
 ---
 title: "大模型应用岗学习路线：从基础直觉到工程落地"
-description: "一条围绕「企业知识库 RAG 系统」展开的大模型应用学习路线：从 Transformer 直觉、RAG 检索与评估，到 Agent 原理、进阶检索范式、微调部署与工程生态。检索、评估、Agent、可观测性几块落到了项目改造上，其余是概念梳理。"
+description: "一条围绕「企业知识库 RAG 系统」的大模型应用学习路线：从 Transformer 直觉、RAG 检索与评估，到 Agent、进阶检索、微调部署与工程生态。检索、评估、Agent、可观测性落到了项目里。"
 pubDate: 2026-06-01
 tags: ["AI", "LLM", "RAG", "Agent", "学习路线"]
 series: "llm-learn"

@@ -45,9 +45,13 @@ seriesLabel: "微服务新人踩坑实录"
 
 ```
 char(1) / String 的枚举字段：
-  - 查询过滤用 StringUtils.isNotBlank(...)   （不是 ObjectUtil.isNotNull）
-  - BO 校验注解用 @NotBlank                  （不是 @NotNull）
-  - 前端收到的是字符串 "1"，不是数字 1        （对接时注意）
+  - 查询过滤用
+    StringUtils.isNotBlank(...)
+    （不是 ObjectUtil.isNotNull）
+  - BO 校验注解用 @NotBlank
+    （不是 @NotNull）
+  - 前端收到的是字符串 "1"，
+    不是数字 1（对接时注意）
 ```
 
 > **经验：** 字段类型不是孤立的决定。把 `tinyint` 改成 `char(1)` 后，**校验注解、查询条件、前端类型预期**都要跟着改，漏一个就会出现「过滤不生效」或「校验不触发」。改完字段还要重新构建模块刷新 MapStruct 生成类（见第 04 篇）。

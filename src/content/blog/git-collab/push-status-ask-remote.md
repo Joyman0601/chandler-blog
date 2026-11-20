@@ -1,9 +1,9 @@
 ---
-# import-articles-sha256: 81305fa55a3afdd24c1fa616d3de3ff71ab694344ef273ba066dd813fbcf4e9e
+# import-articles-sha256: ddf90913bbd2b81ccd703096037ff04c2828f8a63badc85472609e6d6d081186
 # Imported by scripts/import-articles.mjs from posts/git-collab/push-status-ask-remote.md
 # Source date: 2026-10-19
 title: "推送和 PR 状态只问远端：ls-remote、竞态和主干保护"
-description: "没设 upstream 不等于没推送，本地的 origin/* 也会过期。清点「推了还没开 PR」的分支要按自己的提交筛、每次重新枚举；把两个 PR 合成一个有竞态；「不推主干」的规则拦不住自己开 PR 再自己合。附核对脚本、守卫示例和推送前清单。"
+description: "没设 upstream 不等于没推送，本地的 origin/* 也会过期。清点「推了没开 PR」的分支要按自己的提交筛、每次重新枚举；合并两个 PR 有竞态；「不推主干」拦不住自己开 PR 再自己合。附核对脚本和推送前清单。"
 pubDate: 2026-10-19
 tags: ["Git","协作","Claude Code","Hooks"]
 series: git-collab
@@ -103,7 +103,7 @@ gh pr list --repo OWNER/REPO --state all --limit 400 \
 
 ## 3. 推送前算主干前进了多少，也用远端的 sha
 
-推送前我会判断一次：主干在我切出来以后前进了多少，要不要先合主干再验一遍。有一次助手 fetch 之后数 `merge-base..origin/main`，得到 0，就推了。推完用 `ls-remote` 核对，主干其实已经前进了一大截，其中一个文件和这条分支在同一行各加了一项，要先合主干再重验。那次 fetch 为什么没更新本地的 `origin/main`，事后没查清。
+推送前我会判断一次：主干在我切出来以后前进了多少，要不要先合主干再验一遍。有一次助手 fetch 之后数 `merge-base..origin/main`，得到 0，就推了。推完用 `ls-remote` 核对，主干其实已经前进了一大截，其中一个文件和这条分支在同一行各加了一项，要先合主干再重验。回头看，那次 fetch 只指定了自己这条分支：`git fetch origin <分支>` 只更新这一条的远端跟踪引用，`origin/main` 还停在上一次全量 fetch 的位置。
 
 所以这一步也按远端实况算：
 

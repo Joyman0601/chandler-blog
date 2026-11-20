@@ -1,9 +1,9 @@
 ---
-# import-articles-sha256: 37613d15b7d19d59efd306932445b350a6a1cf0c66351e99339b09d047495455
+# import-articles-sha256: 52db5a30d4de8f27f47366753e7092acddb7592219ffe36fd8f0c61c61e8f75b
 # Imported by scripts/import-articles.mjs from posts/tooling/dev-env-from-zero.md
 # Source date: 2026-09-21
 title: "从零搭一台开发机：顺手写了个会话检索工具"
-description: "从 Windows 换到 Apple Silicon Mac 的第一天，绕开不通的 GitHub 和 Homebrew 装好工具链，又写了一个检索 Claude Code 历史会话的小工具。讲安装顺序和几处坑，以及这个工具的设计和后来发现的局限。"
+description: "从 Windows 换到 Apple Silicon Mac 的第一天，绕开不通的 GitHub 和 Homebrew 装好工具链，又写了个检索 Claude Code 历史会话的小工具。讲安装顺序、几处坑，以及这个工具的设计和局限。"
 pubDate: 2026-09-21
 tags: ["开发环境","macOS","Go","Claude Code","命令行"]
 series: tooling

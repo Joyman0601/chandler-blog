@@ -1,6 +1,6 @@
 ---
 title: "进阶 RAG 范式：Query 改写、HyDE、Self-RAG、GraphRAG 与三层优化框架"
-description: "把进阶 RAG 技术组织成一个清晰的三层优化框架——检索侧、Query 侧、文档与生成侧。讲清 Query 改写与 Multi-Query 的真正区别、HyDE 解决的向量空间 gap、Self-RAG 的自反思、GraphRAG 的关系推理，以及一组「改写反而降低召回」的实测教训。"
+description: "把进阶 RAG 技术按检索侧、Query 侧、文档与生成侧分成三层，讲清 Query 改写与 Multi-Query 的区别、HyDE、Self-RAG 和 GraphRAG，再加一组「改写反而降低召回」的实测。"
 pubDate: 2026-06-06
 tags: ["RAG", "HyDE", "Self-RAG", "GraphRAG"]
 series: "llm-learn"

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 01658934a4dc32d360c422033829b8b039c0c8f35ecfa94ae8ea2c3460b2752b
+# import-articles-sha256: 90b9e5d1124940af0274cd1440eefa6111fbb8981efb7a59fa1a7e7cd138d2db
 # Imported by scripts/import-articles.mjs from posts/git-collab/worktree-multi-task.md
 # Source date: 2026-09-28
 title: "多任务并行的 git 用法：按任务隔离 worktree"
@@ -106,12 +106,17 @@ git -C "${WORK}/wt/task-a/worker" rev-parse --git-common-dir
 
 ```text
 改依赖源码为 new，不重新 vendor
-  go build          → 退出码 0，运行输出 old
-  go run -mod=mod . → new
+  go build
+    → 退出码 0，运行输出 old
+  go run -mod=mod .
+    → new
 改 go.mod 的 replace 目标，不重新 vendor
-  go build          → go: inconsistent vendoring ...
-                      is replaced by ../dep2 in go.mod, but marked as
-                      replaced by ../dep in vendor/modules.txt
+  go build
+    → go: inconsistent vendoring ...
+      is replaced by ../dep2
+      in go.mod, but marked as
+      replaced by ../dep
+      in vendor/modules.txt
 ```
 
 前一种不报错，最容易漏。审带 vendor 的仓库时，先跑一次 `go mod vendor` 再构建和测试；`vendor/` 被忽略时，`git status` 看不出快照旧了。

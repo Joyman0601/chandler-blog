@@ -1,10 +1,10 @@
 ---
 title: "Git 克隆大仓库失败与稀疏检出实战排错"
-description: "整理一次操作 RuoYi-Vue-Plus 仓库时遇到的克隆失败、稀疏检出与代理冲突问题及解决方案。"
+description: "克隆 RuoYi-Vue-Plus 这类大仓库时碰到 early EOF、稀疏检出找不到模块、推送连不上本地代理三个问题：浅克隆和按需拉取先克隆下来，sparse-checkout 只检出要的模块，再清掉残留的 Git 代理。"
 pubDate: 2025-12-20
-tags: ["Git", "排错", "开发环境"]
+tags: ["Git", "排查", "开发环境"]
 series: "dev-env"
-seriesLabel: "开发环境与排错"
+seriesLabel: "Windows 开发环境排错"
 ---
 
 > 本文整理自一次实际操作 RuoYi-Vue-Plus 仓库时遇到的克隆失败、稀疏检出与代理冲突问题。

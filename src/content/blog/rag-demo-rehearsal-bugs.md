@@ -1,10 +1,11 @@
 ---
 title: "录屏前的彩排：让我修完三个能毁掉演示的 bug"
-description: "录屏前对着脚本做了一次完整彩排，暴露了三处一到面试就会翻车的 bug——Langfuse trace 里 latency 和 cost 都是 0、Agent 处理年假问题稳定报 TOOL_EXECUTION_FAILED、以及 TOKEN_BUDGET_EXCEEDED。每一个单独看都是小问题，但连在一起足以毁掉整场演示。这篇按修复顺序复盘,顺便谈谈「哪些通路能加重试、哪些不能」。"
+description: "录屏前彩排撞上三个能毁掉演示的 bug：Langfuse 的 latency 和 cost 为 0、Agent 报 TOOL_EXECUTION_FAILED、TOKEN_BUDGET_EXCEEDED。按修复顺序复盘，再谈哪些通路能重试。"
 pubDate: 2026-08-01
 tags: ["Agent", "LLM", "重试", "可观测性", "Langfuse", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 11
 ---
 
 > 一句话总结：录屏前我信心满满对着脚本先做了一次彩排——毕竟功能都测过了、Langfuse 也接上了、Agent 三个工具场景也验证过。结果两个小时里连撞三个能毁掉整场演示的 bug：Langfuse UI 里 latency 显示 0 秒（讲「可观测性」时观众看到 0 秒会尴尬）、Agent 处理「公司请年假」稳定报 `TOOL_EXECUTION_FAILED`（讲 Agent 演示时正好翻车）、以及 `TOKEN_BUDGET_EXCEEDED`。这篇按修复顺序复盘，最后聊聊哪些 LLM 通路能直接加重试、哪些要加条件。
@@ -58,9 +59,9 @@ private Map<String, Object> buildGenerationEvent(
 
 我在参数里传了 `latencyMs`——LLM 调用时用 `System.currentTimeMillis()` 记的起止时间差——但**根本没塞进事件体**。startTime 和 endTime 都取 `Instant.now()`，Langfuse UI 拿两者相减自然是 0。
 
-cost 为 0 是另一回事，我原来写的「cost 按 latency 比例呈现」不对。Langfuse 的成本是用量乘以模型价格表算出来的，和耗时无关。可能的原因（推测，当时没逐项核）有两个：一是 Langfuse 里没有给这个模型名配价格，匹配不上就算不出成本；二是上报的 usage 字段名没被它识别，用量没进计算。
+cost 为 0 是另一回事，我原来写的「cost 按 latency 比例呈现」不对。Langfuse 的成本是用量乘以模型价格表算出来的，和耗时无关。用量这一半没问题：generation 里的 token usage 有值，说明字段被识别了。出问题的是价格表：我用的 Langfuse 版本内置的模型价格表里没有 `qwen-plus`，按模型名匹配不上，成本就算不出来，显示为 0。补法是在 Langfuse 的模型设置里给 `qwen-plus` 加一条自定义模型定义，按模型名匹配，填上输入、输出单价。成本是在 trace 写入时算的，这条定义只对加完之后新进来的 trace 生效，旧 trace 的 cost 还是 0。
 
-**修复**：从 endTime 倒推 startTime：
+**修复**：latency 这边，从 endTime 倒推 startTime：
 
 ```java
 Instant endInstant = Instant.now();
@@ -182,7 +183,7 @@ Embedding 就没这些问题——同样的输入必然生成同样的向量，�
 1. 第 1 步：调 `search_knowledge_base` 检索「公司请年假」，返回 3 篇 chunk。
 2. 第 2 步：把 observation（3 篇 chunk 拼接）塞进 user message 生成最终答案，token 预算 checker 报 2650 tokens 超了 1500 的上限。
 
-**根因**：我把 chat/RAG/Agent 三条通路的 token 预算全部用同一个配置 `chatMaxInputTokens=1500`。这个 1500 是给 RAG 单轮 ask 设的。**Agent 通路不一样**——它每一步都要把 tool observation 累积到上下文里，这次年假那篇的 3 个 chunk 拼起来就超过了 2000 token。RAG ask 同样会把检索到的 chunk 放进 prompt，同一个问题走 RAG 为什么没撞上 1500，我当时没查，待核对。
+**根因**：我把 chat/RAG/Agent 三条通路的 token 预算全部用同一个配置 `chatMaxInputTokens=1500`。这个 1500 是给 RAG 单轮 ask 设的。**Agent 通路不一样**——它每一步都要把 tool observation 累积到上下文里，这次年假那篇的 3 个 chunk 拼起来就超过了 2000 token。RAG ask 同样会把检索到的 chunk 放进 prompt，但它没撞上 1500，因为 RAG 拼资料时另有一道上下文预算：`buildContext` 按 `ragMaxContextTokens`（默认 1200）往里装 chunk，装不下的直接截掉；调 LLM 前的那次检查，上限也是 1500 加上这 1200。Agent 的 observation 没有这道截断，3 个 chunk 原样拼进去，就超了。
 
 用一个预算兜三条通路，最短板决定天花板。
 
@@ -237,7 +238,7 @@ app:
 
 - 段 1-2：OK
 - 段 3 Agent「公司请年假」：**跑通了**，Agent 3 步返回完整流程答案，`stopReason: SUCCESS`
-- 段 5 Langfuse trace：**latency 显示 4.2s，cost 显示 $0.0012**（qwen-plus 定价）。上面的修复只改了时间戳，cost 是哪一步之后显示出来的，我当时没记下来，待核对
+- 段 5 Langfuse trace：**latency 显示 4.2s，cost 显示 $0.0012**（qwen-plus 定价）。时间戳修复管的是 latency；cost 能显示出来，靠的是第 1 节在 Langfuse 里补的那条 `qwen-plus` 价格定义，第二遍彩排产生的都是新 trace，所以按新价格算出了成本
 
 段 5 的 chat 气泡也正常显示（这个是[自建 Langfuse 那篇](/blog/rag-langfuse-selfhost/)里的第 6 个坑修的），Agent 那段的 sources 也命中了年假 md。
 

@@ -4,7 +4,7 @@ description: "汇总 Maven 多 Profile、查看已停止容器、WSL 访问 Wind
 pubDate: 2026-03-06
 tags: ["Maven", "Docker", "WSL", "开发环境"]
 series: "dev-env"
-seriesLabel: "开发环境与排错"
+seriesLabel: "Windows 开发环境排错"
 ---
 
 > 本文汇总几个独立但高频的开发环境小问题及其原理。
@@ -120,4 +120,4 @@ wslpath "C:\Users\你\Desktop"            # Windows → WSL: /mnt/c/Users/你/De
 | 用 **WSL / Linux bash** | 原生 VT 控制台 |
 | 必须用传统 CMD 时 | 开启注册表 VT 支持：<br>`reg add HKCU\Console /f /v VirtualTerminalLevel /t REG_DWORD /d 1` |
 
-**一句话**：行叠加、闪烁是因为当前控制台没有开 VT 序列解析，流式刷新的控制符没被渲染。管理员模式下更容易碰到，我的推测是提权后打开的是传统 conhost 窗口，而不是平时用的 Windows Terminal，这一点没有单独验证。日常调试流式输出请优先用 Windows Terminal / VS Code / IDEA 终端。
+**一句话**：行叠加、闪烁是因为当前控制台没有开 VT 序列解析，流式刷新的控制符没被渲染。管理员模式下更容易碰到，是因为从开始菜单或右键「以管理员身份运行」打开的 CMD / PowerShell，在默认终端没改成 Windows Terminal 的系统上（比如 Windows 10）落在传统 conhost 窗口里，而平时用的是 Windows Terminal 或 IDE 终端。日常调试流式输出请优先用 Windows Terminal / VS Code / IDEA 终端。

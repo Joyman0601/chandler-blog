@@ -1,13 +1,14 @@
 ---
 title: "多模态 RAG 踩坑：4096 维的「VL embedding」其实分不清红图和蓝图"
-description: "想让图片和 PDF 里的图也能被文本 query 召回，于是给 RAG 接 VL embedding。结果发现一个挺反直觉的坑：同样叫『Qwen3-VL-Embedding』，走 OpenAI 兼容的 /v1/embeddings 端点是伪多模态——连红图蓝图都分不开，推断是把图片当成 base64 字符串 embedding 了；走 DashScope 原生多模态端点才是真的。记录这个区别，以及真多模态向量空间怎么落地。"
+description: "给 RAG 接 VL embedding 时踩的坑：走 OpenAI 兼容的 /v1/embeddings，图片被当成 base64 字符串，连红图蓝图都分不开；换成 DashScope 原生多模态端点才是真多模态。记录区别和落地方式。"
 pubDate: 2026-06-26
 tags: ["Java", "Spring Boot", "RAG", "多模态", "Embedding", "Qwen-VL", "PDFBox"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 5
 ---
 
-> 一句话总结：想让图片和 PDF 里的图也能被文本 query 召回，给 RAG 接了 VL embedding。本来以为是「换个模型」的小事，结果踩到一个挺典型的坑——**同样是 Qwen3-VL-Embedding，走 OpenAI 兼容的 `/v1/embeddings` 是伪多模态**（红图蓝图都分不开，推断是把图片当 base64 字符串 embed 了），**走 DashScope 原生多模态端点才是真的**。这篇记录这个区别，以及真·多模态向量空间是怎么落地的。开关默认关，纯文本路径零回归。
+> 一句话总结：想让图片和 PDF 里的图也能被文本 query 召回，给 RAG 接了 VL embedding。本来以为是「换个模型」的小事，结果踩到一个挺典型的坑——**同样是 Qwen3-VL-Embedding，走 OpenAI 兼容的 `/v1/embeddings` 是伪多模态**（红图蓝图都分不开，图片被当成 base64 字符串 embed 了），**走 DashScope 原生多模态端点才是真的**。这篇记录这个区别，以及真·多模态向量空间是怎么落地的。开关默认关，纯文本路径零回归。
 
 ## 0. 两条路：图转文 vs 同一向量空间
 
@@ -35,7 +36,7 @@ embedImage(bytes, mime) -> POST /v1/embeddings { "input": "data:image/png;base64
 | --- | --- | --- |
 | SiliconFlow `/v1/embeddings` | 0.302 | **0.354** ← 反而离蓝图更近 |
 
-红色文本居然离蓝图更近。我的推断是：**OpenAI 格式的 `/v1/embeddings` 的 `input` 按字符串处理**，传进去的 data URL 没被当图片解码，而是把那一长串 base64 文本当普通字符串 embed 了。这样返回的 4096 维向量编码的是「base64 字符串的文本特征」，跟图像内容无关，颜色当然分不开。这个根因是从红蓝实验的结果倒推的，我没在该端点的文档里找到明确说明。
+红色文本居然离蓝图更近。根因在接口形状上：**OpenAI 格式的 `/v1/embeddings` 里，`input` 只收字符串**（或字符串数组、token 数组），没有「图片」这种类型。传进去的 data URL 不会被当成图片解码，那一长串 base64 就是一段普通文本，被原样 embed 了。所以返回的 4096 维向量编码的是「base64 字符串的文本特征」，跟图像内容无关，颜色当然分不开。
 
 这就是**伪多模态**：模型名字带 VL、维度也对、调用也成功，但这个 API 形状根本喂不进图像。
 
@@ -72,14 +73,26 @@ embedImage(bytes,mime) -> { "input": { "contents": [ { "image": "data:...;base64
 
 确认端点真能吃图之后，剩下的就是把图片接进入库链路。
 
-```
-上传 png/jpg ──────────────► 整张图 = 1 个 IMAGE chunk
-上传 pdf ──► PDFBox 解析 ─┬─► 正文文本 ──► 现有文本分块链路 = TEXT chunk
-                          └─► 内嵌图片对象 ──► 每张图 = 1 个 IMAGE chunk
-上传 txt/md ──────────────► 现有文本链路（完全不变）
+```text
+上传 png/jpg
+  → 整张图 = 1 个 IMAGE chunk
 
-TEXT chunk  ──► EmbeddingClient.embed(text)        ┐
-IMAGE chunk ──► EmbeddingClient.embedImage(bytes)  ┴─► 同一向量空间 ──► VectorStore
+上传 pdf → PDFBox 解析
+  ├→ 正文文本
+  │    → 现有文本分块链路
+  │    = TEXT chunk
+  └→ 内嵌图片对象
+       → 每张图 = 1 个 IMAGE chunk
+
+上传 txt/md
+  → 现有文本链路（完全不变）
+
+TEXT chunk
+  → EmbeddingClient.embed(text)
+IMAGE chunk
+  → EmbeddingClient.embedImage(bytes)
+两路向量
+  → 同一向量空间 → VectorStore
 ```
 
 **检索链路完全不用动**：query 文本 embedding 后在同一向量空间里做近邻（vector / hybrid / rerank 都照旧），命中的 IMAGE chunk 和 TEXT chunk 一起按分数排序返回。这是「同一向量空间」最大的好处——多模态不是另起一套检索，而是让图像 chunk 混进现有检索里一起排。

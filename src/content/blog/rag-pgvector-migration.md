@@ -5,6 +5,7 @@ pubDate: 2026-06-19
 tags: ["Java", "Spring Boot", "RAG", "pgvector", "PostgreSQL", "向量检索"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 1
 ---
 
 > 一句话总结：我这个 RAG 项目的 `VectorStore` 一直只有一个 `InMemoryVectorStore`——HashMap + 线性扫描，重启就全没了。这次给它接上真正的向量数据库 **pgvector**，用一个开关在「内存」和「pgvector」之间切换，**现有 107 个测试一行没改就全过了**。代码其实没多少，真正花时间的是三个设计点：怎么不把现有测试搞挂、怎么用 SQL 表达权限、怎么让向量检索和 BM25 在新后端里继续配合。
@@ -229,7 +230,7 @@ WITH r AS MATERIALIZED (
 SELECT * FROM r ORDER BY distance;
 ```
 
-要严格保持顺序，可以用 `strict_order`，代价是多扫一些。我这个项目的过滤命中率、实际漏了多少，这次没有测。
+要严格保持顺序，可以用 `strict_order`，代价是多扫一些。我这个项目在 4096 维期间其实没建成索引（见第 5 节的更正），检索走的是精确扫描，WHERE 过滤完再排序，不会少返回；后来换成 1024 维、索引建上之后才需要留意这一条。
 
 ---
 
@@ -256,13 +257,15 @@ CREATE INDEX ON document_chunk USING hnsw (embedding vector_cosine_ops)
 - `m = 16`：每个节点在图里连多少条边。越大越准，但索引越大、建得越慢。
 - `ef_construction = 64`：建索引时每步考察多少候选。越大越准，建得越慢。
 
-> 更正：这条语句在我的表上建不出来。pgvector README 写明，HNSW 和 IVFFlat 对 `vector` 类型最多索引 2000 维，`halfvec` 最多 4000 维。第 1 节建表用的是 `vector(4096)`，超过了上限，执行这句会直接报错。我当时实际怎么处理的，待我回头核对。
+> 更正：这条语句在我的表上建不出来。pgvector README 写明，HNSW 和 IVFFlat 对 `vector` 类型最多索引 2000 维，`halfvec` 最多 4000 维。第 1 节建表用的是 `vector(4096)`，超过了上限，执行这句会直接报错。
+
+所以在 4096 维期间，这条索引一次也没建成过。`01_schema.sql` 是容器首次初始化时执行的，跑到这句就报错中断：前面的建表已经生效，这句和它后面的语句都没执行。表上没有向量索引，检索一直走的是全表精确扫描。我当时没察觉，有两个原因：一是数据量小，精确扫描也不慢；二是集成测试 `PgVectorStoreIT` 自己建了一张 2 维向量的测试表，在那张表上建 HNSW 没问题，测不到维度上限。直到部署上云时换成 1024 维的模型、删卷重新初始化（见[部署那篇](/blog/rag-deploy-compose-pitfalls/)的坑 4、坑 5），这条索引才真正建上。
 
 4096 维想走索引，有几条路可选：
 
-1. **降维**：不少 Embedding 模型有输出维度参数，直接要 1024 维这类较低维度，列改成 `vector(1024)`。后来[部署那篇](/blog/rag-deploy-compose-pitfalls/)换成了 1024 维的模型。
+1. **降维**：不少 Embedding 模型有输出维度参数，直接要 1024 维这类较低维度，列改成 `vector(1024)`。我最后走的是这条：部署时换成了 1024 维的模型。
 2. **二值量化加重排**：用 `binary_quantize` 建表达式索引（`bit` 类型最多 64000 维），先按汉明距离粗召回，再用原向量重排。半精度 `halfvec` 上限 4000，装不下 4096。
-3. **不建索引**：数据量小的时候走精确扫描，结果和暴力检索一样，本节说的 HNSW 收益也就没有了。
+3. **不建索引**：数据量小的时候走精确扫描，结果和暴力检索一样，本节说的 HNSW 收益也就没有了。4096 维那段时间，我实际就处在这个状态，只是不是主动选的。
 
 第 2 条的写法，照 README 的例子改成本文的表：
 
@@ -335,7 +338,7 @@ PG_URL=jdbc:postgresql://localhost:5432/rag PG_USER=rag PG_PASSWORD=rag \
 # 3. 想看索引到底有没有生效，连进去 EXPLAIN ANALYZE 看执行计划是否命中 HNSW
 ```
 
-这次没贴 EXPLAIN 的结果。怎么看：命中 HNSW 时，计划里有一行 `Index Scan using document_chunk_embedding_idx on document_chunk`（建索引没起名时，PostgreSQL 自动按「表名_列名_idx」命名）；看到 `Seq Scan` 加 `Sort`，就是没走索引。pgvector README 提醒，查询要有按距离升序的 `ORDER BY` 加 `LIMIT`，规划器才会考虑这个索引；表很小时，它也可能认为顺序扫描更快。
+这次没贴 EXPLAIN 的结果。按第 5 节的更正，4096 维那张表上看到的只会是 `Seq Scan`。怎么看：命中 HNSW 时，计划里有一行 `Index Scan using document_chunk_embedding_idx on document_chunk`（建索引没起名时，PostgreSQL 自动按「表名_列名_idx」命名）；看到 `Seq Scan` 加 `Sort`，就是没走索引。pgvector README 提醒，查询要有按距离升序的 `ORDER BY` 加 `LIMIT`，规划器才会考虑这个索引；表很小时，它也可能认为顺序扫描更快。
 
 集成测试 `PgVectorStoreIT` 我故意做成「只在设了 `PG_URL` 时才运行」，没有 PG 的环境自动跳过，不影响默认全绿。它覆盖的场景和内存实现的单元测试一一对应：权限过滤、版本过滤、私有/部门/自定义可见性、关键词检索、向量 round-trip——就是为了确认 SQL 翻译之后的行为，和内存语义真的完全一致。
 

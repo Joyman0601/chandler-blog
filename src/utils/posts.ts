@@ -8,11 +8,13 @@ export function sortByDateDesc(posts: BlogPost[]): BlogPost[] {
   );
 }
 
-// 同系列文章按 id 升序（系列文件名带 00/01… 前缀，正好是阅读顺序）
+// 同系列文章的阅读顺序：先按 seriesOrder（没写的排后面），再按 id 升序
+// （多数系列的文件名带 00/01… 前缀，按 id 排正好是阅读顺序）
 export function seriesPostsSorted(posts: BlogPost[], series: string): BlogPost[] {
+  const order = (p: BlogPost) => p.data.seriesOrder ?? Number.POSITIVE_INFINITY;
   return posts
     .filter((p) => p.data.series === series)
-    .sort((a, b) => a.id.localeCompare(b.id));
+    .sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 }
 
 export interface ReadStats {

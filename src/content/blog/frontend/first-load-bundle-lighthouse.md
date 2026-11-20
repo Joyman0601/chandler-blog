@@ -1,9 +1,9 @@
 ---
-# import-articles-sha256: b844dcf9460ec19aad2bf1fd8dc60f550c19693f88750cac118524f2f8610340
+# import-articles-sha256: 45a085d0f73327a2bc30ac32d4c0483a9c051ae7572433f0b01db825e6c97250
 # Imported by scripts/import-articles.mjs from posts/frontend/first-load-bundle-lighthouse.md
 # Source date: 2026-09-29
 title: "首屏包体与 Lighthouse：共享注册表把全量文案打进首屏"
-description: "一个迁移完的页面 Lighthouse 稳定比同类页面低 3 分。查出两个原因：复用的共享估算器把全量注册表和多语言文案带进首屏，HTML 又刚好跨过模拟网络的一个 RTT 阈值。顺带记下本地生产构建会打到正式第三方、本地命令给出假结果这两类坑。"
+description: "一个迁移完的页面 Lighthouse 稳定比同类页面低 3 分：共享估算器把全量注册表和多语言文案带进首屏，HTML 又刚好跨过模拟网络的一个 RTT 阈值。附本地生产构建打到第三方、本地命令给假结果两类坑。"
 pubDate: 2026-09-29
 tags: ["前端","性能","Lighthouse","Next.js","开发环境"]
 series: frontend
@@ -96,7 +96,8 @@ test('价格区首屏不加载全量注册表和多语言文案', async () => {
 **根因**：Lighthouse 默认的移动端节流不是真的限速，而是模拟出来的。它的模拟器叫 Lantern，参数是 RTT 150ms、吞吐 1638.4 Kbps，按 TCP 慢启动一轮一轮估算下载时间。按 Lighthouse 13 源码里的参数复算：初始拥塞窗口 10 段，之后每轮翻倍，上限 21 段，每段 1460 B。
 
 ```text
-10 + 20 + 21 = 51 段 × 1460 B = 74,460 B   ← 一个轮次边界
+10 + 20 + 21 = 51 段
+51 × 1460 B = 74,460 B（一个轮次边界）
 ```
 
 HTML 文档的传输大小（压缩后）一旦超过这个边界，哪怕只多一个字节，也要整整多等一个 RTT。这 150ms 会把 FCP、LCP（最大内容绘制） 和后面依赖它的所有请求一起往后推，分数阶梯式下降。

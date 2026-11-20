@@ -5,6 +5,7 @@ pubDate: 2026-07-31
 tags: ["Langfuse", "可观测性", "Docker Compose", "Nginx", "反向代理", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 10
 ---
 
 > 一句话总结：给 RAG 项目做观测层，选了自建 Langfuse 而不是 Cloud——数据不出内网、面试可以给面试官 read-only 链接看真实 trace。整个过程从「拷官方 compose」到「面试官能匿名点开 trace 详情」花了 3 小时，其中至少 2 小时在排坑。这篇按踩到的顺序把 6 个坑复盘出来：观测栈解耦、NEXTAUTH_URL、Postgres 数据卷路径、Next.js 反代 WS 头、`web` 镜像必须 rebuild、以及最耗时的一个——Langfuse UI 里 trace input/output 显示为 null 的排查。
@@ -21,14 +22,18 @@ Langfuse 有 Cloud 版，免费额度对演示环境完全够。但我最后还�
 
 架构长这样：
 
-```
-observability.rag.chandlerblog.com (Cloudflare A 记录, DNS only)
-  ↓ HTTPS
-Nginx (web 容器, TLS 终结, 反代)
-  ↓ HTTP 走 docker 内网
-langfuse-server (Next.js, 3000 端口)
-  ↓
-langfuse-db (Postgres 16)
+```text
+observability.rag.chandlerblog.com
+  Cloudflare A 记录，DNS only
+    ↓ HTTPS
+Nginx（web 容器）
+  TLS 终结，反代
+    ↓ HTTP，走 docker 内网
+langfuse-server
+  Next.js，3000 端口
+    ↓
+langfuse-db
+  Postgres 16
 ```
 
 同时 Spring Boot 应用侧从 docker 内网直接上报到 `http://langfuse-server:3000`，**绕过公网 TLS**，省一次 TLS 握手 + 证书依赖。
@@ -116,9 +121,17 @@ initdb: directory "/var/lib/postgresql/data" exists but is not empty
 FATAL: database directory appears to contain a database, but is missing files
 ```
 
-**根因**：我当时写的解释是「挂父目录会把散在 `/var/lib/postgresql` 下的辅助文件顶掉」，这一点我核不实，算推测。能从官方文档确认的是：postgres 17 及以下的镜像在 `/var/lib/postgresql/data` 声明了数据卷，文档要求把数据卷挂在这个子目录；挂在父目录 `/var/lib/postgresql`，**容器重建后数据不会保留**。上面那条报错具体怎么来的，待我回头核对。postgres 18 起默认路径改了，数据卷要挂 `/var/lib/postgresql`，用新版本时以镜像文档为准。
+**根因**：postgres 17 及以下的镜像在 `/var/lib/postgresql/data` 声明了数据卷，文档要求把数据卷挂在这个子目录。我挂在父目录 `/var/lib/postgresql`，真正存数据的 `data` 子目录就没落在我起名的卷里，而是落进了 Docker 按镜像声明自动建的匿名卷。匿名卷在 `up -d` 重建容器时会被沿用，`down` 之后再起就换成一个新的空卷，所以**容器重建后数据不会保留**。
 
-**修复**：挂到子目录：
+那条报错是这么来的：第一次启动时，初始化还没跑完，容器就被我重建了（那段时间正在反复改配置、`up -d`）。data 目录里留下了一半文件，却没有标志初始化完成的 `PG_VERSION`。重建后匿名卷被沿用，入口脚本看到没有 `PG_VERSION`，就再跑一次 initdb；initdb 发现目录非空，于是报错退出。
+
+postgres 18 起默认路径改了，数据卷要挂 `/var/lib/postgresql`，用新版本时以镜像文档为准。
+
+**修复**：先把这个栈连卷一起删掉，清掉那份半截数据，再挂到子目录重新起：
+
+```bash
+docker compose -f docker-compose.langfuse.yml down -v
+```
 
 ```yaml
 volumes:
@@ -129,7 +142,7 @@ volumes:
 
 ## 4. 反代 Next.js 应用：带上 Upgrade / Connection 头
 
-我当时的理解是：Langfuse 有 WebSocket 和 SSE 通路，live trace、实时 dashboard 靠它，反代不带升级头，页面能渲染但实时功能失效。这个说法我后来没在 Langfuse 文档里找到依据，只能算推测。反代 Next.js 这类应用时，带上 `Upgrade` / `Connection` 头是常见写法，对普通请求没有坏处，所以配置照留。
+我一开始以为 Langfuse 的 live trace、实时 dashboard 走 WebSocket，反代不带升级头，页面能渲染但实时功能会失效。实际上 Langfuse v2 的页面数据走的是普通 HTTP 请求，主要功能用不着 WebSocket，不带这两个头也不影响使用。我还是把它们留着，算预防：反代 Next.js 这类应用时，带上 `Upgrade` / `Connection` 头是常见写法，以后哪个功能真用上 WebSocket 也不用再改；对普通请求没有坏处。
 
 正确的反代块长这样：
 
@@ -195,7 +208,7 @@ dcp up -d --build web
 
 最后一个坑，也是耗时最久的。埋点代码写完，Spring Boot 侧上报了三条 `/api/rag/ask`，去 Langfuse UI 看：
 
-**Trace 列表**：能看到 3 条 trace，时间、latency、cost 都对。
+**Trace 列表**：能看到 3 条 trace，时间、token 用量都有（latency 和 cost 当时显示为 0，是另外两个问题，见[录屏彩排那篇](/blog/rag-demo-rehearsal-bugs/)）。
 
 **点进详情**：顶部 input / output 显示 `null`。子 generation 有内容。
 
@@ -222,16 +235,16 @@ private Map<String, Object> buildTraceEvent(TraceContext ctx, Object input, Obje
 }
 ```
 
-Rebuild、部署、跑问答、看 UI……**还是 null**。
+Rebuild、部署、跑问答、看 UI……**还是不对**。
 
-进 DB 查 traces 表：`traces.input` 是我传的字符串 `"[system] xxx\n[user] xxx"`，UI 上还是显示 null 或者显示成不像话的样子。
+进 DB 查 traces 表：`traces.input` 是我传的字符串 `"[system] xxx\n[user] xxx"`。UI 上不再是 null 了，但显示成一整段纯文本，分不出哪句是 system、哪句是 user。
 
 **根因（第二版）**：input/output 本身可以是任意 JSON，字符串也能存、也能以纯文本显示。但 Langfuse UI 要把它渲染成 **chat 气泡**，需要的是 role / content 结构：
 
 - `input`: `List<Map<String,String>>`，形如 `[{"role":"system","content":"..."}, {"role":"user","content":"..."}]`
 - `output`: `Map<String,String>`，形如 `{"role":"assistant","content":"..."}`
 
-我传的是拼接字符串，DB 存下来了，UI 却渲染不出气泡。当时页面上看到的是 null 还是一段纯文本，我没留截图，上面只能写成「null 或者不像话的样子」。
+我传的是拼接字符串，DB 存下来了，UI 只能把它原样当文本显示，渲染不出气泡。
 
 **第二版修复**：
 
@@ -260,8 +273,8 @@ Rebuild、部署、跑问答……**这次终于看到 chat 气泡了**：system
 回头看这 6 个坑：
 
 1. **NEXTAUTH_URL 精确匹配** — 抄示例翻车，env 强校验挡住
-2. **Postgres 数据卷** — 17 及以下挂子目录 `/data`，挂父目录重建后数据不保留
-3. **反代 Upgrade 头** — Next.js 应用反代的常见写法，「缺了实时功能会挂」是推测
+2. **Postgres 数据卷** — 17 及以下挂子目录 `/data`，挂父目录时数据落进匿名卷，重建后不保留
+3. **反代 Upgrade 头** — Langfuse v2 用不着 WebSocket，这两个头是反代 Next.js 应用的预防性写法
 4. **web 镜像必须 rebuild** — build-time 资产改了要 `--build`，`restart` 白改
 5. **trace input/output 独立于 generation** — 三层观察点独立读取
 6. **想要对话气泡就传 message 数组** — 字符串也能存，但 UI 不会渲染成气泡

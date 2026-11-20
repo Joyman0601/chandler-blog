@@ -82,7 +82,23 @@ db.password.0=<远程密码>
 - 我在本地的 `ruoyi-system` 里把它**实现**了；
 - 在我的业务模块里 `@DubboReference` 调它。
 
-本地测试：完美。部署到测试环境（库 B）：**RPC 报错**，大意是「找不到这个方法 / 解码请求失败」。
+本地测试：完美。部署到测试环境（库 B）：**RPC 报错**，说的是「解码请求失败、找不到这个方法」。报错的样子大致如下，按 Dubbo 3 的报错格式整理，地址和方法名换成了示例：
+
+```text
+org.apache.dubbo.rpc.RpcException:
+  Failed to invoke remote method:
+  selectUserIdsByName,
+  provider: dubbo://<库 B 地址>:20880/
+    org.dromara.system.api.RemoteUserService?...
+  cause: org.apache.dubbo.remoting.RemotingException:
+  Fail to decode request due to:
+  java.lang.IllegalArgumentException:
+  Service not found:
+    org.dromara.system.api.RemoteUserService,
+    selectUserIdsByName
+```
+
+关键是最后两行：provider 收到请求后，按接口名、方法名和参数类型去找要调的方法，没找到，于是请求解码失败。consumer 这边只看到一个 `RpcException`。
 
 ### 根因
 
@@ -99,12 +115,17 @@ Dubbo 是 provider / consumer 架构：
 ### 解决与经验
 
 ```
-改动落地前，先问自己一句：「我动了哪些模块？」
+改动落地前，先问自己：
+「我动了哪些模块？」
 
-1. 只动了自己的业务模块        → 只部署自己的模块，OK
-2. 动了 ruoyi-api（接口契约）   → 契约变了，provider 也得重新部署
-   或动了 ruoyi-system 等别人的模块
-   → 这些模块也必须一起部署，否则 consumer 单独上线必崩
+1. 只动了自己的业务模块
+   → 只部署自己的模块，OK
+2. 动了 ruoyi-api（接口契约）
+   → 契约变了，provider
+     也得重新部署
+3. 动了 ruoyi-system 等别人的模块
+   → 这些模块也必须一起部署，
+     否则 consumer 单独上线必崩
 ```
 
 落地时有两个选择：
@@ -115,7 +136,7 @@ Dubbo 是 provider / consumer 架构：
 
 还有一条魔鬼细节：Dubbo 按**方法名 + 参数类型列表**在 provider 上找方法，这两样两端必须一致。即使 provider 部署了，参数类型对不上，照样找不到方法。返回类型不参与查找；两端返回类型不一致时，出问题的是结果反序列化或类型转换，是另一类报错。
 
-> **排查口诀：** 「本地好、测试环境 RPC 报错」→ 看报错里 Dubbo provider 暴露的方法列表，你调的方法不在列表里 = **provider 端版本旧 / 缺实现**。
+> **排查口诀：** 「本地好、测试环境 RPC 报错」→ 先看报错里有没有 `Service not found`，再去 Nacos 看 provider 注册信息里的方法列表（`methods`），你调的方法不在列表里 = **provider 端版本旧 / 缺实现**。
 
 ## 小结
 

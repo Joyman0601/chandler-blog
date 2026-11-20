@@ -1,6 +1,6 @@
 ---
 title: "微调与本地部署：LoRA、量化、vLLM 与 Ollama"
-description: "跳出「只会调 API」：讲清微调谱系（预训练→SFT→RLHF/DPO）、LoRA/QLoRA 为什么能把显存从 100GB 降到个位数、量化格式与 GPTQ/AWQ、vLLM 的 PagedAttention 如何消灭显存碎片，以及「什么时候该微调、什么时候该用 RAG」。"
+description: "跳出「只会调 API」：讲清微调谱系、LoRA/QLoRA 为什么能大幅省显存、量化与 GPTQ/AWQ、vLLM 的 PagedAttention 和 Ollama 本地部署，以及什么时候该微调、什么时候该用 RAG。"
 pubDate: 2026-06-07
 tags: ["微调", "LoRA", "量化", "vLLM"]
 series: "llm-learn"
@@ -72,7 +72,7 @@ ollama run qwen2.5:7b
 - **vs 调云端 API**：本地部署数据不出机（合规、隐私）、无网络延迟、无调用费用；代价是受限于本机显存，只能跑小模型。
 - **一个落地坑**：有些应用用的是 Responses API（`/v1/responses`），接 Ollama 前要先确认它支持哪些端点。
 
-  > 更正：这里原来写「Ollama 只支持 chat/completions」。按 Ollama 当前的 OpenAI 兼容文档，它从 v0.13.3 起也提供 `/v1/responses`，但只支持无状态的用法，`previous_response_id` 这类依赖服务端会话的参数不能用。我当时用的版本支不支持，没有留下记录。
+  > 更正：这里原来写「Ollama 只支持 chat/completions」。按 Ollama 当前的 OpenAI 兼容文档，它从 v0.13.3 起也提供 `/v1/responses`，但只支持无状态的用法，`previous_response_id` 这类依赖服务端会话的参数不能用。我当时装的是早于 v0.13.3 的版本，还没有这个端点，请求 `/v1/responses` 直接返回 404，于是误以为它只支持 chat/completions。升级之后无状态的请求就能接上；应用要是依赖 `previous_response_id` 这类有状态参数，仍要改走 chat/completions。
 
 ## RAG vs 微调：什么时候选哪个
 

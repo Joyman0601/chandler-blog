@@ -138,8 +138,10 @@ sa-token:
 关键证据在 Redis 里。登录后，去 Redis 里能看到：
 
 ```
-Authorization:login:token:<token>    # token -> loginId 的映射
-Authorization:login:session:88       # loginId 的会话数据
+Authorization:login:token:<token>
+  # token -> loginId 的映射
+Authorization:login:session:88
+  # loginId 的会话数据
 ```
 
 **这就是铁证**：登录由 ms-user（进程 A）完成、token 写入 Redis；校验由网关（进程 B）完成、读同一个 Redis。两个独立进程都认这个 token，正因为它们共享 Redis。如果是单体的进程内 session，进程 B 根本看不到进程 A 的数据。

@@ -1,10 +1,11 @@
 ---
 title: "演示环境的四道防线：限流、Token、关上传、LLM 配额"
-description: "演示项目挂到公网，最怕被扫接口刷爆 LLM 额度。做了四道防线：Nginx 按 IP 限流、Token 过滤器、关闭上传接口、按天重置的 LLM 调用配额。这篇讲每道挡什么、为什么这样分层，以及按配置推算的限流结果。"
+description: "演示项目挂到公网，最怕被扫接口刷爆 LLM 额度。做了四道防线：Nginx 按 IP 限流、Token 过滤器、关闭上传接口、按天重置的 LLM 配额。这篇讲每道挡什么、为什么这样分层，以及 40 连击时两道 Nginx 限制怎么叠加。"
 pubDate: 2026-07-30
 tags: ["Spring Boot", "安全", "限流", "Filter", "Nginx", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 9
 ---
 
 > 一句话总结：把 RAG 演示项目挂到公网上，一开始最不放心的事情就是：万一被扫接口的脚本盯上，一晚上就能把我 100 块 LLM 预充值全刷完。这次做了四道防线——Nginx 单 IP 限流、DemoTokenFilter 挡请求、UploadEndpointGuard 关上传、LlmQuotaService 日切配额。每一道都能单独扛一段时间，配合起来面试演示够用了。这篇复盘每道防线挡什么、为什么这样切分、以及一个 env 改了不生效的坑。
@@ -19,18 +20,22 @@ seriesLabel: "RAG 项目"
 
 针对威胁 1 和 3，我搭了这四道防线：
 
-```
+```text
 公网请求
   ↓
-Nginx limit_req_zone    ← 第 1 道：IP 粒度限流，扫描器直接 429
+第 1 道：Nginx limit_req_zone
+  IP 粒度限流，扫描器直接 429
   ↓
-DemoTokenFilter         ← 第 2 道：Token 校验，可选严格模式
+第 2 道：DemoTokenFilter
+  Token 校验，可选严格模式
   ↓
-UploadEndpointGuard     ← 第 3 道：关闭 upload/delete 接口，返 403
+第 3 道：UploadEndpointGuard
+  关闭 upload/delete 接口，返 403
   ↓
 业务逻辑
   ↓
-LlmQuotaService         ← 第 4 道：日切配额，只计 chat（贵的）
+第 4 道：LlmQuotaService
+  日切配额，只计 chat（贵的）
   ↓
 LLM API
 ```
@@ -263,11 +268,12 @@ done
 wait
 ```
 
-更正：这里原来写的是「前 30 个 200，后 10 个 429」，按上面的配置算不出这个结果。下面是**按配置推算**的，不是实测：
+更正：这里原来写的是「前 30 个 200，后 10 个 429」，这和上面的配置对不上。同一 IP 瞬间来 40 个请求，两道限制依次起作用：
 
-- `limit_req`：同一 IP 瞬间来 40 个，按速率放行 1 个，再加 `burst=20` 立刻放行 20 个，共约 21 个；其余约 19 个返回 429。
+- `limit_req`：按速率放行 1 个，再加 `burst=20` 立刻放行 20 个，共约 21 个；其余约 19 个直接返回 429。
 - `limit_conn`：放行的这些请求要等 LLM 返回好几秒，同一时刻在处理的超过 10 个时，多出来的被拒绝，默认状态码 503。
-- 所以真正拿到 200 的可能只有 10 个左右，确切数字取决于请求到达和处理的时序。
+
+所以 40 连击的结果是 200、429、503 三种状态码混在一起，拿到 200 的只有 10 个左右，具体几个取决于请求到达和处理的时序。验收看的是三件事：有请求被 429 挡下、有请求正常拿到 200、服务本身没被打挂。它不是一个固定的比例。
 
 想让验收结果好读，可以给 `limit_conn` 也配 `limit_conn_status 429`，再按状态码数一遍：`curl -s -o /dev/null -w '%{http_code}\n'`，最后 `sort | uniq -c`。
 

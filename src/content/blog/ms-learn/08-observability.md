@@ -1,6 +1,6 @@
 ---
 title: "可观测性：微服务出了问题怎么定位"
-description: "服务多、链路长，出了问题怎么查？三支柱 Metrics/Logs/Traces 落地：Actuator 暴露指标、Prometheus+Grafana 看图、Zipkin 链路追踪。重点讲 Feign traceId 断裂、Zipkin UI 被 GET span 淹没等排查很久的坑。"
+description: "服务多、链路长，出了问题怎么查？用 Actuator、Prometheus + Grafana、Zipkin 落地指标、日志、链路三支柱，重点讲 Feign 处 traceId 断裂、Zipkin 列表被 GET span 淹没等坑。"
 pubDate: 2026-02-11
 tags: ["微服务", "可观测性", "Prometheus", "Zipkin"]
 series: "ms-learn"
@@ -103,9 +103,20 @@ management:
 **验证**：直打 ms-order:9002 下单，查到完整的 3-span 瀑布（实测一条 trace 的时间线）：
 
 ```
-ms-order  SERVER  http post /order/buy    起+0ms     耗时~108ms  ← 最外层, 整个下单全过程
-  ms-order  CLIENT  http post             起+10.8ms  耗时~48ms   ← Feign 出门调库存
-    ms-stock  SERVER  http post /stock/deduct  起+24.7ms  耗时~35ms  ← 库存服务真正扣减
+ms-order SERVER
+http post /order/buy
+起+0ms，耗时~108ms
+最外层，整个下单全过程
+│
+└─ ms-order CLIENT
+   http post
+   起+10.8ms，耗时~48ms
+   Feign 出门调库存
+   │
+   └─ ms-stock SERVER
+      http post /stock/deduct
+      起+24.7ms，耗时~35ms
+      库存服务真正扣减
 ```
 
 **瀑布图怎么读**：
@@ -146,13 +157,13 @@ ms-order  SERVER  http post /order/buy    起+0ms     耗时~108ms  ← 最外�
 
 **修复**：ms-stock 补上 actuator。
 
-### 坑 D：排除 brave-propagation-aws（是否必要待验证）
+### 坑 D：排除 brave-propagation-aws（其实不必要）
 
 `micrometer-tracing-bridge-brave` 会**间接引入** `io.zipkin.aws:brave-propagation-aws`。我当时认为它把默认传播格式换成了 AWS X-Ray 格式，造成跨服务 traceId 不互认，于是把它排除了。
 
 **当时的做法**：在 `micrometer-tracing-bridge-brave` 上 `<exclusion>` 掉 `io.zipkin.aws:brave-propagation-aws`。
 
-更正：这里原先写的是「把默认的 B3 传播格式换成了 AWS X-Ray 格式」，有两处不对。第一，Spring Boot 3 默认的传播格式是 W3C（`traceparent` 请求头），不是 B3：按 Spring Boot 3.2 的配置项文档，`management.tracing.propagation.produce` 默认是 `W3C`，`consume` 默认是 `W3C, B3, B3_MULTI`。第二，这个包进了 classpath 是否就会替换格式，我在 Spring Boot 文档里没找到依据，它的可选传播类型里也没有 AWS。坑 B、C 修好之后链路已经能串起来，排除这个包是不是必要的，还要单独验证。
+更正：这里原先写的是「把默认的 B3 传播格式换成了 AWS X-Ray 格式」，有两处不对。第一，Spring Boot 3 默认的传播格式是 W3C（`traceparent` 请求头），不是 B3：按 Spring Boot 3.2 的配置项文档，`management.tracing.propagation.produce` 默认是 `W3C`，`consume` 默认是 `W3C, B3, B3_MULTI`。第二，这个包只是把 AWS 格式的实现放进 classpath，要在代码里显式把它配成传播方式才会用上；Spring Boot 的自动配置只按 `management.tracing.propagation` 的取值装 W3C 或 B3，可选类型里没有 AWS。所以它在不在 classpath，都不会改变默认格式。链路真正接上，靠的是坑 B、C 的两处修复；排除这个包无害，但不必要。
 
 ### 坑 E：WebFlux（网关）的追踪没攻克
 
@@ -164,11 +175,11 @@ ms-order  SERVER  http post /order/buy    起+0ms     耗时~108ms  ← 最外�
 
 ## 把四个坑串起来看
 
-坑 B/C/D 其实是**同一个目标的三道关卡**——让 ms-stock 的 span 出现在同一条 trace 里：
+坑 B、C 是**同一个目标的两道关卡**，坑 D 是排查时顺带查的第三个方向——目标都是让 ms-stock 的 span 出现在同一条 trace 里：
 
 1. **B**：traceId 得先能**传过去**（Feign 埋点）。
 2. **C**：被调方得**愿意建 span**（actuator）。
-3. **D**：两边的**传播格式得一致**。两端都是 Spring Boot 3 的默认配置时，发的是 W3C、收的认 W3C 和 B3，天然一致；坑 D 的排除是否必要还待验证。
+3. **D**：两边的**传播格式得一致**。两端都是 Spring Boot 3 的默认配置时，发的是 W3C、收的认 W3C 和 B3，天然一致，所以坑 D 的排除其实不必要。
 
 前两关缺一，跨服务追踪就断；第三关在两端版本、配置不一致时要查。理解了这条链，再遇到「trace 断在某个调用处」就知道往这三个方向查。
 
@@ -184,7 +195,7 @@ ms-order  SERVER  http post /order/buy    起+0ms     耗时~108ms  ← 最外�
 - **A**：排查用后端 API，别靠 UI 列表肉眼翻（被 GET span 淹没）。
 - **B**：Feign 要加 `feign-micrometer` 才传播 traceId。
 - **C**：被调方要有 actuator 才生成 span。
-- **D**：两端传播格式要一致（Spring Boot 3 默认发 W3C）；排除 `brave-propagation-aws` 是否必要待验证。
+- **D**：两端传播格式要一致（Spring Boot 3 默认发 W3C）；`brave-propagation-aws` 不会改默认格式，不必排除。
 - **E**：WebFlux（网关）追踪是已知遗留坑，直打后端服务即可。
 
 ## 系列收尾

@@ -5,6 +5,7 @@ pubDate: 2026-07-29
 tags: ["Docker", "Docker Compose", "pgvector", "PostgreSQL", "部署", "RAG"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 8
 ---
 
 > 一句话总结：这个 RAG 项目本地跑了几个月都很稳，为了面试演示要把它部署到阿里云 ECS 上。我给自己估的时间是「一下午」——毕竟 Dockerfile 都写好了、`docker-compose.prod.yml` 也 review 了好几遍。实际花了 **3.5 小时**，踩了 **5 个坑**。这篇把每个坑的现象、根因、修复原样记下来，尤其想强调其中几个「本地写 compose 时根本想不到会翻车」的点。
@@ -20,11 +21,16 @@ seriesLabel: "RAG 项目"
 现在要上云，改成 3 容器同时起：
 
 ```text
-pgvector（PostgreSQL 15 + pgvector 扩展）
-  ↓
-app（Spring Boot jar，maven → jre 两阶段构建）
-  ↓
-web（Vue 打包 + Nginx，反代 /api → app:19090）
+pgvector
+  PostgreSQL 15 + pgvector 扩展
+    ↓
+app
+  Spring Boot jar
+  maven → jre 两阶段构建
+    ↓
+web
+  Vue 打包 + Nginx
+  反代 /api → app:19090
 ```
 
 我提前一天把 `docker-compose.prod.yml` / 后端 `Dockerfile` / 前端 `Dockerfile` / `nginx.conf` / `.env.prod.example` 都写好了，看着挺完整的。真到服务器上一跑——每一个都出问题。
@@ -60,9 +66,13 @@ app:
 
 更正：我当时写的解释是「`service_healthy` 有超时，等不到 healthy 就放行 app」，这不对。Compose 会一直等依赖变成 healthy；依赖被判 unhealthy 时，Compose 报错（`dependency failed to start`），不启动 app。另外，postgres 官方镜像本身不带 HEALTHCHECK，`pg_isready` 这条检查是我自己在 compose 里写的。
 
-更可能的原因（推测，当时日志没留全）：postgres 镜像首次启动时，会先起一个临时实例跑 `docker-entrypoint-initdb.d/*.sql`。官方文档写明，这个临时实例只监听 Unix socket。`pg_isready` 不带 `-h` 时走的正是 Unix socket，于是在初始化阶段就报 ready，容器被判 healthy，app 跟着启动。app 走 TCP 去连，这时 TCP 端口还没开，或者临时实例刚好在关、正式实例还没起来，就是 `Connection refused`。上面 `ps` 里 pgvector 显示的 `health: starting` 和这个推测也对不全，具体是哪种，待我核对。
+真正的原因出在首次初始化，分两层。
 
-当时实际的处理是**再跑一遍 `docker compose up -d`**：第二次数据卷里已经有库，不再走初始化，几秒钟就 healthy，app 一次起来。
+第一层是健康检查报早了。postgres 镜像首次启动时，会先起一个临时实例跑 `docker-entrypoint-initdb.d/*.sql`。官方文档写明，这个临时实例只监听 Unix socket。`pg_isready` 不带 `-h` 时走的正是 Unix socket，于是在初始化阶段就报 ready，容器被判 healthy，app 跟着启动。app 走 TCP 去连，这时 TCP 端口还没开，就是 `Connection refused`。
+
+第二层是这次初始化本身没跑完。`01_schema.sql` 里建完表，下一句是建 HNSW 索引；而向量列写的是 `vector(4096)`（为什么是 4096，见坑 4）。HNSW 最多索引 2000 维，这句直接报错，初始化脚本中断，容器退出，又被 pgvector 配的 `restart: unless-stopped` 拉了起来。重启后的容器，健康状态从头计算，所以 `ps` 里 pgvector 显示 `health: starting`，而 app 已经退出了。
+
+当时实际的处理是**再跑一遍 `docker compose up -d`**：pgvector 重启时数据目录里已经有库，入口脚本跳过了初始化，几秒钟就 healthy，app 一次起来。代价是库里只有那张向量表，索引和后面的表都没建上。这一点当时没发现，到坑 5 删卷重建时才一起补齐。
 
 **修复**：可复用的写法是三处一起改：
 

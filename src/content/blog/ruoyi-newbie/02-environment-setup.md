@@ -2,7 +2,7 @@
 title: "02 环境搭建踩坑实录"
 description: "微服务最劝退新人的不是写代码，而是第一周连不上、起不来、调不通。数据库初始化、Nacos 命名空间与字符集、启动顺序、网关路由、那些把人带偏的 403，每个坑都给现象→根因→解决。"
 pubDate: 2026-06-12
-tags: ["RuoYi", "Nacos", "网关", "Sa-Token", "环境搭建"]
+tags: ["RuoYi", "Nacos", "API 网关", "Sa-Token", "环境搭建"]
 series: "ruoyi-newbie"
 seriesLabel: "微服务新人踩坑实录"
 ---
@@ -68,7 +68,15 @@ spring:
 微服务有依赖关系，乱序启动会看到一堆「连不上 XXX」的红字，但根因只是顺序不对：
 
 ```
-Nacos  →  ruoyi-system  →  ruoyi-auth  →  ruoyi-gateway  →  业务模块
+Nacos
+  ↓
+ruoyi-system
+  ↓
+ruoyi-auth
+  ↓
+ruoyi-gateway
+  ↓
+业务模块
 ```
 
 Nacos 必须第一个（大家都要从它拿配置/注册）；`ruoyi-system` 是地基（很多模块依赖它的 Dubbo 服务）；网关和业务模块最后。

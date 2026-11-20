@@ -1,7 +1,7 @@
 ---
 title: "个人网站搭建记录：Astro 静态站从上线到持续改版"
 description: "这个博客从 Astro 起步、部署到 Cloudflare，再到加系列、搜索、评论、从本地文章库导入、改字体和配图的过程，以及一次静态站被当成 SSR 部署、卡在 SESSION KV 的坑。"
-pubDate: 2025-12-03
+pubDate: 2026-05-27
 tags: ["Astro", "个人网站", "Cloudflare", "部署"]
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Prompt 工程与 Agent 原理：从 CoT 到受控的 ReAct 循环"
-description: "讲清 Prompt 四范式与 CoT 的底层机制、ReAct 范式为什么能用外部事实治幻觉、Tool Calling 的真实流程，以及一个生产级 Agent Loop 需要哪些工程护栏：硬上限、去重、Human-in-the-Loop 与安全边界。"
+description: "讲清 Prompt 四范式与 CoT 的机制、ReAct 为什么能用外部事实治幻觉、Tool Calling 的真实流程，以及一个受控 Agent Loop 要哪些护栏：硬上限、去重、人工确认与安全边界。"
 pubDate: 2026-06-05
 tags: ["Agent", "ReAct", "Prompt", "Tool Calling"]
 series: "llm-learn"

@@ -1,10 +1,11 @@
 ---
 title: "RAG 检索召回升级：可插拔分块、独立父块、Contextual Retrieval"
-description: "原来分块只有「固定 600 字 + 100 overlap」一条路走到黑。这次把它重构成可插拔策略（FIXED / MARKDOWN / SEMANTIC），落地 Parent-Document 独立父块，又借鉴 Anthropic 的 Contextual Retrieval 给子块加上下文前缀再 embedding。三件事都围绕一个目标：让小子块召回得准、又不丢全局语境。默认全关，现有测试零回归。"
+description: "把固定窗口分块重构成可插拔策略（FIXED / MARKDOWN / SEMANTIC），落地独立父块，再借鉴 Contextual Retrieval 给子块加定位前缀后 embedding，让小块召回准又不丢语境。默认全关，零回归。"
 pubDate: 2026-06-26
 tags: ["Java", "Spring Boot", "RAG", "分块", "向量检索", "Contextual Retrieval"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 4
 ---
 
 > 一句话总结：我这个 RAG 项目的分块一直只有一种——「固定 600 字 + 100 overlap」，逐字符切，切到哪算哪。这次围绕「召回」做了三件连贯的事：**分块策略可插拔**（FIXED / MARKDOWN / SEMANTIC）、**独立父块 Parent-Document**（检索用小块、喂 LLM 用大块）、**Contextual Retrieval**（embedding 前给子块补一句全局定位）。它们解决的是同一个矛盾：子块切小了检索准、但语义残缺；切大了语义全、但检索糊。默认全关，现有测试零回归。
@@ -82,11 +83,20 @@ Parent-Document 的思路很直接：**检索时命中小子块（保精度）�
 
 回填发生在问答的 `buildContext`：
 
-```
-命中子块 c1（parentId=p1）、c2（parentId=p1）、c3（无父块）
-        ↓
-上下文 = 父块 p1 正文（出现一次，按 parentId 去重）+ c3 原文
-sources = [c1, c3]   ← 仍指向命中的子块，可追溯到精确命中点
+```text
+命中子块：
+  c1（parentId=p1）
+  c2（parentId=p1）
+  c3（无父块）
+    ↓
+上下文：
+  父块 p1 正文
+  （只出现一次，按 parentId 去重）
+  + c3 原文
+sources：
+  [c1, c3]
+  仍指向命中的子块，
+  可追溯到精确命中点
 ```
 
 两个我自己觉得想清楚了的点：**父块按 parentId 去重**（c1、c2 同属 p1，p1 正文只拼一次，不浪费上下文预算）；**sources 仍指向子块**（父块正文只进 LLM 上下文、不进引用列表，用户点开 source 看到的还是精确命中的那一小段）。
@@ -109,10 +119,15 @@ String buildEmbeddingText(String content, String contextSource);
 
 调 LLM 的方式我刻意贴合了之前 [Prompt Caching 那篇](/blog/rag-prompt-caching/) 的机制：
 
-```
-system (instructions) ← 固定任务说明 + contextSource（父块/全文）  ← cache_control 注入在这块
-user   (input)        ← 该子块正文
-output                ← ≤50 字定位说明
+```text
+system（instructions）
+  固定任务说明
+  + contextSource（父块/全文）
+  cache_control 注入在这块
+user（input）
+  该子块正文
+output
+  ≤50 字定位说明
 ```
 
 把 `contextSource` 放进 system，是因为 `LlmClient` 在缓存开启时正是对 system 块注入 `cache_control`。于是**同一父块/全文的多个子块，system 内容完全一致 → 可以命中缓存**：第 1 个子块付全价写缓存，后面的子块那段父块/全文就按缓存价计费。前提是 system 块够长：显式缓存要求被缓存的内容至少 1024 token，父块太短时根本建不起缓存，每个子块照样全价（门槛细节见 [Prompt Caching 那篇](/blog/rag-prompt-caching/)）。按章节切出来的父块可能不到这个长度；用全文当 contextSource 时更容易满足。满足前提时，一篇文档切 N 个子块，本来要把全文重读 N 遍，现在只有第 1 遍是全价。这一点把「Contextual 给每个子块加一次 LLM 调用」的成本压了下来。

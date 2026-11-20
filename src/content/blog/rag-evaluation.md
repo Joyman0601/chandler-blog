@@ -5,6 +5,7 @@ pubDate: 2026-06-26
 tags: ["Java", "Spring Boot", "RAG", "RAGAS", "评估", "LLM-as-Judge"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 7
 ---
 
 > 一句话总结：前面几篇都在说「我觉得检索变好了」，但到底好多少，得用数字说话。这篇做两件事：把评估集**从 26 题弱标注扩到 53 题带标准答案**（覆盖规范 FAQ / 口语化 / 多跳 / 无答案四类），补上 **context recall / answer correctness** 两个需要标准答案的指标，凑成检索、生成双侧 5 个 RAGAS 指标，再加 Java 侧的 Hit@K。真正跑出数字的只有 26 题上的 3 个 reference-free 指标：混合检索相对纯向量 faithfulness 0.85→0.95、answer relevancy 0.37→0.53；53 题和另外两个指标还没跑。
@@ -54,16 +55,24 @@ seriesLabel: "RAG 项目"
 
 加粗的两个是这次补的。这里有个我自己挺满意的设计——**judge 与数据集解耦**：
 
-```
-RagMeasurementHarnessTest (Java, 真 API)
-  └─ 跑 vector / hybrid / hybrid_rerank / vector_rewrite 四种模式
-  └─ 导出 ragas-dataset-<mode>.json（question / contexts / answer）
-                          │
-                          ▼
-eval/ragas_eval.py (Python, 判官 LLM)
-  └─ 从 questions.json 实时读 question→groundTruthAnswer
-  └─ 按 question 把【完整标准答案】join 进每行的 reference 字段
-  └─ 全部行都有 reference 时才启用 reference-based 指标
+```text
+RagMeasurementHarnessTest
+（Java，真 API）
+  └─ 跑四种模式：
+     vector / hybrid /
+     hybrid_rerank / vector_rewrite
+  └─ 导出 ragas-dataset-<mode>.json
+     （question / contexts / answer）
+        │
+        ▼
+eval/ragas_eval.py
+（Python，判官 LLM）
+  └─ 从 questions.json 实时读
+     question → groundTruthAnswer
+  └─ 按 question 把【完整标准答案】
+     join 进每行的 reference 字段
+  └─ 全部行都有 reference 时
+     才启用 reference-based 指标
   └─ 输出 ragas-comparison.md
 ```
 
@@ -88,7 +97,7 @@ reference-free 三指标我已经用真实判官跑出来了（判官 `Qwen2.5-7
 读出来几个结论：
 
 - **hybrid 相对 vector 全面提升**：faithfulness 0.854→0.948、answer_relevancy 0.370→0.526、context_precision 0.653→0.843。混合检索召回了更相关的上下文，答案于是更忠实、也更切题——这就给前面「混合检索值得做」补上了数字证据。
-- **answer_relevancy 整体偏低**（vector 约 0.37）：可能的原因是无答案题。这类题的正确回答是兜底句「根据现有资料无法回答。」，它和问题的语义相似度天然低，在这个指标上会拉低平均分。这是推测：前提是这 26 题里有无答案题，我没按题型拆开算过，待核。
+- **answer_relevancy 整体偏低**（vector 约 0.37）：主要是兜底句拉的。这 26 题都是语料里有答案的题，但检索没找到对应资料时，系统会回兜底句「根据现有资料无法回答。」。翻导出的数据集，vector 模式下有 8 题的回答以兜底句开头，hybrid 只有 3 题。兜底句和问题的语义相似度天然低，在这个指标上会拉低平均分；hybrid 落到兜底的题少，answer_relevancy 也就高一截。
 - **rerank 把 context_precision 顶到最高 0.889**：精排把最相关的块顶到最前面，这正是它该干的。faithfulness / relevancy 略低于 hybrid，在小样本上属判官波动范围。
 
 这组数字和 [RAG 评估体系](/blog/llm-learn/03-rag-evaluation-ragas/) 那篇里同样 26 题的第一次评估对不上（那篇 vector 的 faithfulness 是 0.942、context_precision 是 0.967），以本篇为准，那篇也加了更正。

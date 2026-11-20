@@ -140,7 +140,8 @@ if (!Arrays.asList(relTenantIds.split(",")).contains(contextTenantId)) {
     │
     ▼
 JwtFilter.preHandle()
-    └─ TenantContext.setTenant("1001")        ← ThreadLocal 存储
+    └─ TenantContext.setTenant("1001")
+       ← ThreadLocal 存储
 
     ▼
 ShiroRealm.checkUserTokenIsEffect()
@@ -153,13 +154,16 @@ ShiroRealm.checkUserTokenIsEffect()
 
     ▼
 TenantLineInnerInterceptor 拦截 SQL
-    └─ SELECT * FROM sys_depart WHERE ...
+    └─ SELECT * FROM sys_depart
+       WHERE ...
        自动改写为:
-       SELECT * FROM sys_depart WHERE ... AND tenant_id = 1001
+       SELECT * FROM sys_depart
+       WHERE ... AND tenant_id = 1001
 
     ▼
 JwtFilter.afterCompletion()
-    └─ TenantContext.clear()                  ← 清理 ThreadLocal
+    └─ TenantContext.clear()
+       ← 清理 ThreadLocal
 ```
 
 ---
@@ -214,7 +218,15 @@ loginUser.relTenantIds = "1001,1002"
 普通的 Spring Boot CRUD 开发，整条链路的前提假设是：**写代码的时候就知道表长什么样**。
 
 ```
-Controller → Service → Mapper（固定 Entity）→ MyBatis XML（固定 SQL）→ 数据库
+Controller
+  ↓
+Service
+  ↓
+Mapper（固定 Entity）
+  ↓
+MyBatis XML（固定 SQL）
+  ↓
+数据库
 ```
 
 低代码平台要解决的是完全相反的问题：**写框架代码的时候不知道用户将来会配置什么表，但仍然要能对任意表做 CRUD**。
@@ -254,28 +266,42 @@ List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
 这些「关于数据结构的数据」就是**元数据**，存储在 `onl_cgform_field` 表里：
 
 ```
-db_field_name   = "order_no"   ← 数据库字段名，拼 SQL 用
-db_type         = "varchar"    ← 字段类型，做类型转换用
-field_show_type = "input"      ← 前端渲染什么控件
-is_query        = 1            ← 是否出现在搜索栏
-field_must_input = 1           ← 是否必填
-field_extend_json = "{...}"    ← 扩展配置（JSON）
+db_field_name = "order_no"
+  ← 数据库字段名，拼 SQL 用
+db_type = "varchar"
+  ← 字段类型，做类型转换用
+field_show_type = "input"
+  ← 前端渲染什么控件
+is_query = 1
+  ← 是否出现在搜索栏
+field_must_input = 1
+  ← 是否必填
+field_extend_json = "{...}"
+  ← 扩展配置（JSON）
 ```
 
 运行时 CRUD 流程（按元数据表结构推断，同样不是 jar 里的代码）：
 
 ```
 POST /online/cgform/api/saveData
-  { tableName: "cg_order", record: { order_no: "001", amount: 999 } }
+{
+  tableName: "cg_order",
+  record: {
+    order_no: "001",
+    amount: 999
+  }
+}
             │
             ▼
-1. SELECT * FROM onl_cgform_field WHERE cgform_head_id = ?
+1. SELECT * FROM onl_cgform_field
+   WHERE cgform_head_id = ?
    → 取出字段定义列表
             │
             ▼
 2. 遍历 record 里的每个 key-value：
    - 查元数据，确认字段存在且合法
-   - 根据 db_type 做类型转换（"999" → 999.0）
+   - 根据 db_type 做类型转换
+     （"999" → 999.0）
    - 组装 INSERT 的字段列表和值列表
             │
             ▼

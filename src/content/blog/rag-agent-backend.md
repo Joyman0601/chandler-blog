@@ -5,6 +5,7 @@ pubDate: 2026-05-12
 tags: ["Java", "Spring Boot", "RAG", "Agent", "LLM"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 0
 ---
 
 > 一句话总结：这个项目从一个全内存的 RAG + Agent 后端起步，后来接上了 pgvector 和 PostgreSQL，补了混合检索、分块、多模态、多轮改写、Prompt Caching 和评估，最后用 Docker Compose 部署成公网演示环境，配了限流、配额和自建 Langfuse。这篇是 RAG 系列的导读：先讲现在的架构，再按能力列出对应的文章。

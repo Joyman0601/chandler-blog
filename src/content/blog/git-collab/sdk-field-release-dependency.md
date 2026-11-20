@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 186e3dccf50e5c554fc179df97cbda9ecd01fa583af0b8dfeb2819d03a397465
+# import-articles-sha256: c59879f88bbbf508b5cce76ef1f4e703e5134005ea0f2db7eaec2ba3a243b6b7
 # Imported by scripts/import-articles.mjs from posts/git-collab/sdk-field-release-dependency.md
 # Source date: 2026-10-29
 title: "SDK 加了字段：本地通过还要核发版依赖"
@@ -182,12 +182,19 @@ cd - && git worktree remove --force /tmp/precheck
 我用一个本地文件代理（`GOPROXY=file://...`）模拟了发版：代理上只有不带新字段的 `v1.2.0`，兄弟目录里已经加了字段。结果如下：
 
 ```text
-本地（带 replace）  go test ./...  → ok
-预检（去掉 replace）go list -m      → example.org/task-sdk v1.2.0
-                    go build ./... → 通过（新字段只在测试里引用）
-                    go test ./...  → unknown field SeparatePools in struct literal
-                                     of type sdk.Config  [build failed]
-发布 v1.3.0，go get 后再跑     → 新消息、旧消息两个子测试都 PASS
+本地（带 replace）
+  go test ./...  → ok
+预检（去掉 replace）
+  go list -m
+    → example.org/task-sdk v1.2.0
+  go build ./... → 通过
+    （新字段只在测试里引用）
+  go test ./...
+    → unknown field SeparatePools
+      in struct literal of type
+      sdk.Config  [build failed]
+发布 v1.3.0，go get 后再跑
+  → 新消息、旧消息两个子测试都 PASS
 ```
 
 中间那行值得注意：消费方的业务代码不直接引用新字段时（本文的情形就是只经 JSON 接收），`go build` 是绿的，只有引用了字段的测试会挡住旧版本。所以预检里要跑 `go test`，测试里要有第 4 节那种直接断言新字段的用例。

@@ -5,6 +5,7 @@ pubDate: 2026-06-20
 tags: ["Java", "Spring Boot", "RAG", "PostgreSQL", "成本治理"]
 series: "rag"
 seriesLabel: "RAG 项目"
+seriesOrder: 2
 ---
 
 > 一句话总结：我这个 RAG 项目原本把每次 LLM 调用的 token / 成本记录塞在一个内存 List 里——重启就没，也没法查。这次把它落到 PostgreSQL 的 `usage_record` 表，再加了一个按租户、时间窗聚合的查询接口 `GET /api/usage/summary`，让「成本能算清、能回溯」从一句空话变成真能跑的接口。沿用上一篇 pgvector 改造的同一套「内存默认 + 开关切换」模式，**110 个测试零回归**。
@@ -34,17 +35,31 @@ public List<UsageRecord> list()   { return List.copyOf(records); }
 
 ## 1. 改了哪些东西
 
-```
-cost/UsageRecordRepository.java              新：存储抽象接口
-cost/InMemoryUsageRecordRepository.java      新：内存实现（默认）
-cost/JdbcUsageRecordRepository.java          新：JDBC 实现（pgvector 开关下启用）
-cost/UsageRecordService.java                 改：从“自己存”改成“委托给 Repository”
-cost/UsageSummaryRow.java                    新：汇总结果的一行
-cost/UsageSummaryResponse.java               新：汇总接口的响应体
-cost/UsageController.java                     新：GET /api/usage/summary 只读接口
-db/init/01_schema.sql                         usage_record 表从“预留”转正 + 加索引
-cost/InMemoryUsageRecordRepositoryTest.java   新：聚合逻辑单测（恒跑）
-cost/JdbcUsageRecordRepositoryIT.java         新：连真 PG 的集成测试（env-gated）
+```text
+cost/
+  UsageRecordRepository.java
+    新：存储抽象接口
+  InMemoryUsageRecordRepository.java
+    新：内存实现（默认）
+  JdbcUsageRecordRepository.java
+    新：JDBC 实现（pgvector 开关下启用）
+  UsageRecordService.java
+    改：从「自己存」改成
+    「委托给 Repository」
+  UsageSummaryRow.java
+    新：汇总结果的一行
+  UsageSummaryResponse.java
+    新：汇总接口的响应体
+  UsageController.java
+    新：GET /api/usage/summary 只读接口
+  InMemoryUsageRecordRepositoryTest.java
+    新：聚合逻辑单测（恒跑）
+  JdbcUsageRecordRepositoryIT.java
+    新：连真 PG 的集成测试（env-gated）
+db/init/
+  01_schema.sql
+    usage_record 表从「预留」转正
+    + 加索引
 ```
 
 下面讲三个设计点。第一点是上一篇的延续，会快一些；后两点是这次新琢磨的。
@@ -228,9 +243,9 @@ mvn test    # 110 passed（107 原有 + 3 个新增内存聚合测试），0 fai
 **pgvector 真路径：**
 
 ```bash
-docker compose -f docker-compose.pgvector.yml up -d     # usage_record 表随初始化 SQL 一起建好
+docker compose -f docker-compose.pgvector.yml up -d     # 起一个带 pgvector 的 PostgreSQL
 PG_URL=jdbc:postgresql://localhost:5432/rag PG_USER=rag PG_PASSWORD=rag \
-  mvn test -Dtest=JdbcUsageRecordRepositoryIT            # 验证写入 + 聚合查询
+  mvn test -Dtest=JdbcUsageRecordRepositoryIT            # 自建测试表，验证写入 + 聚合查询
 ```
 
 ## 3. 写在最后
