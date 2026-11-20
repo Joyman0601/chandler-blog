@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 9a50623dafa484ab8daefb716d66254fe0683d39fd7d2f6760b5949e636a25b3
+# import-articles-sha256: d4a8a4ec55a78badf9f42da9098451e76d4452aacc9cf21618c497671131ffb3
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/rename-alias-redirect-ripple.md
 # Source date: 2026-10-08
 title: "改名、别名和重定向：每处按名字查表的地方都代入一遍"
@@ -175,7 +175,7 @@ rg -n -i 'resolve.?(model)?.?alias|canonical(ize)?.?model' --type go | grep -v _
 
 完整性检查的顺序因此是：先从旧契约列出必须保留的集合（接口、方法、章节、语种、对外承诺），再对集合里每一项比值，然后从用户入口实测一遍（真实页面的读取处、真实下载拿到的字节），最后给坏输入断言副作用。不能从生成器当前愿意输出的那个集合，反过来定义什么叫「完整」。
 
-独立复核本身也要核方法。第一轮复核的代理先读了主审写好的报告，再写自己的预期，预期已经被带偏，这一轮按方法不合格处理。重开一个全新上下文，先把预期落盘，再看主审产物。
+独立复核本身也要核方法。第一轮复核的代理先读了主审写好的报告，再写自己的预期，预期已经被带偏，这一轮按方法不合格处理。重开一个全新上下文，先把预期写进文件，再看主审产物。
 
 ## 6. 默认档变化：没写目标的入口全跟着走
 

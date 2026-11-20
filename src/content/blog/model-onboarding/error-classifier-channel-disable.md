@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 1b628cc1692f20537c894c93b0b5f1101147edb670e56a4790f08a79d18fc2c1
+# import-articles-sha256: 55e3cb4c3b269b24784538c8089cd4ff040ff6b0360094813db3d2da9c57206b
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/error-classifier-channel-disable.md
 # Source date: 2026-10-17
 title: "错误分类、重试和渠道禁用：新上游的错误原文要逐条过分类器"
@@ -38,7 +38,7 @@ mock 上游返回的是自己编的错误体，永远测不出这个问题。
 
 **修复**：按真实文案补一条规则，文本请求和任务两套分类器都补，各配一条用真实原文写的单测。再经网关用假 key 打一遍，确认用户看到的是统一文案。
 
-接新上游时我会做一次零成本的「假 key 巡检」：每个主机乘每个端点打一次，状态码、错误体、响应头全部落盘。
+接新上游时我会做一次零成本的「假 key 巡检」：每个主机乘每个端点打一次，状态码、错误体、响应头全部存成文件。
 
 ```bash
 # 每个主机 × 每个端点用一个明显无效的 key 打一次，不会产生费用

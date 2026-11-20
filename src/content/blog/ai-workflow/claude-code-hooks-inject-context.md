@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: c533dae40da5981928b56c7930525c529b1113625ff1d81a79cc8ad144b56ec6
+# import-articles-sha256: 548cf68f1ec755f0a74a8786dbc3c0c991c39be9928242fe804885e1d0eb01ff
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/claude-code-hooks-inject-context.md
 # Source date: 2026-09-30
 title: "Claude Code hooks：提示拦不住命令，要拒绝一次"
@@ -23,7 +23,7 @@ seriesLabel: "AI 辅助开发"
 
 - **经验卡片**：命令、报错、要写的文件路径命中某条经验的触发规则，就把那条经验的正文送进上下文；
 - **读取守卫**：记下长文件实际读进了哪几行，被截断时提示分段重读，交回前核对「必读」有没有读全；
-- **上下文闸**：上下文涨到一定程度先提醒落盘，再涨就拦下写操作，直到写好交接文件；
+- **上下文闸**：上下文涨到一定程度先提醒把决定和进度写进文件，再涨就拦下写操作，直到写好交接文件；
 - **页面规范闸**：第一次写页面文件前，要求先整读规范并写出规则清单，之后每写一个文件弹出对应的检查卡。
 
 下面讲做这些 hook 时踩的坑，以及事件怎么选。下面的结论除特别标注外都是实测，环境是 2026 年 9–10 月的 Claude Code。

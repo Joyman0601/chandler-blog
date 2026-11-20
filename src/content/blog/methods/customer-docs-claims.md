@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: ee0d67b8a3df784d2ad8cc655b1413e01fca5da35ee1bd30546f0aaf17284daa
+# import-articles-sha256: e08c704eb325b338b8ceb05504f44028f27e8868eb34129f13381787c79b6bbf
 # Imported by scripts/import-articles.mjs from posts/methods/customer-docs-claims.md
 # Source date: 2026-10-19
 title: "对外文档和文案：每句承诺都要过四道对照"
@@ -174,7 +174,7 @@ def check(src_fields, loc_fields, loc):
 几个具体的坑：
 
 - 中日韩的句号后面没有空格，`[.!?]\s` 一条都数不到；长度也只有英文的几分之一。「译文太短」的阈值按文字系统分开定，拉丁字母约 0.6，中日韩约 0.2，否则全是误报。
-- 一个韩语页面上，同一段里出现了两处裸写的 `1~15` 和 `2~7`。GFM 把两个波浪号之间的文字渲染成了删除线。范围值一律放进行内代码。
+- 一个韩语页面上，同一段里出现了两处裸写的 `1~15` 和 `2~7`。GFM（GitHub Flavored Markdown）把两个波浪号之间的文字渲染成了删除线。范围值一律放进行内代码。
 - 一次合并冲突的处理，把一个字段的说明混进了另一个字段，每个语种都是。要点对照脚本能抓到，人眼扫很难。
 - 生成物会被别人直接改。重新生成之前，先把重生成结果和分支现状逐字节 diff，一致了才能继续用脚本，否则会悄悄回滚别人的修改。
 - 合入多语言补丁前，按语言数一遍改动文件：`git diff --name-only | cut -d/ -f1 | sort | uniq -c`。有一次 50 个文件看着齐全，一数才发现只有一类文件改全了所有语种，其余只改了两种。

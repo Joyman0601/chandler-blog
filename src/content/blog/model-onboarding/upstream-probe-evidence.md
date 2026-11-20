@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: b9dae8fd8ab4d5a752b591bf0076d0023b6a620e8565f0bde329756fc8343593
+# import-articles-sha256: c30d3a4aaeba0331dca38df525c75d0c8337707366164883f38a7cfb74b15f57
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/upstream-probe-evidence.md
 # Source date: 2026-09-29
 title: "上游接口实测：判通判拒都要指到证明它的字段"
@@ -133,7 +133,7 @@ ffmpeg -f lavfi -i color=c=white:s=320x240:d=2 \
 **修复**：每条渠道交付前，至少一单「经网关 → SDK → 真上游 → 终态 → 核实扣」。在那之前，先用假上游抓一次 SDK 实际出站的 body，和探测请求逐字段比，多出来的字段每个都在真上游验一遍。探测报告里把「裸请求」和「经网关 / SDK」分成两列，裸请求通过只填前一列。抓出站 body 的假上游写起来很短。Go 的 HTTP 客户端在 body 长度未知时用分块编码发送，不带 `Content-Length`，Python 的 `http.server` 又不会替你解码分块，所以读请求体要两种都支持，否则录下来的 body 是空的：
 
 ```python
-# fake_upstream.py：把收到的请求原样落盘，回一个固定的成功响应
+# fake_upstream.py：把收到的请求原样写进文件，回一个固定的成功响应
 import json, http.server
 
 def read_body(h):
@@ -194,7 +194,7 @@ tail -1 captured.jsonl   # body 应是 {"model": "m1", "temperature": 0.2}，不
 
 ## 7. 落盘、分类和一个执行器骨架
 
-每次请求保存两份证据：响应体，和元数据（请求参数、状态码、耗时、请求 id）。报告里每条结论链接到对应文件，结论分三类：与文档一致、与文档不符、文档未说明，后两类单独列。机器判不了的（听感、画质）列成「样本 + 要判断的问题」，约时间让人过。测试中创建的资源（音色、文件）记进台账，结束时按台账删除，并核对没有误删不属于自己的。
+每次请求保存两份证据：响应体，和元数据（请求参数、状态码、耗时、请求 id）。报告里每条结论链接到对应文件，结论分三类：与文档一致、与文档不符、文档未说明，后两类单独列。机器判不了的（听感、画质）列成「样本 + 要判断的问题」，约时间让人过。测试中创建的资源（音色、文件）记进台账（一张登记测试中创建了哪些资源的表），结束时按台账删除，并核对没有误删不属于自己的。
 
 我现在把要花钱的探测写成执行器，而不是一串 curl。骨架如下，按自己的上游填 `submit`、`poll` 和用例：
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 45a085d0f73327a2bc30ac32d4c0483a9c051ae7572433f0b01db825e6c97250
+# import-articles-sha256: 723960c89c1f6f3c76acda158b1448d367e96c3ae4a75388d296fcf5d8f0b15f
 # Imported by scripts/import-articles.mjs from posts/frontend/first-load-bundle-lighthouse.md
 # Source date: 2026-09-29
 title: "首屏包体与 Lighthouse：共享注册表把全量文案打进首屏"
@@ -10,7 +10,7 @@ series: frontend
 seriesLabel: "前端实践"
 ---
 
-> 一句话总结：复用共享组件前先看它背后 import 了什么，不在首屏的大模块用 `next/dynamic` 加 `ssr: false` 移出去；比较 Lighthouse 分数前先排除 HTML 跨过 RTT 阈值的阶梯效应，至少跑 3 次取中位数，并且在请求层拦住正式的第三方。
+> 一句话总结：复用共享组件前先看它背后 import 了什么，不在首屏的大模块用 `next/dynamic` 加 `ssr: false` 移出去；比较 Lighthouse 分数前先排除 HTML 跨过 RTT（往返时延）阈值的阶梯效应，至少跑 3 次取中位数，并且在请求层拦住正式的第三方。
 
 ## 0. 起因：两个同类页面，分数稳定差 3 分
 
@@ -21,7 +21,7 @@ seriesLabel: "前端实践"
 最后查出两个原因，叠在一起：
 
 1. 价格区复用的一个共享组件，把一个覆盖几十个模型的注册表和一份多种语言的文案整个带进了首屏包；
-2. 页面的 HTML 文档刚好比 Lighthouse 模拟网络的一个阈值多了几百字节，凭空多等了一轮 RTT（往返时延）。
+2. 页面的 HTML 文档刚好比 Lighthouse 模拟网络的一个阈值多了几百字节，凭空多等了一轮 RTT。
 
 这篇先讲这两个原因，再讲跑 Lighthouse 时自己踩到的两类环境坑：本地生产构建会连到正式的第三方服务，以及本地命令给出的假结果。
 
@@ -217,7 +217,7 @@ if (leaks.length) throw new Error(`第三方请求漏出：${leaks.length} 次`)
 
 还有三个小坑：
 
-- 用 Playwright 的 `connectOverCDP` 连上自起的 Chrome 验证 PAC 时，结束不要调 `browser.close()`。对 CDP 连上的浏览器，它会把那个 Chrome 关掉，后面 `lighthouse --port` 就一直等端口。
+- 用 Playwright 的 `connectOverCDP` 连上自起的 Chrome 验证 PAC 时，结束不要调 `browser.close()`。对通过 CDP（Chrome DevTools Protocol）连上的浏览器，它会把那个 Chrome 关掉，后面 `lighthouse --port` 就一直等端口。
 - **每跑完一次就检查**报告的 `network-requests` 里有没有被拦域名（状态码在 1–599 之间就算漏了），一旦发现立即中止，不要等全部跑完。
 - 只做验收时，直接调底层命令（`next build`、`next start -p <端口>`）。仓库的构建脚本可能有 `pre` 钩子改写受跟踪的文件，`start` 脚本可能写死了别人正在用的端口。
 
@@ -229,7 +229,7 @@ if (leaks.length) throw new Error(`第三方请求漏出：${leaks.length} 次`)
 
 **macOS 没有 `timeout`**。`timeout 600 npx tsc …` 在 macOS 上退出码 127（命令不存在），同样被当成「跑过了」。
 
-**`pnpm install` 退出码 1，但依赖其实装好了**。新版 pnpm 遇到带构建脚本、又没有声明是否允许运行的依赖，会报 `ERR_PNPM_IGNORED_BUILDS` 并以 1 退出，顺手生成一个未跟踪的 `pnpm-workspace.yaml` 模板。依赖其实已经落盘。`pnpm exec next dev` 也会先做这道检查，直接退出，端口一直不通。
+**`pnpm install` 退出码 1，但依赖其实装好了**。新版 pnpm 遇到带构建脚本、又没有声明是否允许运行的依赖，会报 `ERR_PNPM_IGNORED_BUILDS` 并以 1 退出，顺手生成一个未跟踪的 `pnpm-workspace.yaml` 模板。依赖其实已经装到磁盘上了。`pnpm exec next dev` 也会先做这道检查，直接退出，端口一直不通。
 
 **dev server 和 build 共写 `.next`**。包体检查报「构建产物缺少某条路由」，和改动毫无关系；停掉同一目录的 dev server 以后就没了。
 

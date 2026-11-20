@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 823e0b29494b3cb6d91795744b7a4376c6ca66fab098d909627c315cfe9990c2
+# import-articles-sha256: e7e7d7b0bbde9de419e46cc4121ebaa24cc03c3dd87ab50df7ec2fd8bd5b05d9
 # Imported by scripts/import-articles.mjs from posts/methods/identify-upstream-fingerprint.md
 # Source date: 2026-10-07
 title: "判断自部署还是转售：按信号强弱取证，线索要有区分力"
@@ -135,18 +135,7 @@ curl -s https://cdn.example.com/assets/index-xxxx.js | grep -oE 'api-[A-Za-z0-9_
 
 这张表是子代理采集、助手压缩成摘要的，所以交付前做了两道核对。
 
-**逐格核出处**。458 格，每格回原文找依据并截图存档，结果如下：
-
-| 结果 | 格数 |
-|---|---|
-| 一致 | 367 |
-| 推断，已标 | 19 |
-| 不一致 | 43 |
-| 来源冲突 | 22 |
-| 无出处 | 5 |
-| 无法截图 | 2 |
-
-要改的约占 15%。错法很集中，下次可以直接按这几类去找：推断没标；漏了附加计费项；页面其实写了，表里却写「未写」；把「免费额度」读成了「免费」。
+**逐格核出处**。458 格逐格回原文找依据、截图存档，约 15% 要改。错法很集中：推断没标；漏了附加计费项；页面其实写了，表里却写「未写」；把「免费额度」读成了「免费」。完整的结果表、错法分类和核对做法见[子代理的审查发现是线索那篇](/blog/ai-workflow/subagent-findings-are-leads/)第 3 节。
 
 **人工盲核**。逐格核是自己核自己，还要请人独立核一遍。做法见[盲核页那篇](/blog/testing/blind-crosscheck-page/)，这里只说出题：
 

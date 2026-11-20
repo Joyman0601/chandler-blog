@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: ec605e809d35a256b0ac26e7ef0d857d20995c96370641e0a2475a00fcae29d7
+# import-articles-sha256: 2194eea359f9ebe447d5b8f463a1c5ae0ea16627136ba71db3f416eac24d3852
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/multi-window-parallel-dev.md
 # Source date: 2026-10-09
 title: "多窗口并行开发：派生简报、交接文件和各写各的记录"
@@ -219,7 +219,7 @@ W6 的设计是那次最有用的部分。它开场只读三份文件：自己�
 3. **/rename 单独一条** —— 斜杠命令会吃掉整条消息；交给别人的东西，按对方的用法试一遍。
 4. **共享记录各写各的、只追加** —— 覆盖写入不报错，靠数条目和 git 才能发现、找回。
 5. **验收窗口先冻结预期** —— 先看修复报告再验收，验的只是作者的自洽。
-6. **编排为中断做准备** —— 产物落盘，续跑另写脚本。
+6. **编排为中断做准备** —— 产物写进文件，续跑另写脚本。
 7. **拆分先算协调成本** —— 输入、写入和证据可独立时再拆；授权范围与主审责任保持明确。
 
 下次再拆窗口，我会先写 PLAN 的分工表和文件归属，再写简报，用脚本把简报过一遍才发出去。窗口一多，上下文的花费也会变成问题，见[上下文花费的大头是重读前缀](/blog/ai-workflow/context-compaction-cost/)。

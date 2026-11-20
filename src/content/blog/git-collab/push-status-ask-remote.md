@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: ddf90913bbd2b81ccd703096037ff04c2828f8a63badc85472609e6d6d081186
+# import-articles-sha256: c0e761e1900e087b685c2b05c7404b592f9d7ac5253fb3ae69bd9d70817bbaae
 # Imported by scripts/import-articles.mjs from posts/git-collab/push-status-ask-remote.md
 # Source date: 2026-10-19
 title: "推送和 PR 状态只问远端：ls-remote、竞态和主干保护"
@@ -132,7 +132,7 @@ git rev-list --count "$(git merge-base HEAD "${LOCAL_MAIN}")..${LOCAL_MAIN}"
 
 文档站的主干就是线上，合进去当场生效。一周后 leader 看到了，评价是「很严重的流程问题」（转述）。事后复查又查出 1 处示例照抄会请求失败，十来处同页说法不一致，只能从当前主干另开分支修复。
 
-**根因**：我的规则里写的是动作「不推 main」，不是职责「合主干归谁」。`gh pr merge` 不是 `git push`，推送前的闸和规则都没覆盖它。这条路之外还有 `gh api` 调合并接口、网页上的合并按钮。托管平台默认允许作者合自己的 PR；主干如果没开分支保护，就没有第二道门。代理把「合入 main」当成可以直接执行的指令，它不知道我本人也不是合并人。
+**根因**：我的规则里写的是动作「不推 main」，不是职责「合主干归谁」。`gh pr merge` 不是 `git push`，推送前的闸（推送命令执行前自动跑的检查，不过就拦下）和规则都没覆盖它。这条路之外还有 `gh api` 调合并接口、网页上的合并按钮。托管平台默认允许作者合自己的 PR；主干如果没开分支保护，就没有第二道门。代理把「合入 main」当成可以直接执行的指令，它不知道我本人也不是合并人。
 
 **修复**：两层。
 

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 48cdfdf25a309af975376a2664a171b0283a883606cff5626826ac7f3874c181
+# import-articles-sha256: 460976887b6152fb71ca7347fef86a5c98eacdf9009dbccf02877a648952e14b
 # Imported by scripts/import-articles.mjs from posts/frontend/async-seam-url-variant.md
 # Source date: 2026-09-23
 title: "一个 await 就是一道缝：异步回写和 URL 变体的首帧"
@@ -77,7 +77,7 @@ rg -n 'await |\.then\(' app/ components/ | rg -v '__tests__|\.test\.'
 
 这是读代码推出来的。当天没有直接改，而是记成卡点：先写测试证实或证伪，再动手。按清单找，这一页永远找不到，因为它的症状和清单上的那条完全不同；套判据才找得到。
 
-另一件事是把判据固化成一个 CI 闸，不让它停在笔记里。判据写得很干：一个组件如果持有多档状态，它渲染的上传控件就必须传一个「归属」回调。存量不满足的页面登记进基线，新代码不许再增加。
+另一件事是把判据固化成一个 CI 闸（CI 里自动跑的检查，不满足就让构建失败），不让它停在笔记里。判据写得很干：一个组件如果持有多档状态，它渲染的上传控件就必须传一个「归属」回调。存量不满足的页面登记进基线，新代码不许再增加。
 
 ```ts
 // variant-ownership.gate.test.ts：持有多档状态的组件，上传控件必须带归属回调

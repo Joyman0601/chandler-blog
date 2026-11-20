@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 942a64cb18cae9a14a8423495fdfcd361953450af9cd69534b5146b8a308f124
+# import-articles-sha256: 69e4cf6b955be42ebb4bad6a7a5684e531a01e617c546d8287a1f51d8204050a
 # Imported by scripts/import-articles.mjs from posts/billing-regression/sql-on-prod-shaped-db.md
 # Source date: 2026-10-09
 title: "要进生产库的 SQL：先在生产形状的库上整份真跑"
@@ -114,7 +114,7 @@ SELECT * FROM chk ORDER BY seq;   -- ← 最后一条语句输出结论
 
 | 报错 | 原因 | 改法 |
 |---|---|---|
-| 1137 `Can't reopen table` | 临时表在一条语句里出现了两次（自连接、两个子查询各引用一次、UNION 两边） | 拆成独立语句；自检改用 CTE，CTE 在一条语句里可以引用多次 |
+| 1137 `Can't reopen table` | 临时表在一条语句里出现了两次（自连接、两个子查询各引用一次、UNION 两边） | 拆成独立语句；自检改用 CTE（`WITH` 子句定义的公用表表达式），CTE 在一条语句里可以引用多次 |
 | 1046 `No database selected` | 「表名都带库名」漏了临时表；多表 `DELETE a FROM db.t1 a JOIN …` 全带库名也报 | 每处都带库名；多表 DELETE 改成单表 `DELETE … WHERE id IN (SELECT …)` |
 | 1052 列名歧义 | `INSERT … SELECT … ON DUPLICATE KEY UPDATE col = …`，来源里有同名列 | 引用目标表的列一律写 `目标表.列` |
 | 1064 语法错 | 回滚段整段注释，给人看的说明行也只有一层 `-- `，按「整段去注释」执行就成了裸文本 | 段内说明行写 `-- -- `，去一层仍是注释 |
@@ -179,7 +179,7 @@ mysql app < inject_notx.sql
 snap                                      # 预期：删除留了下来，目标行数变成 0
 ```
 
-两个结果一起，才证明是事务在起作用。注入点要放在「已经写过东西、还没写完」的地方。DDL 会隐式提交，对照证明不了脚本里没有这类语句，要另外读。
+两个结果一起，才证明是事务在起作用。注入点要放在「已经写过东西、还没写完」的地方。DDL（建表、改表这类结构变更语句）会隐式提交，对照证明不了脚本里没有这类语句，要另外读。
 
 反过来，脚本没有事务时要写清楚。有一份改价脚本就没有事务，中途失败不会撤回已执行的语句。报告里写明「本地检查通过不等于生产操作完成」。
 

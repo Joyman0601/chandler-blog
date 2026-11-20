@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 40521f662be3fec04745e208edc8af5e8373090ef2680bee1d667aeea03b787a
+# import-articles-sha256: 0f95ae510807c001aa9b13376c3cd8c78212a4b107ecd81af6f50b5ffd7714a6
 # Imported by scripts/import-articles.mjs from posts/model-onboarding/stream-terminal-usage-eof-lifecycle.md
 # Source date: 2026-11-01
 title: "流式收尾：终态、用量、EOF 和保活要分开"
@@ -18,7 +18,7 @@ seriesLabel: "模型接入"
 
 前者像「结束太晚」，后者像「结束太早」。只改一个统一超时，很容易把两者来回切换。后来复盘发现，业务完成、用量完整、读取完成和保活退出，本来就不是同一个信号。
 
-这里讨论一种特定应用契约：正常 EOF 及时收尾；传输未结束时，确认业务终态且取得有效用量后，才允许按空闲宽限结束。不是所有流式协议都要求有用量字段，也不能把这条应用规则当成 SSE 标准。
+这里讨论一种特定应用契约：正常 EOF 及时收尾；传输未结束时，确认业务终态且取得有效用量后，才允许按空闲宽限结束。不是所有流式协议都要求有用量字段，也不能把这条应用规则当成 SSE（Server-Sent Events，服务端发送事件）标准。
 
 ## 1. 四个信号，各回答一个问题
 
@@ -29,7 +29,7 @@ seriesLabel: "模型接入"
 | EOF | 响应体已经读完 | 一定是正常业务成功 |
 | 保活 | 连接仍可传输或避免空闲断开 | 业务有进展、用量已经到齐 |
 
-SSE（Server-Sent Events，服务端发送事件）用空行划分事件，冒号开头的行是注释；注释本身不是业务数据。[HTML 标准的事件流解释规则](https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation)
+SSE 用空行划分事件，冒号开头的行是注释；注释本身不是业务数据。[HTML 标准的事件流解释规则](https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation)
 
 应用还要继续解析事件里的内容，识别自己的终态和用量。标准规定的事件边界，与应用定义的「可以结算了」，也不是同一层。
 

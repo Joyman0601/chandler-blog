@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 962390ad17f8dbc56b7fcfdbf9c037417c67cb40e988a96e42900266b5fe460b
+# import-articles-sha256: 285d08a13d4ef4f6547c76cdfb27a710e6e95c9d46b990518db563be7c244bcc
 # Imported by scripts/import-articles.mjs from posts/tooling/mac-dev-machine-ops.md
 # Source date: 2026-10-22
 title: "Mac 开发机的日常排障：代理、磁盘、负载和后台进程"
@@ -101,7 +101,7 @@ Host some-host-behind-proxy
 - **`docker volume prune` 删什么看版本**。Docker 23 起默认只删没被容器用着的匿名卷，要连命名卷一起删得加 `-a`；更早的版本默认就把没被用着的命名卷一起删了（文档：Docker 23.0 的发布说明）。先 `docker version` 看一眼服务端版本；
 - **Docker 虚拟盘看实占**。`Docker.raw` 是稀疏文件，`ls -l` 显示的是上限（两百多 GB），prune 之后也不变，要用 `du -sh` 看实占。prune 之后几十秒，实占从 17.7 GB 缩到 7.5 GB；
 - **Go 缓存为什么可以按 mtime 删**。Go 自带的修剪每天一次，只删 5 天没用过的条目，所以并行编译时会涨得很快。Go 读到一条缓存时，如果它的 mtime 超过 1 小时就刷新一次（文档：Go 标准库缓存实现里的 `mtimeInterval`）。所以「3 小时以上没被读过」的条目，正在编译的进程不会用到。实测 16 GB 删到 7.5 GB，并行跑着的测试没受影响。`go clean -cache` 是全删，会拖慢别的窗口，还有读到一半被删的风险；
-- **pnpm 的 node_modules 量不准**。每个检出 `du` 出来约 0.8 GB，但 pnpm 在 APFS 上默认先用写时复制克隆，`du` 看不出它和全局仓库共用磁盘块。删它们大概省不出多少（推断，没有实测）；
+- **pnpm 的 node_modules 量不准**。每个检出 `du` 出来约 0.8 GB，但 pnpm 在 APFS（macOS 的文件系统）上默认先用写时复制克隆，`du` 看不出它和全局仓库共用磁盘块。删它们大概省不出多少（推断，没有实测）；
 - **缓存里可能正跑着程序**。npx 起的命令行工具就从 `~/.npm/_npx/` 里运行，当时正好有一个文档校验在那里跑着，删了就把它弄断。删之前用 `pgrep -fl '/.npm/_npx/'` 看一眼；
 - **按内容认缓存，不按名字**。按目录名找 `go-cache`，误中了一个同名的第三方库源码。先看目录里是不是缓存的格式（两位十六进制分桶、`cache/download` 这类结构）再删。Go 模块缓存是只读的，删之前要 `chmod -R u+w`；
 - **每一步前后各打一次 `df`**。别的窗口同时在编译、装浏览器，几分钟内剩余空间从 18 GB 掉到 11 GB。不打 `df`，就不知道这一步到底回收了多少。
@@ -133,7 +133,7 @@ Claude Code 会话在系统临时目录下也有按会话分的沙箱目录，�
 ### 汇总的口径
 
 - CPU：`ps` 的 %CPU 按应用归组后求和；
-- 内存：用 `top` 的 MEM 列。它把被压缩的部分也算进去了；RSS 不算被压缩、被换出的内存，会严重低估。实测同一个浏览器，RSS 合计 1.1 GB，MEM 合计 6.7 GB；Docker 虚拟机 RSS 0.3 GB，MEM 8.2 GB；
+- 内存：用 `top` 的 MEM 列。它把被压缩的部分也算进去了；RSS（常驻内存）不算被压缩、被换出的内存，会严重低估。实测同一个浏览器，RSS 合计 1.1 GB，MEM 合计 6.7 GB；Docker 虚拟机 RSS 0.3 GB，MEM 8.2 GB；
 - 各进程的 MEM 加起来会超过物理内存，因为有压缩和换出，只看相对大小；
 - 「已用 15 GB」这类数字说明不了问题，macOS 本来就会把空闲内存拿去做缓存。看交换区用量和内存压力。
 
@@ -179,7 +179,7 @@ curl -s --noproxy '*' -m 3 "http://127.0.0.1:${PORT}/json/list" | head
 在 Claude Code 的自动模式下，停容器、`docker desktop stop` 都被拒了。我让它把整个顺序写成脚本，自己执行：
 
 1. 记对照：健康检查结果、数据库端口能不能握手；
-2. `docker stop -t 60 <容器>`，给数据库留时间正常落盘；
+2. `docker stop -t 60 <容器>`，给数据库留时间把内存里的数据正常写回磁盘；
 3. `docker desktop stop`，改设置文件里的 `MemoryMiB`；
 4. `docker desktop start`，轮询 `docker info` 直到可用，核对 MemTotal；
 5. `docker start <容器>`，等端口能握手；

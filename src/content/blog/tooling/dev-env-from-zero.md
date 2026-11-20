@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 52db5a30d4de8f27f47366753e7092acddb7592219ffe36fd8f0c61c61e8f75b
+# import-articles-sha256: 1e658b65191c3903049f61d7175c4fc1abeb9720895d644931d5bb154e2aaea9
 # Imported by scripts/import-articles.mjs from posts/tooling/dev-env-from-zero.md
 # Source date: 2026-09-21
 title: "从零搭一台开发机：顺手写了个会话检索工具"
@@ -91,7 +91,7 @@ zsh -ic 'command -v docker'
 
 **现象**：`docker pull` 报 EOF，镜像拉不下来。
 
-**根因**：当时本机代理只开了 TUN 模式，没有提供 HTTP 端口给 Docker 用，Docker 虚拟机里的流量没被代理覆盖（这是当时的判断，没有进一步验证）。
+**根因**：当时本机代理只开了 TUN 模式（代理建一块虚拟网卡、在网卡层接管系统流量的模式），没有提供 HTTP 端口给 Docker 用，Docker 虚拟机里的流量没被代理覆盖（这是当时的判断，没有进一步验证）。
 
 **做法**：在 Docker Desktop 的 Docker Engine 设置里配镜像加速，配置存在 `~/.docker/daemon.json`：
 

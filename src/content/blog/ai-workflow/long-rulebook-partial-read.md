@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 65a1409ee0426ece26c88677b8cba8961117057b9213fd54944667ba348dc985
+# import-articles-sha256: b39e603bad1caf9ac561323194a6e5cca4f532723212397b8f355749902498ce
 # Imported by scripts/import-articles.mjs from posts/ai-workflow/long-rulebook-partial-read.md
 # Source date: 2026-10-06
 title: "长规范只读了不到三分之一就开工：规则清单、检查卡和读取守卫"
@@ -130,7 +130,7 @@ def on_pre_write(path, session):
 几个细节：
 
 - **拒绝理由里给出要读的行号范围**，而且是按规范当前的标题现算出来的，规范改了也不会指错位置。
-- **只拒两次。** 两次之后放行，并在日志里记一笔。闸本身出错时，宁可漏拦，也不能把人卡死。
+- **只拒两次。** 两次之后放行，并在日志里记一笔。这道拦截 hook 本身出错时，宁可漏拦，也不能把人卡死。
 - **判「本会话写过规则清单」不能只看工具事件**：清单可能是用脚本写的，或者上一个中断的会话写的。所以 `fresh_rules_file` 比的是文件修改时间和会话开始时间。
 
 装好的当天，它在搭建它的那个会话里就真的拦下了两次页面写入（实测），拒绝理由里的行号范围和规范当前的标题对得上。

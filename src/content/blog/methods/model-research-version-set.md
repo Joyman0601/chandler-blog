@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 705a7f2eae28344005f1c762b58850465474e25f8320eea0a39a2ad3a7b43a28
+# import-articles-sha256: 1f645c248b82f1d5d3e12e317221857af3f17cee701fcb795e4e301978143025
 # Imported by scripts/import-articles.mjs from posts/methods/model-research-version-set.md
 # Source date: 2026-09-24
 title: "新模型调研：先核对版本全集，再写参数、计费、迁移"
@@ -41,7 +41,7 @@ seriesLabel: "工作方法"
 CANDIDATES = ["max_len", "max_length", "maxLength"]
 for name in CANDIDATES:
     body = {"model": MODEL, "prompt": "hello", name: 16}
-    resp = post(ENDPOINT, body)   # 自己封装的请求函数，顺手把请求和响应落盘
+    resp = post(ENDPOINT, body)   # 自己封装的请求函数，顺手把请求和响应存成文件
     print(name, resp.status, resp.json().get("message", "")[:80])
 # 报「未知参数」说明名字不对；报「取值非法」说明名字对、值不对
 ```

@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 263dfb644e2102f5efa4dbfb2e3f333fd1ee7f03eb75f306af3826f21fca53eb
+# import-articles-sha256: 5bc8d497bc8291799ced8b67e66b4679e3e3de154b07d167a26d6ceddcdec8d9
 # Imported by scripts/import-articles.mjs from posts/billing-regression/agent-api-token-cost.md
 # Source date: 2026-10-15
 title: "估 agent 类接口的花费：缓存读才是大头"
@@ -109,7 +109,7 @@ leader 说的是「10 倍左右」，我统计的是「127 倍」。差一个数
 预估：输入侧 = N × (a% × 1 + b% × 1.25 + c% × 0.1) × 普通输入单价
       输出侧 = M × 输出单价
 上限：输入全部按缓存写算（N × 1.25 × 普通输入单价），输出按上限算
-闸门：当天台账 + 本条上限 ≤ 每日预算，否则不跑
+闸门：当天台账里已记的花费 + 本条上限 ≤ 每日预算，否则不跑
 回填：跑完记下 usage 里各类字段，算出实际占比，替换第一行的前提
 ```
 

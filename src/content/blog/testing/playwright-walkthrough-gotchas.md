@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: 18288f4e4188f7390cd0b8a8a7572bd68dcd43de4c06e07439b391351e122cde
+# import-articles-sha256: 47f0fa004f99ed49f7529a4e10b82b153bfea5f70637da946d52e39e3baf552e
 # Imported by scripts/import-articles.mjs from posts/testing/playwright-walkthrough-gotchas.md
 # Source date: 2026-10-15
 title: "用 Playwright 走查页面、截证据图的一串坑"
@@ -258,4 +258,4 @@ const visible = !!hit && (hit === anc || anc.contains(hit))   // false：换存�
 7. **原文截图** —— 跨节点找片段、按命中位置滚、`elementFromPoint` 确认看得见、多处命中取第一处可见的、图名用片段。
 8. **脚本自己** —— 归一化前想清楚抹掉了什么；排除规则别按类名整类跳；贴来的图先看是不是整窗。
 
-这些坑有个共同点：脚本给出的都是一个干脆的结果（找到了、失败了、0 处、看得见），而那个结果和人看到的不是一回事。所以我现在给走查脚本的每个关键判断都配一个对照：换一种进入路径、换一种判定方式、拿一个已知该红的样本跑一遍。对照对不上，就先查脚本，再查页面。关于把这类检查做成交付前的硬闸，见[两次「假完成」之后](/blog/testing/fake-done-and-gates/)。
+这些坑有个共同点：脚本给出的都是一个干脆的结果（找到了、失败了、0 处、看得见），而那个结果和人看到的不是一回事。所以我现在给走查脚本的每个关键判断都配一个对照：换一种进入路径、换一种判定方式、拿一个已知该红的样本跑一遍。对照对不上，就先查脚本，再查页面。关于把这类检查做成交付前的硬闸（不通过就不许交付的自动检查），见[两次「假完成」之后](/blog/testing/fake-done-and-gates/)。

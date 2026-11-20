@@ -1,5 +1,5 @@
 ---
-# import-articles-sha256: f4a566fb171a8c7c1feb35c9df06db6be18de8eb49481ee502198c23079abaab
+# import-articles-sha256: aeee72b3bb6b6e4dd204761e4e270284c36ad46ec1e7457f894a68285056ff3a
 # Imported by scripts/import-articles.mjs from posts/frontend/page-framework-migration.md
 # Source date: 2026-09-22
 title: "把旧页面迁到新页面框架：机器闸兜底，人只验机器验不了的"
@@ -22,7 +22,7 @@ seriesLabel: "前端实践"
 - 一个统计迁移进度的状态脚本；
 - 几十个按页参数化的契约测试。
 
-活主要是我和 Claude Code（下文叫助手）一起干：助手按规范改代码、跑测试、报进度，我验收。开头连着出了两次「检查全绿、需求没做完」，那两次的经过和后来补的闸另写在[两次「假完成」之后](/blog/testing/fake-done-and-gates/)。这篇讲的是迁移本身的做法：怎么并行，契约测试挡下了什么，交给验收的人什么东西。最后补一次两周后的改版教训，它和迁移是同一类问题的另一面。
+活主要是我和 Claude Code（下文叫助手）一起干：助手按规范改代码、跑测试、报进度，我验收。开头连着出了两次「检查全绿、需求没做完」，那两次的经过和后来补的闸（交付前自动跑、不过就拦下的检查）另写在[两次「假完成」之后](/blog/testing/fake-done-and-gates/)。这篇讲的是迁移本身的做法：怎么并行，契约测试挡下了什么，交给验收的人什么东西。最后补一次两周后的改版教训，它和迁移是同一类问题的另一面。
 
 ## 1. 三页并行：一页一个 worktree，共享清单只追加
 
